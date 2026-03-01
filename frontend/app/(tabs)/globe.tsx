@@ -356,8 +356,16 @@ export default function GlobeScreen() {
         </View>
       </View>
 
-      {/* 3D Native Globe */}
-      <View style={styles.globeContainer}>
+      {/* 3D Native Globe — Wrapped in Animated.View for Quantum Zoom */}
+      <Animated.View 
+        style={[
+          styles.globeContainer, 
+          { 
+            transform: [{ scale: globeContainerScale }],
+            opacity: globeContainerOpacity,
+          }
+        ]}
+      >
         {Platform.OS === 'web' ? (
           <View style={styles.webFallback}>
             <LinearGradient
