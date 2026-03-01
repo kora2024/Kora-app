@@ -15,9 +15,13 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
-import KoraGlobe from '../../src/globe/KoraGlobe';
+import KoraGlobe, { GlobeRef } from '../../src/globe/KoraGlobe';
 
 const { width: SW } = Dimensions.get('window');
+
+// Mock user location (Fort-de-France - sovereign territory)
+const USER_LOCATION = { lat: 14.6, lng: -61.0 };
+const IS_USER_SOVEREIGN = true;
 
 // Loading component for Globe
 function GlobeLoader() {
@@ -40,6 +44,9 @@ export default function GlobeScreen() {
   const { activeTerritory, setActiveTerritory } = useKoraStore();
   const [globeReady, setGlobeReady] = useState(false);
   const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
+  
+  // Globe ref for camera control
+  const globeRef = useRef<GlobeRef>(null);
 
   // Animations
   const hintOpacity = useRef(new Animated.Value(0)).current;
@@ -82,6 +89,9 @@ export default function GlobeScreen() {
   const handleTerritorySelect = useCallback((territory: Territory) => {
     haptic.light();
     setActiveTerritory(territory);
+    
+    // Focus camera on selected territory
+    globeRef.current?.focusOnTarget(territory.lat, territory.lng);
   }, [setActiveTerritory]);
 
   // Handle double tap on territory
@@ -103,20 +113,36 @@ export default function GlobeScreen() {
     ]).start();
   }, [gpsToastOpacity]);
 
+  // Focus on user's sovereign territory
+  const handleFocusHome = useCallback(() => {
+    haptic.medium();
+    globeRef.current?.focusOnTarget(USER_LOCATION.lat, USER_LOCATION.lng);
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="globe-screen">
       {/* Top bar */}
       <View style={styles.topBar}>
         <Text style={styles.logoText} testID="globe-logo">KORA</Text>
-        <TouchableOpacity style={styles.settingsBtn} testID="globe-settings-btn" activeOpacity={0.7}>
-          <Text style={styles.settingsIcon}>⚙</Text>
-        </TouchableOpacity>
+        <View style={styles.topBarRight}>
+          {/* Home button - focus on sovereign territory */}
+          <TouchableOpacity 
+            style={styles.homeBtn} 
+            onPress={handleFocusHome}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.homeBtnIcon}>🏠</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsBtn} testID="globe-settings-btn" activeOpacity={0.7}>
+            <Text style={styles.settingsIcon}>⚙</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* 3D Native Globe */}
       <View style={styles.globeContainer}>
         {Platform.OS === 'web' ? (
-          // Web fallback - simple styled view with message
+          // Web fallback
           <View style={styles.webFallback}>
             <LinearGradient
               colors={['#0a1829', '#060d17', '#000000']}
@@ -130,9 +156,12 @@ export default function GlobeScreen() {
           </View>
         ) : (
           <KoraGlobe
+            ref={globeRef}
             onTerritorySelect={handleTerritorySelect}
             onTerritoryDoubleTap={handleTerritoryDoubleTap}
             onGPSClick={handleGPSClick}
+            userLocation={USER_LOCATION}
+            isUserSovereign={IS_USER_SOVEREIGN}
           />
         )}
 
@@ -201,7 +230,7 @@ export default function GlobeScreen() {
       {/* Hint */}
       <Animated.View style={[styles.hintContainer, { opacity: hintOpacity }]}>
         <Text style={styles.hintText} testID="globe-hint">
-          {'✋ Appui long + glisse pour plonger'}
+          {'✋ Glissez pour explorer · Double-tap pour plonger'}
         </Text>
       </Animated.View>
     </View>
@@ -221,11 +250,29 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     zIndex: 10,
   },
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   logoText: {
     fontFamily: FONTS.playfairBold,
     fontSize: 28,
     color: COLORS.cream,
     letterSpacing: 2,
+  },
+  homeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeBtnIcon: {
+    fontSize: 18,
   },
   settingsBtn: {
     width: 40,
