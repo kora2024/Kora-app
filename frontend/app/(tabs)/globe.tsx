@@ -240,9 +240,13 @@ export default function GlobeScreen() {
       const unsubscribe = liveStream.subscribe(handleLiveEclat);
       liveStream.start();
       
+      // UPGRADE 25 — Start movement detection for human proof
+      startMovementDetection();
+      
       return () => {
         unsubscribe();
         liveStream.stop();
+        stopMovementDetection();
       };
     }
   }, [globeReady, handleLiveEclat]);
