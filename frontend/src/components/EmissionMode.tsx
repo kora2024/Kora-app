@@ -333,11 +333,16 @@ export default function EmissionMode({
         haptic.success();
 
         const audioPath = await saveEclatAudio(uri);
+        
+        // UPGRADE 14 — Generate mock transcription
+        const transcription = getRandomMockTranscription();
+        
         const newEclat = await createEclat({
           audioPath,
           duration: recordingDuration,
           lat: userLocation.lat,
           lng: userLocation.lng,
+          transcription,
         });
 
         // Animate out
