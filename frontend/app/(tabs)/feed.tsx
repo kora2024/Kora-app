@@ -194,11 +194,6 @@ function FeedItemCard({ item, itemHeight }: { item: FeedItem; itemHeight: number
       {/* Full-screen background */}
       <LinearGradient colors={item.gradient} style={StyleSheet.absoluteFill} />
 
-      {/* Centered emoji */}
-      <View style={styles.emojiCenter}>
-        <Text style={styles.emojiGiant}>{item.emoji}</Text>
-      </View>
-
       {/* Bottom gradient overlay */}
       <LinearGradient
         colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.9)']}
@@ -208,20 +203,20 @@ function FeedItemCard({ item, itemHeight }: { item: FeedItem; itemHeight: number
 
       {/* Right side actions */}
       <View style={styles.actionsColumn}>
-        <ActionButton icon="✦" label="Résonne" testId={`action-resonne-${item.id}`} />
+        <ActionButton IconComponent={ResonneIcon} label="Résonne" testId={`action-resonne-${item.id}`} />
         <ActionButton
-          icon="💬"
+          IconComponent={OrbiteIcon}
           label="Orbite"
           testId={`action-orbite-${item.id}`}
           onPress={() => router.push('/orbite')}
         />
         <ActionButton
-          icon="📡"
+          IconComponent={TransmetIcon}
           label="Transmet"
           testId={`action-transmet-${item.id}`}
           onPress={() => router.push('/(tabs)/nebuleuse')}
         />
-        <ActionButton icon="🔗" label="Lien" testId={`action-lien-${item.id}`} />
+        <ActionButton IconComponent={LinkIcon} label="Lien" testId={`action-lien-${item.id}`} />
       </View>
 
       {/* Bottom content */}
@@ -252,7 +247,7 @@ function FeedItemCard({ item, itemHeight }: { item: FeedItem; itemHeight: number
           {item.reactions.map((r) => (
             <ReactionBubble
               key={r.key}
-              icon={r.icon}
+              IconComponent={r.IconComponent}
               label={r.label}
               count={r.count}
               active={!!activeReactions[r.key]}
