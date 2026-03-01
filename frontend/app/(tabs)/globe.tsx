@@ -28,6 +28,7 @@ import {
   GlobeIcon,
   CreateIcon,
 } from '../../src/components/icons/KoraIcons';
+import QuantumZoom, { SimpleQuantumZoom } from '../../src/components/QuantumZoom';
 
 const { width: SW } = Dimensions.get('window');
 
