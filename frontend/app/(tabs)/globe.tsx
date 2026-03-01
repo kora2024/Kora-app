@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, Suspense } from 'react';
 import {
   View,
   Text,
@@ -7,56 +7,50 @@ import {
   Animated,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
-import { getGlobeHTML } from '../../src/globe/globeHTML';
 import { haptic } from '../../src/utils/haptics';
+import KoraGlobe from '../../src/globe/KoraGlobe';
 
 const { width: SW } = Dimensions.get('window');
+
+// Loading component for Globe
+function GlobeLoader() {
+  return (
+    <View style={styles.loadingOverlay}>
+      <LinearGradient
+        colors={['#0a1829', '#060d17']}
+        style={styles.loadingGlobe}
+      >
+        <ActivityIndicator size="large" color={COLORS.blue} />
+      </LinearGradient>
+      <Text style={styles.loadingLabel}>Chargement du globe...</Text>
+    </View>
+  );
+}
 
 export default function GlobeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeTerritory, setActiveTerritory } = useKoraStore();
   const [globeReady, setGlobeReady] = useState(false);
+  const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Hint animation
+  // Animations
   const hintOpacity = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const cardSlide = useRef(new Animated.Value(20)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
+  const gpsToastOpacity = useRef(new Animated.Value(0)).current;
 
-  // Timeout fallback for globe loading (web/iframe)
+  // Mark globe as ready after mount
   useEffect(() => {
-    const timer = setTimeout(() => setGlobeReady(true), 3000);
-    // Listen for iframe messages on web
-    if (Platform.OS === 'web') {
-      const handler = (event: MessageEvent) => {
-        try {
-          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-          if (data.type === 'ready') setGlobeReady(true);
-          else if (data.type === 'select') {
-            const territory = TERRITORIES.find((t) => t.id === data.territory.id);
-            if (territory) setActiveTerritory(territory);
-          } else if (data.type === 'doubletap') {
-            const territory = TERRITORIES.find((t) => t.id === data.territory);
-            if (territory) setActiveTerritory(territory);
-            haptic.heavy();
-            router.push('/(tabs)/feed');
-          } else if (data.type === 'longpress_navigate') {
-            haptic.heavy();
-            router.push('/(tabs)/feed');
-          }
-        } catch {}
-      };
-      window.addEventListener('message', handler);
-      return () => { clearTimeout(timer); window.removeEventListener('message', handler); };
-    }
+    const timer = setTimeout(() => setGlobeReady(true), 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -84,27 +78,30 @@ export default function GlobeScreen() {
     ).start();
   }, []);
 
-  const handleWebViewMessage = useCallback((event: any) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-      if (data.type === 'ready') {
-        setGlobeReady(true);
-      } else if (data.type === 'select') {
-        const territory = TERRITORIES.find((t) => t.id === data.territory.id);
-        if (territory) setActiveTerritory(territory);
-      } else if (data.type === 'doubletap') {
-        const territory = TERRITORIES.find((t) => t.id === data.territory);
-        if (territory) setActiveTerritory(territory);
-        router.push('/(tabs)/feed');
-      } else if (data.type === 'longpress_navigate') {
-        router.push('/(tabs)/feed');
-      }
-    } catch (e) {
-      // ignore
-    }
+  // Handle territory selection from globe
+  const handleTerritorySelect = useCallback((territory: Territory) => {
+    haptic.light();
+    setActiveTerritory(territory);
+  }, [setActiveTerritory]);
+
+  // Handle double tap on territory
+  const handleTerritoryDoubleTap = useCallback((territory: Territory) => {
+    haptic.heavy();
+    setActiveTerritory(territory);
+    router.push('/(tabs)/feed');
   }, [setActiveTerritory, router]);
 
-  const globeHtml = getGlobeHTML();
+  // Handle GPS click (raycasting result)
+  const handleGPSClick = useCallback((lat: number, lng: number) => {
+    setLastGPSClick({ lat, lng });
+    
+    // Show GPS toast
+    Animated.sequence([
+      Animated.timing(gpsToastOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(2500),
+      Animated.timing(gpsToastOpacity, { toValue: 0, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [gpsToastOpacity]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="globe-screen">
@@ -116,44 +113,55 @@ export default function GlobeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 3D Globe - Platform adaptive */}
+      {/* 3D Native Globe */}
       <View style={styles.globeContainer}>
         {Platform.OS === 'web' ? (
-          <iframe
-            srcDoc={globeHtml}
-            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0D0D0D' } as any}
-            title="KORA Globe"
-            allowFullScreen
-          />
-        ) : (
-          <WebView
-            testID="globe-webview"
-            source={{ html: globeHtml }}
-            style={styles.webview}
-            scrollEnabled={false}
-            bounces={false}
-            javaScriptEnabled={true}
-            onMessage={handleWebViewMessage}
-            originWhitelist={['*']}
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            overScrollMode="never"
-            {...(Platform.OS === 'android' ? { hardwareAccelerationDisabledAndroid: false } : {})}
-          />
-        )}
-        {/* Loading overlay */}
-        {!globeReady && (
-          <View style={styles.loadingOverlay}>
+          // Web fallback - simple styled view with message
+          <View style={styles.webFallback}>
             <LinearGradient
-              colors={['#0a1829', '#060d17']}
-              style={styles.loadingGlobe}
-            >
-              <Text style={styles.loadingText}>◉</Text>
-            </LinearGradient>
-            <Text style={styles.loadingLabel}>Chargement du globe...</Text>
+              colors={['#0a1829', '#060d17', '#000000']}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.webGlobeCircle}>
+              <Text style={styles.webGlobeEmoji}>🌍</Text>
+            </View>
+            <Text style={styles.webFallbackText}>Globe 3D interactif</Text>
+            <Text style={styles.webFallbackSubtext}>Disponible sur l'app mobile</Text>
           </View>
+        ) : (
+          <Suspense fallback={<GlobeLoader />}>
+            <KoraGlobe
+              onTerritorySelect={handleTerritorySelect}
+              onTerritoryDoubleTap={handleTerritoryDoubleTap}
+              onGPSClick={handleGPSClick}
+            />
+          </Suspense>
         )}
+
+        {/* Loading overlay */}
+        {!globeReady && Platform.OS !== 'web' && <GlobeLoader />}
       </View>
+
+      {/* GPS Coordinates Toast */}
+      <Animated.View
+        style={[
+          styles.gpsToast,
+          { opacity: gpsToastOpacity },
+        ]}
+        pointerEvents="none"
+      >
+        <View style={styles.gpsToastContent}>
+          <Text style={styles.gpsToastIcon}>📍</Text>
+          <View>
+            <Text style={styles.gpsToastLabel}>Coordonnées GPS</Text>
+            {lastGPSClick && (
+              <Text style={styles.gpsToastCoords}>
+                {lastGPSClick.lat.toFixed(3)}°, {lastGPSClick.lng.toFixed(3)}°
+              </Text>
+            )}
+          </View>
+        </View>
+      </Animated.View>
 
       {/* Territory preview card */}
       <Animated.View
@@ -165,7 +173,10 @@ export default function GlobeScreen() {
         <TouchableOpacity
           style={styles.previewCard}
           testID="globe-territory-preview"
-          onPress={() => router.push('/(tabs)/territoire')}
+          onPress={() => {
+            haptic.medium();
+            router.push('/(tabs)/territoire');
+          }}
           activeOpacity={0.8}
         >
           <View style={[styles.previewAvatar, { backgroundColor: activeTerritory.color }]}>
@@ -236,11 +247,44 @@ const styles = StyleSheet.create({
   globeContainer: {
     flex: 1,
     marginTop: -10,
+    backgroundColor: COLORS.dark,
   },
-  webview: {
+  // Web fallback
+  webFallback: {
     flex: 1,
-    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  webGlobeCircle: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(26, 58, 92, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(74, 127, 165, 0.3)',
+    shadowColor: '#4A7FA5',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 30,
+  },
+  webGlobeEmoji: {
+    fontSize: 80,
+  },
+  webFallbackText: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: COLORS.cream,
+    marginTop: 24,
+  },
+  webFallbackSubtext: {
+    fontFamily: FONTS.jostExtraLight,
+    fontSize: 14,
+    color: COLORS.gray,
+    marginTop: 8,
+  },
+  // Loading
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: COLORS.dark,
@@ -255,16 +299,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     opacity: 0.6,
   },
-  loadingText: {
-    fontSize: 24,
-    color: COLORS.blue,
-  },
   loadingLabel: {
     fontFamily: FONTS.jostExtraLight,
     fontSize: 12,
     color: 'rgba(255,255,255,0.3)',
     marginTop: 12,
     letterSpacing: 1,
+  },
+  // GPS Toast
+  gpsToast: {
+    position: 'absolute',
+    top: 100,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(26, 26, 26, 0.95)',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+    shadowColor: '#FFD700',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  gpsToastContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gpsToastIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  gpsToastLabel: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: COLORS.gold,
+    letterSpacing: 1,
+  },
+  gpsToastCoords: {
+    fontFamily: FONTS.jetbrainsMono,
+    fontSize: 14,
+    color: COLORS.cream,
+    marginTop: 2,
   },
   // Preview card
   previewWrapper: {
