@@ -25,13 +25,15 @@ export const FONTS = {
   jetbrainsMono: 'JetBrainsMono_400Regular',
 };
 
+// UPGRADE 5 — Épure et respiration
+// Une galerie d'art ne remplit pas ses murs
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: 8,
+  sm: 16,
+  md: 24,
+  lg: 40,
+  xl: 60,
+  xxl: 80,
 };
 
 export const RADIUS = {
@@ -39,4 +41,10 @@ export const RADIUS = {
   md: 16,
   lg: 24,
   xl: 50,
+};
+
+// Typography constraints
+export const TYPOGRAPHY = {
+  minFontSize: 12,
+  lineHeight: 1.6,
 };
