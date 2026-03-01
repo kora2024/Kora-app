@@ -14,6 +14,7 @@ import { MockEclat } from '../data/mockEclats';
 interface GlobeProps {
   onTerritorySelect?: (territory: Territory) => void;
   onTerritoryDoubleTap?: (territory: Territory) => void;
+  onTerritoryLongPress?: (territory: Territory) => void; // UPGRADE 19 — Ancrage
   onGPSClick?: (lat: number, lng: number) => void;
   onEclatTap?: (eclat: Eclat) => void;
   onMockEclatTap?: (eclat: MockEclat) => void;
@@ -21,6 +22,7 @@ interface GlobeProps {
   isUserSovereign?: boolean;
   eclats?: Eclat[];
   mockEclats?: MockEclat[];
+  ancrages?: { territoireId: string; lat: number; lng: number }[]; // UPGRADE 19
 }
 
 export interface GlobeRef {
