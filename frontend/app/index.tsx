@@ -1,9 +1,11 @@
 /**
- * KORA Index — UPGRADE 16 (Onboarding unique)
+ * KORA Index — UPGRADE 16 & 17 (Onboarding unique + Biométrie)
  * 
  * L'Éveil est un rite de passage.
  * On ne se marie pas deux fois dans la même cérémonie.
  * Une seule fois. Pour toujours.
+ * 
+ * La biométrie protège ton territoire.
  */
 
 import React, { useEffect, useState } from 'react';
@@ -42,9 +44,9 @@ export default function Index() {
     );
   }
 
-  // Si l'Éveil est complété → GlobeScreen
+  // Si l'Éveil est complété → Écran biométrique
   // Sinon → EveilScreen
-  return <Redirect href={hasCompletedEveil ? '/(tabs)/globe' : '/eveil'} />;
+  return <Redirect href={hasCompletedEveil ? '/biometric' : '/eveil'} />;
 }
 
 const styles = StyleSheet.create({
