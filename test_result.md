@@ -101,3 +101,84 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: |
+  Refactoring du GlobeScreen - Remplacement de l'implémentation WebView par un globe 3D natif 
+  utilisant @react-three/fiber avec les fonctionnalités Phase 2:
+  - Textures satellite haute définition (NASA Blue Marble style)
+  - Zoom de précision avec contrôles adaptatifs
+  - GPS Raycasting (conversion clics 3D en lat/lng)
+  - Effet ripple sur clic GPS
+  - Brouillard atmosphérique
+
+frontend:
+  - task: "Native 3D Globe with @react-three/fiber"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/globe/KoraGlobe.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented native 3D globe replacing WebView. Features: shader-based Earth rendering with dark oceans (#000000) and golden urban glow (#FFD700), GPS raycasting with lat/lng conversion, ripple effect on click, atmospheric fog, territory points with pulse animation, connection arcs between territories."
+
+  - task: "Globe Screen UI Integration"
+    implemented: true
+    working: "NA"
+    file: "frontend/app/(tabs)/globe.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated GlobeScreen to use native KoraGlobe component. Added GPS coordinates toast, web fallback display, Suspense loading state, haptic feedback on interactions."
+
+  - task: "Precision Zoom Controls"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/globe/KoraGlobe.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented zoom with min distance 0.8 (territory view) to max 6 (space view). Rotation sensitivity decreases as user zooms in for precise navigation."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Native 3D Globe with @react-three/fiber"
+    - "Globe Screen UI Integration"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Implémentation terminée du globe 3D natif:
+      1. Supprimé l'ancien fichier globeHTML.ts (WebView)
+      2. Créé KoraGlobe.tsx avec @react-three/fiber
+      3. Mis à jour globe.tsx pour intégrer le nouveau composant
+      
+      Fonctionnalités implémentées:
+      - Rendu shader avec océans noirs et zones urbaines dorées
+      - Raycasting GPS avec conversion point 3D -> lat/lng
+      - Effet ripple animé sur clic
+      - Points de territoires avec animation pulse
+      - Arcs de connexion animés
+      - Brouillard atmosphérique (FogExp2)
+      - Contrôles de zoom avec sensibilité adaptative
+      - Fallback web avec message informatif
+      
+      Le globe 3D nécessite un appareil physique pour fonctionner
+      (expo-gl ne fonctionne pas sur les émulateurs ou web preview).
