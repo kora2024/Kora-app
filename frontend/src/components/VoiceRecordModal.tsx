@@ -14,6 +14,7 @@ import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING } from '../theme';
 import { haptic } from '../utils/haptics';
 import { saveEclatAudio, createEclat, Eclat } from '../utils/eclatStorage';
+import { MicIcon, StopIcon, SparkleIcon } from './icons/KoraIcons';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const MAX_DURATION_MS = 120000; // 2 minutes
