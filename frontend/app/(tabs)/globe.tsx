@@ -217,6 +217,34 @@ export default function GlobeScreen() {
     }
   }, [globeReady]);
 
+  // ════════════════════════════════════════════════════════════════════════════
+  // UPGRADE 22 — Live Stream Handler
+  // ════════════════════════════════════════════════════════════════════════════
+  
+  const handleLiveEclat = useCallback((event: LiveEclatEvent) => {
+    // Show toast notification
+    const icon = event.isFromAncrage ? '●' : '○';
+    showToast('emission', `${icon} ${event.territory.name} émet`, undefined, 3000);
+    
+    // Haptic feedback
+    haptic.light();
+    
+    console.log('📡 Live éclat reçu:', event.territory.name);
+  }, []);
+  
+  // Start live stream simulation when globe is ready
+  useEffect(() => {
+    if (globeReady) {
+      const unsubscribe = liveStream.subscribe(handleLiveEclat);
+      liveStream.start();
+      
+      return () => {
+        unsubscribe();
+        liveStream.stop();
+      };
+    }
+  }, [globeReady, handleLiveEclat]);
+
   useEffect(() => {
     // Show hint after 2s, hide after 6s
     Animated.sequence([
