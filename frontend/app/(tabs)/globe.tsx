@@ -352,10 +352,10 @@ export default function GlobeScreen() {
             onPress={handleFocusHome}
             activeOpacity={0.7}
           >
-            <Text style={styles.homeBtnIcon}>🏠</Text>
+            <HomeIcon size={18} color={COLORS.gold} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.settingsBtn} testID="globe-settings-btn" activeOpacity={0.7}>
-            <Text style={styles.settingsIcon}>⚙</Text>
+            <SettingsIcon size={16} color={COLORS.cream} />
           </TouchableOpacity>
         </View>
       </View>
