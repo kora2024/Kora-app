@@ -336,6 +336,9 @@ export default function FeedScreen() {
         decelerationRate="fast"
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        windowSize={5}
+        maxToRenderPerBatch={3}
+        removeClippedSubviews
         getItemLayout={(_, index) => ({
           length: itemHeight,
           offset: itemHeight * index,
