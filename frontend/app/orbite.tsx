@@ -64,6 +64,7 @@ function OrbitalBubble({
   }, []);
 
   const handleTap = () => {
+    haptic.light();
     setTapped((p) => !p);
     Animated.sequence([
       Animated.spring(tapScale, { toValue: 1.2, useNativeDriver: true, speed: 50, bounciness: 12 }),
