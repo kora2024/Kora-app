@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, FONTS, SPACING } from '../../src/theme';
+import { COLORS, FONTS, SPACING, TYPOGRAPHY } from '../../src/theme';
 import { haptic } from '../../src/utils/haptics';
 import { CloseIcon } from '../../src/components/icons/KoraIcons';
 
