@@ -1,3 +1,14 @@
+/**
+ * KORA Root Layout — UPGRADE 7 (Transitions Fluides)
+ * 
+ * Configuration des animations de navigation :
+ * - default: fade simple (280ms)
+ * - orbite: slide_from_bottom (expansion orbitale)
+ * - noyau: slide_from_right (descente centrale)
+ * - eveil: fade (onboarding)
+ * - tabs: fade
+ */
+
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -18,8 +29,20 @@ import {
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import * as SplashScreen from 'expo-splash-screen';
 import { COLORS } from '../src/theme';
+import TransitionOverlay from '../src/components/TransitionOverlay';
 
 SplashScreen.preventAutoHideAsync();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TRANSITION CONFIGURATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+const TRANSITION_DURATION = {
+  fast: 200,
+  normal: 280,
+  slow: 400,
+  cinematic: 500,
+};
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -51,18 +74,66 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
+      
+      {/* Overlay de transition (flash subtil) */}
+      <TransitionOverlay />
+      
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: COLORS.dark },
+          // Animation par défaut : fade élégant
           animation: 'fade',
+          animationDuration: TRANSITION_DURATION.normal,
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="eveil" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="(tabs)" options={{ gestureEnabled: false }} />
-        <Stack.Screen name="orbite" options={{ animation: 'slide_from_right' }} />
-        <Stack.Screen name="noyau" options={{ animation: 'slide_from_right' }} />
+        {/* Écran d'accueil */}
+        <Stack.Screen 
+          name="index"
+          options={{
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.fast,
+          }}
+        />
+        
+        {/* Onboarding — fade lent */}
+        <Stack.Screen 
+          name="eveil" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.slow,
+          }} 
+        />
+        
+        {/* Tabs principaux — fade cinématique */}
+        <Stack.Screen 
+          name="(tabs)" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.cinematic,
+          }} 
+        />
+        
+        {/* Orbite (commentaires) — expansion depuis le bas */}
+        <Stack.Screen 
+          name="orbite" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            animationDuration: TRANSITION_DURATION.normal,
+            presentation: 'card',
+          }} 
+        />
+        
+        {/* Noyau — slide depuis la droite (descente) */}
+        <Stack.Screen 
+          name="noyau" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.slow,
+          }} 
+        />
       </Stack>
     </>
   );
