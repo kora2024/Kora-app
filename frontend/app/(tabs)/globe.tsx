@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS, FONTS, SPACING } from '../../src/theme';
+import { COLORS, FONTS, SPACING, TYPOGRAPHY } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
 import KoraGlobe, { GlobeRef } from '../../src/globe/KoraGlobe';
