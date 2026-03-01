@@ -99,6 +99,16 @@ export default function TerritoireScreen() {
             HEADER — Épuré : Avatar + Nom + Rôle uniquement
         ═══════════════════════════════════════════════════════════════ */}
         <View style={styles.headerSection}>
+          {/* Settings Button — Top Right */}
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => router.push('/settings')}
+            activeOpacity={0.7}
+            testID="settings-btn"
+          >
+            <SettingsIcon size={22} color={COLORS.gray} strokeWidth={1.2} />
+          </TouchableOpacity>
+          
           {/* Avatar */}
           <View style={styles.avatarWrap}>
             <LinearGradient
