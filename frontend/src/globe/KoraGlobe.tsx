@@ -535,7 +535,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       isAnimatingToTarget.current = true;
       autoRotate.current = false;
     },
-    addEclat: addEclatToGlobe,
+    addEclat: addUserEclatToGlobe, // UPGRADE 15: Use user eclat with birth animation
     addMockEclat: addMockEclatToGlobe,
   }));
 
