@@ -42,13 +42,13 @@ interface FeedItem {
   initial: string;
   avatarColors: [string, string];
   text: string;
-  reactions: { key: string; icon: string; label: string; count: number }[];
+  reactions: { key: string; IconComponent: React.FC<{size?: number; color?: string}>; label: string; count: number }[];
 }
 
 const FEED_DATA: FeedItem[] = [
   {
     id: '1',
-    emoji: '🎵',
+    emoji: '',
     gradient: ['#0a1a12', '#081510'],
     author: 'Kévin Désir',
     location: 'Fort-de-France',
@@ -57,16 +57,16 @@ const FEED_DATA: FeedItem[] = [
     avatarColors: [COLORS.terra, COLORS.gold],
     text: 'La kora résonne dans chaque algorithme. Nos ancêtres codaient en musique, chaque note une ligne de code vivante.',
     reactions: [
-      { key: 'resonne', icon: '✦', label: 'Résonne', count: 127 },
-      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 34 },
-      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 22 },
-      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 89 },
-      { key: 'transmet', icon: '📡', label: 'Transmet', count: 67 },
+      { key: 'resonne', IconComponent: ResonneIcon, label: 'Résonne', count: 127 },
+      { key: 'propulse', IconComponent: PropulseIcon, label: 'Propulse', count: 34 },
+      { key: 'eveille', IconComponent: EveillIcon, label: 'Éveille', count: 22 },
+      { key: 'ancre', IconComponent: AncreIcon, label: 'Ancre', count: 89 },
+      { key: 'transmet', IconComponent: TransmetIcon, label: 'Transmet', count: 67 },
     ],
   },
   {
     id: '2',
-    emoji: '🌊',
+    emoji: '',
     gradient: ['#0a0f1e', '#060a15'],
     author: 'Marcel Théodore',
     location: 'Saint-Pierre',
@@ -75,16 +75,16 @@ const FEED_DATA: FeedItem[] = [
     avatarColors: [COLORS.blue, '#2a5a7a'],
     text: "L'océan ne connaît pas de frontières. Notre mémoire voyage sur chaque vague, de continent en continent.",
     reactions: [
-      { key: 'resonne', icon: '✦', label: 'Résonne', count: 203 },
-      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 56 },
-      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 41 },
-      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 178 },
-      { key: 'transmet', icon: '📡', label: 'Transmet', count: 92 },
+      { key: 'resonne', IconComponent: ResonneIcon, label: 'Résonne', count: 203 },
+      { key: 'propulse', IconComponent: PropulseIcon, label: 'Propulse', count: 56 },
+      { key: 'eveille', IconComponent: EveillIcon, label: 'Éveille', count: 41 },
+      { key: 'ancre', IconComponent: AncreIcon, label: 'Ancre', count: 178 },
+      { key: 'transmet', IconComponent: TransmetIcon, label: 'Transmet', count: 92 },
     ],
   },
   {
     id: '3',
-    emoji: '🔥',
+    emoji: '',
     gradient: ['#1a0a08', '#120605'],
     author: 'Pulse Records',
     location: 'Lagos',
@@ -93,11 +93,11 @@ const FEED_DATA: FeedItem[] = [
     avatarColors: ['#C9A84C', '#A65D47'],
     text: 'Le feu ne demande pas la permission de brûler. Créer, c\'est allumer des incendies qui éclairent.',
     reactions: [
-      { key: 'resonne', icon: '✦', label: 'Résonne', count: 445 },
-      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 112 },
-      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 67 },
-      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 234 },
-      { key: 'transmet', icon: '📡', label: 'Transmet', count: 189 },
+      { key: 'resonne', IconComponent: ResonneIcon, label: 'Résonne', count: 445 },
+      { key: 'propulse', IconComponent: PropulseIcon, label: 'Propulse', count: 112 },
+      { key: 'eveille', IconComponent: EveillIcon, label: 'Éveille', count: 67 },
+      { key: 'ancre', IconComponent: AncreIcon, label: 'Ancre', count: 234 },
+      { key: 'transmet', IconComponent: TransmetIcon, label: 'Transmet', count: 189 },
     ],
   },
 ];
