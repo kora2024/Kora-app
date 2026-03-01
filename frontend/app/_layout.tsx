@@ -106,6 +106,16 @@ export default function RootLayout() {
           }} 
         />
         
+        {/* Biometric — UPGRADE 17 */}
+        <Stack.Screen 
+          name="biometric" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.fast,
+          }} 
+        />
+        
         {/* Tabs principaux — fade cinématique */}
         <Stack.Screen 
           name="(tabs)" 
