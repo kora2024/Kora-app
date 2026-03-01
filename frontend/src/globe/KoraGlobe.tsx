@@ -248,6 +248,10 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   // Cultural resonance arcs
   const resonanceArcsRef = useRef<THREE.Line[]>([]);
   
+  // Éclats vocaux (terracotta points)
+  const eclatMeshesRef = useRef<THREE.Mesh[]>([]);
+  const eclatAurasRef = useRef<THREE.Mesh[]>([]);
+  
   // Ripple effects
   const ripplesRef = useRef<THREE.Mesh[]>([]);
 
