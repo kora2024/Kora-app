@@ -3,11 +3,26 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { COLORS, FONTS } from '../../src/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  GlobeIcon,
+  FeedIcon,
+  CreateIcon,
+  NebulaIcon,
+  TerritoireIcon,
+} from '../../src/components/icons/KoraIcons';
 
-function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
+interface TabIconProps {
+  icon: React.ReactNode;
+  label: string;
+  focused: boolean;
+}
+
+function TabIcon({ icon, label, focused }: TabIconProps) {
   return (
     <View style={styles.tabItem}>
-      <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>{icon}</Text>
+      <View style={styles.tabIconContainer}>
+        {icon}
+      </View>
       <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
       {focused && <View style={styles.activeIndicator} />}
     </View>
