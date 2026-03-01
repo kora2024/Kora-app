@@ -16,10 +16,11 @@ import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
 import KoraGlobe, { GlobeRef } from '../../src/globe/KoraGlobe';
+import VoiceRecordModal from '../../src/components/VoiceRecordModal';
 
 const { width: SW } = Dimensions.get('window');
 
-// Mock user location (Fort-de-France - sovereign territory)
+// Mock user location (Fort-de-France - sovereign territory, UTC-4)
 const USER_LOCATION = { lat: 14.6, lng: -61.0 };
 const IS_USER_SOVEREIGN = true;
 
@@ -44,6 +45,7 @@ export default function GlobeScreen() {
   const { activeTerritory, setActiveTerritory } = useKoraStore();
   const [globeReady, setGlobeReady] = useState(false);
   const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
+  const [voiceModalVisible, setVoiceModalVisible] = useState(false);
   
   // Globe ref for camera control
   const globeRef = useRef<GlobeRef>(null);
