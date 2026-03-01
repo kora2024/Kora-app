@@ -441,8 +441,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionIcon: {
-    fontSize: 18,
+  actionIconContainer: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionLabel: {
     fontFamily: FONTS.jostExtraLight,
