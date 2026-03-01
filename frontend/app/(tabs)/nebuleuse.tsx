@@ -523,9 +523,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   msgText: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: COLORS.cream,
-    lineHeight: 14 * 1.6,
+    ...TYPOGRAPHY.body,
   },
 });
