@@ -285,6 +285,48 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   // EXPOSE focusOnTarget VIA REF
   // ============================================
   
+  // Function to add an Éclat to the globe
+  const addEclatToGlobe = useCallback((eclat: Eclat) => {
+    if (!globeGroupRef.current || !sceneRef.current) return;
+    
+    const pos = latLngToVector3(eclat.lat, eclat.lng, 1.04);
+    const TERRA = 0xA65D47; // Terracotta color
+    
+    // Create core point (16px equivalent, ~0.02 in 3D)
+    const coreGeo = new THREE.SphereGeometry(0.02, 16, 16);
+    const coreMat = new THREE.MeshPhongMaterial({
+      color: TERRA,
+      emissive: TERRA,
+      emissiveIntensity: 0.6,
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    coreMesh.position.copy(pos);
+    coreMesh.userData = { eclat, isEclat: true };
+    globeGroupRef.current.add(coreMesh);
+    eclatMeshesRef.current.push(coreMesh);
+    
+    // Create pulsing aura (glow effect)
+    const auraGeo = new THREE.RingGeometry(0.025, 0.05, 32);
+    const auraMat = new THREE.MeshBasicMaterial({
+      color: TERRA,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide,
+    });
+    const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+    auraMesh.position.copy(pos);
+    auraMesh.lookAt(0, 0, 0);
+    auraMesh.userData = { 
+      isEclatAura: true, 
+      startTime: clockRef.current?.getElapsedTime() || 0,
+      eclatId: eclat.id,
+    };
+    globeGroupRef.current.add(auraMesh);
+    eclatAurasRef.current.push(auraMesh);
+    
+    console.log('Éclat ajouté au globe:', eclat.id);
+  }, []);
+  
   useImperativeHandle(ref, () => ({
     focusOnTarget: (lat: number, lng: number) => {
       const target = latLngToSpherical(lat, lng);
@@ -295,6 +337,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       isAnimatingToTarget.current = true;
       autoRotate.current = false;
     },
+    addEclat: addEclatToGlobe,
   }));
 
   // Create ripple effect
