@@ -296,6 +296,9 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   
   // Ripple effects
   const ripplesRef = useRef<THREE.Mesh[]>([]);
+  
+  // UPGRADE 8: Night sphere for day/night cycle
+  const nightSphereRef = useRef<{ mesh: THREE.Mesh; material: THREE.ShaderMaterial } | null>(null);
 
   // Spherical rotation state
   const spherical = useRef({
