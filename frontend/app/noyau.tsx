@@ -137,6 +137,12 @@ function CentralSphere({ onTap, onLongPress }: CentralSphereProps) {
 export default function NoyauScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  
+  // UPGRADE 12: Emission Mode state
+  const [emissionModeActive, setEmissionModeActive] = useState(false);
+  
+  // Mock user location (Fort-de-France)
+  const userLocation = { lat: 14.6, lng: -61.08 };
 
   // Entrance animation
   const contentOpacity = useRef(new Animated.Value(0)).current;
@@ -148,6 +154,23 @@ export default function NoyauScreen() {
       Animated.timing(contentSlide, { toValue: 0, duration: 600, delay: 400, useNativeDriver: true }),
     ]).start();
   }, []);
+  
+  // Tap on sphere → open Nébuleuse (messages)
+  const handleSphereTap = () => {
+    router.push('/(tabs)/nebuleuse');
+  };
+  
+  // Long press on sphere → Emission Mode
+  const handleSphereLongPress = () => {
+    setEmissionModeActive(true);
+  };
+  
+  // Handle Éclat creation
+  const handleEclatCreated = (eclat: Eclat) => {
+    console.log('Éclat created:', eclat.id);
+    // Navigate to Globe to see the new Éclat
+    router.push('/(tabs)/globe');
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="noyau-screen">
@@ -167,8 +190,12 @@ export default function NoyauScreen() {
       >
         {/* ═══════════════════════════════════════════════════════════════
             CENTRAL SPHERE — 50% of screen, nothing else above fold
+            Tap = Nébuleuse, Long Press (800ms) = Emission Mode
         ═══════════════════════════════════════════════════════════════ */}
-        <CentralSphere />
+        <CentralSphere 
+          onTap={handleSphereTap}
+          onLongPress={handleSphereLongPress}
+        />
 
         {/* ═══════════════════════════════════════════════════════════════
             CONTENT BELOW FOLD — Animated entrance
