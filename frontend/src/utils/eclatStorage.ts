@@ -12,6 +12,7 @@ export interface Eclat {
   lng: number;
   createdAt: string;
   duration: number; // in milliseconds
+  transcription?: string; // UPGRADE 14 — Transcription organique (MOCK)
 }
 
 /**
