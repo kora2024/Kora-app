@@ -270,7 +270,7 @@ export default function EveilScreen() {
   const handleResetEveil = useCallback(async () => {
     Alert.alert(
       'Réinitialiser l\'Éveil',
-      'Cette action effacera toutes vos données et redémarrera l\'application. Êtes-vous sûr ?',
+      'Cette action effacera toutes vos données. L\'application redémarrera. Êtes-vous sûr ?',
       [
         { text: 'Annuler', style: 'cancel' },
         {
@@ -287,14 +287,15 @@ export default function EveilScreen() {
               ]);
               
               haptic.heavy();
+              setShowDevMenu(false);
               
-              // Try to reload app (works in development)
-              try {
-                await Updates.reloadAsync();
-              } catch {
-                // In development, just navigate back to index
-                router.replace('/');
-              }
+              // Reset step to 0 and reload the page
+              setStep(0);
+              Alert.alert(
+                'Éveil réinitialisé',
+                'Fermez et rouvrez l\'application pour recommencer.',
+                [{ text: 'OK' }]
+              );
             } catch (error) {
               console.error('Reset error:', error);
               Alert.alert('Erreur', 'Impossible de réinitialiser. Réessayez.');
@@ -303,7 +304,7 @@ export default function EveilScreen() {
         },
       ]
     );
-  }, [router]);
+  }, []);
 
   const handleContinueStep1 = () => {
     animateStepTransition(1);
