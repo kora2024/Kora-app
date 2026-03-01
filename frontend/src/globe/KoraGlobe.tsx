@@ -473,6 +473,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
 
     // ============================================
     // TERRITORY NODES with Nebula Float Animation
+    // + AXE 1: Circadian cycle dimming
     // ============================================
     
     dotMeshes.current = [];
@@ -481,21 +482,29 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     TERRITORIES.forEach((t, index) => {
       const pos = latLngToVector3(t.lat, t.lng, 1.02);
       const size = t.size / 350;
+      
+      // Check if territory is in nighttime
+      const inNight = isPointInNight(t.lng);
+      const nightDimFactor = inNight ? 0.3 : 1.0;
 
-      // Core node - subtle grey/white, not golden
+      // Core node - dimmed if in night
       const dotGeo = new THREE.SphereGeometry(size, 16, 16);
       const dotMat = new THREE.MeshPhongMaterial({ 
-        color: 0xcccccc,
+        color: inNight ? 0x666666 : 0xcccccc,
         emissive: new THREE.Color(t.color),
-        emissiveIntensity: 0.3,
+        emissiveIntensity: 0.3 * nightDimFactor,
+        opacity: inNight ? 0.6 : 1.0,
+        transparent: inNight,
       });
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.copy(pos);
       dot.userData = { 
         ...t, 
         basePosition: pos.clone(),
-        floatPhase: index * 0.5, // Staggered float animation
+        floatPhase: index * 0.5,
         floatAmplitude: 0.008 + Math.random() * 0.005,
+        isNightTime: inNight,
+        territoryLng: t.lng,
       };
       globeGroup.add(dot);
       dotMeshes.current.push(dot);
