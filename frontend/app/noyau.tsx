@@ -46,7 +46,12 @@ const ACTIVITY = [
 
 // ──────────── CENTRAL SPHERE ────────────
 
-function CentralSphere() {
+interface CentralSphereProps {
+  onTap: () => void;
+  onLongPress: () => void;
+}
+
+function CentralSphere({ onTap, onLongPress }: CentralSphereProps) {
   const pulseScale = useRef(new Animated.Value(1)).current;
   const glowOpacity = useRef(new Animated.Value(0.3)).current;
 
@@ -73,6 +78,13 @@ function CentralSphere() {
       Animated.spring(pulseScale, { toValue: 0.95, useNativeDriver: true, speed: 50 }),
       Animated.spring(pulseScale, { toValue: 1, useNativeDriver: true, speed: 20, bounciness: 12 }),
     ]).start();
+    onTap();
+  };
+
+  const handleLongPress = () => {
+    // UPGRADE 12: Trigger Emission Mode
+    haptic.heavy();
+    onLongPress();
   };
 
   // 50% of screen height for the sphere area
@@ -94,8 +106,14 @@ function CentralSphere() {
         ]} 
       />
 
-      {/* Main sphere */}
-      <TouchableOpacity onPress={handleTap} activeOpacity={0.9} testID="noyau-sphere-btn">
+      {/* Main sphere — Tap + Long Press */}
+      <TouchableOpacity 
+        onPress={handleTap} 
+        onLongPress={handleLongPress}
+        delayLongPress={800}
+        activeOpacity={0.9} 
+        testID="noyau-sphere-btn"
+      >
         <Animated.View style={{ transform: [{ scale: pulseScale }] }}>
           <LinearGradient
             colors={['#e8a882', COLORS.terra, '#6b2d1a']}
