@@ -1191,6 +1191,56 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   const handleTouchEnd = useCallback((e: any) => {
     isDragging.current = false;
     
+    // ============================================
+    // UPGRADE 9: MAGNETIC SNAP ON RELEASE
+    // If within magnetic zone, snap to territory
+    // ============================================
+    
+    if (magneticTargetRef.current && magneticStrengthRef.current > 0.3) {
+      // Strong enough magnetic pull - snap to territory
+      const target = magneticTargetRef.current;
+      
+      haptic.medium();
+      
+      // Set target for smooth animation
+      targetSpherical.current = {
+        theta: (target.lng + 180) * (Math.PI / 180),
+        phi: (90 - target.lat) * (Math.PI / 180),
+      };
+      isAnimatingToTarget.current = true;
+      
+      // Select the territory
+      onTerritorySelect?.(target);
+      
+      // Reset magnetic state
+      magneticTargetRef.current = null;
+      magneticStrengthRef.current = 0;
+      
+      // Reset territory highlights with delay
+      setTimeout(() => {
+        territoryNodesRef.current.forEach((node) => {
+          node.userData.magneticScale = 1.0;
+          node.userData.magneticGlow = false;
+          const mat = node.material as THREE.MeshPhongMaterial;
+          mat.emissiveIntensity = 0.4;
+        });
+      }, 600);
+      
+      return;
+    }
+    
+    // Reset magnetic state
+    magneticTargetRef.current = null;
+    magneticStrengthRef.current = 0;
+    territoryNodesRef.current.forEach((node) => {
+      if (node.userData.magneticGlow) {
+        node.userData.magneticScale = 1.0;
+        node.userData.magneticGlow = false;
+        const mat = node.material as THREE.MeshPhongMaterial;
+        mat.emissiveIntensity = 0.4;
+      }
+    });
+    
     setTimeout(() => { 
       if (!isDragging.current && !isAnimatingToTarget.current) {
         autoRotate.current = true; 
