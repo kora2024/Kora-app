@@ -20,6 +20,14 @@ import KoraGlobe, { GlobeRef } from '../../src/globe/KoraGlobe';
 import VoiceRecordModal from '../../src/components/VoiceRecordModal';
 import EclatPlayerModal from '../../src/components/EclatPlayerModal';
 import { Eclat, getEclats, deleteEclat } from '../../src/utils/eclatStorage';
+import {
+  HomeIcon,
+  SettingsIcon,
+  PinIcon,
+  MicIcon,
+  GlobeIcon,
+  CreateIcon,
+} from '../../src/components/icons/KoraIcons';
 
 const { width: SW } = Dimensions.get('window');
 
