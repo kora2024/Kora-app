@@ -256,18 +256,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statValue: {
-    fontFamily: FONTS.playfairRegular,
-    fontSize: 28,
-    color: COLORS.cream,
+    ...TYPOGRAPHY.statValue,
   },
   statValueAccent: {
     color: COLORS.terra,
   },
   statLabel: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    letterSpacing: 2,
+    ...TYPOGRAPHY.statLabel,
     marginTop: 8,
   },
   
