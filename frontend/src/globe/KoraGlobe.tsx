@@ -290,6 +290,20 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   const eclatMeshesRef = useRef<THREE.Mesh[]>([]);
   const eclatAurasRef = useRef<THREE.Mesh[]>([]);
   
+  // UPGRADE 15 — User's own Éclats (orbiting, gold)
+  const userEclatSystemsRef = useRef<{
+    eclat: Eclat;
+    group: THREE.Group;
+    core: THREE.Mesh;
+    aura: THREE.Mesh;
+    trail: THREE.Mesh[];
+    birthPhase: 'birth' | 'travel' | 'orbit';
+    birthStartTime: number;
+    targetPosition: THREE.Vector3;
+    orbitAngle: number;
+    orbitCenter: THREE.Vector3;
+  }[]>([]);
+  
   // Mock Éclats (text-based, custom colors)
   const mockEclatMeshesRef = useRef<THREE.Mesh[]>([]);
   const mockEclatAurasRef = useRef<THREE.Mesh[]>([]);
