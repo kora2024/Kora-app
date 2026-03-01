@@ -51,7 +51,11 @@ export default function TabsLayout() {
         name="globe"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="◉" label="Globe" focused={focused} />
+            <TabIcon 
+              icon={<GlobeIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Globe" 
+              focused={focused} 
+            />
           ),
         }}
       />
@@ -59,7 +63,11 @@ export default function TabsLayout() {
         name="feed"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="▤" label="Feed" focused={focused} />
+            <TabIcon 
+              icon={<FeedIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Feed" 
+              focused={focused} 
+            />
           ),
         }}
       />
@@ -67,7 +75,11 @@ export default function TabsLayout() {
         name="create"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="✦" label="Créer" focused={focused} />
+            <TabIcon 
+              icon={<CreateIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Créer" 
+              focused={focused} 
+            />
           ),
         }}
       />
@@ -75,7 +87,11 @@ export default function TabsLayout() {
         name="nebuleuse"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="✧" label="Nébuleuse" focused={focused} />
+            <TabIcon 
+              icon={<NebulaIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Nébuleuse" 
+              focused={focused} 
+            />
           ),
         }}
       />
@@ -83,7 +99,11 @@ export default function TabsLayout() {
         name="territoire"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="◎" label="Territoire" focused={focused} />
+            <TabIcon 
+              icon={<TerritoireIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Territoire" 
+              focused={focused} 
+            />
           ),
         }}
       />
