@@ -166,6 +166,14 @@ export default function TerritoireScreen() {
           <Text style={styles.name} testID="territoire-name">Amina Diallo</Text>
           <Text style={styles.role} testID="territoire-role">{role}</Text>
           <Text style={styles.location}>{'📍 Fort-de-France, Martinique'}</Text>
+          
+          {/* AXE 3 — Sovereign ID Display */}
+          {sovereignId ? (
+            <View style={styles.sovereignIdContainer}>
+              <Text style={styles.sovereignIdLabel}>ID SOUVERAIN</Text>
+              <Text style={styles.sovereignIdValue}>{truncateSovereignId(sovereignId)}</Text>
+            </View>
+          ) : null}
 
           {/* Stats */}
           <View style={styles.statsRow}>
