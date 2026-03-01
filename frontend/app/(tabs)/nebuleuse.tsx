@@ -11,6 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
+import { haptic } from '../../src/utils/haptics';
 
 const { width: SW, height: SHH } = Dimensions.get('window');
 
