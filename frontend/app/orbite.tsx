@@ -441,9 +441,9 @@ const styles = StyleSheet.create({
   // Orbital bubbles
   orbitalBubble: {
     position: 'absolute',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: 'rgba(26,26,26,0.9)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
     borderRadius: 50,
     zIndex: 10,
   },
