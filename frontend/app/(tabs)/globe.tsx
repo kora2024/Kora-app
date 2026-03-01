@@ -820,9 +820,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     elevation: 8,
   },
-  fabIcon: {
-    fontSize: 24,
-  },
   fabInviteText: {
     fontFamily: FONTS.jostExtraLight,
     fontSize: 11,
