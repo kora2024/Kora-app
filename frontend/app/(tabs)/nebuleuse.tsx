@@ -439,6 +439,7 @@ export default function NebuleuseScreen() {
   const centerY = SHH * 0.42;
 
   const handleStarTap = useCallback((contact: StarContact) => {
+    haptic.light();
     setSelectedContact(contact);
   }, []);
 
