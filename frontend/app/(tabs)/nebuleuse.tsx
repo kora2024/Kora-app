@@ -386,9 +386,7 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
   },
   title: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 32,
-    color: COLORS.cream,
+    ...TYPOGRAPHY.heading1,
     letterSpacing: 1,
   },
   
