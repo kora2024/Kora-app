@@ -641,7 +641,7 @@ const styles = StyleSheet.create({
   timerContainer: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    marginTop: 40,
+    marginTop: 20,
   },
   timerText: {
     fontFamily: FONTS.jetbrainsMono,
