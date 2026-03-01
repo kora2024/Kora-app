@@ -955,3 +955,207 @@ export function SparkleIcon({
     </Svg>
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// BIOMETRIC ICONS — UPGRADE 17
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Fingerprint Icon — For biometric authentication
+ * Elegant fingerprint pattern
+ */
+export function FingerprintIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* Fingerprint arcs */}
+      <Path
+        d="M12 2C10.67 2 9.4 2.28 8.23 2.8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M4 7.28C2.74 8.85 2 10.84 2 13"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M6.8 4C5.45 4.92 4.34 6.16 3.57 7.6"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M22 13c0-2.16-.74-4.15-2-5.72"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M20.43 7.6c-.77-1.44-1.88-2.68-3.23-3.6"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M15.77 2.8A9.93 9.93 0 0012 2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M7 13c0 2.76 2.24 5 5 5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M17 13c0-2.76-2.24-5-5-5s-5 2.24-5 5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M12 18v4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M14.5 13c0 1.38-1.12 2.5-2.5 2.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M12 10.5c1.38 0 2.5 1.12 2.5 2.5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Face ID Icon — For facial recognition
+ * Minimal face scan pattern
+ */
+export function FaceIdIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {/* Corner brackets */}
+      <Path
+        d="M7 2H4a2 2 0 00-2 2v3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M17 2h3a2 2 0 012 2v3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M22 17v3a2 2 0 01-2 2h-3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M7 22H4a2 2 0 01-2-2v-3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Eyes */}
+      <Circle
+        cx="9"
+        cy="9"
+        r="0.5"
+        fill={color}
+      />
+      <Circle
+        cx="15"
+        cy="9"
+        r="0.5"
+        fill={color}
+      />
+      {/* Smile */}
+      <Path
+        d="M9 15c1 1 5 1 6 0"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Lock Icon — For security/blocked state
+ */
+export function LockIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect
+        x="3"
+        y="11"
+        width="18"
+        height="11"
+        rx="2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Path
+        d="M7 11V7a5 5 0 0110 0v4"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Circle
+        cx="12"
+        cy="16"
+        r="1"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
