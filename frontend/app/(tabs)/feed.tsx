@@ -17,6 +17,7 @@ import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore } from '../../src/store/useKoraStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
+const TAB_BAR_HEIGHT = 80; // approximate tab bar height
 
 // ──────────── DATA ────────────
 
