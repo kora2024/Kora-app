@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { TERRITORIES, Territory } from '../store/useKoraStore';
 import { haptic } from '../utils/haptics';
 import { Eclat } from '../utils/eclatStorage';
+import { MockEclat } from '../data/mockEclats';
 
 // ============================================
 // TYPES & INTERFACES
@@ -15,14 +16,17 @@ interface GlobeProps {
   onTerritoryDoubleTap?: (territory: Territory) => void;
   onGPSClick?: (lat: number, lng: number) => void;
   onEclatTap?: (eclat: Eclat) => void;
+  onMockEclatTap?: (eclat: MockEclat) => void;
   userLocation?: { lat: number; lng: number };
   isUserSovereign?: boolean;
   eclats?: Eclat[];
+  mockEclats?: MockEclat[];
 }
 
 export interface GlobeRef {
   focusOnTarget: (lat: number, lng: number) => void;
   addEclat: (eclat: Eclat) => void;
+  addMockEclat: (eclat: MockEclat, delay?: number) => void;
 }
 
 // ============================================
