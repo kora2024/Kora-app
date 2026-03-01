@@ -86,6 +86,11 @@ export default function GlobeScreen() {
   const firstHintOpacity = useRef(new Animated.Value(0)).current;
   const fabPulseAnimRef = useRef<Animated.CompositeAnimation | null>(null);
   const fabAuraAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  
+  // UPGRADE 11 — Quantum Zoom state
+  const [quantumZoomActive, setQuantumZoomActive] = useState(false);
+  const globeContainerScale = useRef(new Animated.Value(1)).current;
+  const globeContainerOpacity = useRef(new Animated.Value(1)).current;
 
   // Load first eclat state and eclats on mount
   useEffect(() => {
