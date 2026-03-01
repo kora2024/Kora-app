@@ -278,24 +278,15 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   noyauLabel: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    letterSpacing: 2,
+    ...TYPOGRAPHY.label,
   },
   noyauValue: {
-    fontFamily: FONTS.playfairRegular,
-    fontSize: 24,
-    color: COLORS.gold,
-    lineHeight: 24 * 1.6,
+    ...TYPOGRAPHY.cvln,
   },
   
   // ═══════════ SECTION TITLE ═══════════
   sectionTitle: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    letterSpacing: 4,
+    ...TYPOGRAPHY.label,
     marginBottom: SPACING.md,
   },
   
