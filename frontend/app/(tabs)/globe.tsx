@@ -666,40 +666,20 @@ const styles = StyleSheet.create({
     color: 'rgba(244, 241, 234, 0.8)',
     letterSpacing: 0.5,
   },
-  // GPS Toast
+  // GPS Toast — Épuré
   gpsToast: {
     position: 'absolute',
     top: 100,
     alignSelf: 'center',
-    backgroundColor: 'rgba(26, 26, 26, 0.95)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 215, 0, 0.3)',
-  },
-  gpsToastContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gpsToastIconContainer: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  gpsToastLabel: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 12,
-    color: COLORS.gold,
-    letterSpacing: 1,
+    backgroundColor: 'rgba(26, 26, 26, 0.9)',
+    borderRadius: 12,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 8,
   },
   gpsToastCoords: {
     fontFamily: FONTS.jetbrainsMono,
-    fontSize: 14,
-    color: COLORS.cream,
-    marginTop: 2,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.5)',
   },
   // Preview card
   previewWrapper: {
