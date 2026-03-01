@@ -299,7 +299,10 @@ export default function EveilScreen() {
                       key={item.id}
                       testID={`freq-option-${item.id}`}
                       style={[styles.optionCard, selected && styles.optionCardSelected]}
-                      onPress={() => toggleFrequency(item.id)}
+                      onPress={() => {
+                      haptic.selection();
+                      toggleFrequency(item.id);
+                    }}
                       activeOpacity={0.8}
                     >
                       <Text style={styles.optionIcon}>{item.icon}</Text>
