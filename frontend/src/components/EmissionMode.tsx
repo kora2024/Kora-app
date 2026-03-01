@@ -254,9 +254,12 @@ export default function EmissionMode({
         playsInSilentModeIOS: true,
       });
 
-      // Start recording
+      // Start recording with metering enabled
       const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.prepareToRecordAsync({
+        ...Audio.RecordingOptionsPresets.HIGH_QUALITY,
+        isMeteringEnabled: true,
+      });
       await recording.startAsync();
       recordingRef.current = recording;
       setIsRecording(true);
@@ -274,6 +277,20 @@ export default function EmissionMode({
           stopRecording();
         }
       }, 100);
+
+      // Start metering updates
+      meteringIntervalRef.current = setInterval(async () => {
+        if (recordingRef.current) {
+          try {
+            const status = await recordingRef.current.getStatusAsync();
+            if (status.isRecording && status.metering !== undefined) {
+              setMetering(status.metering);
+            }
+          } catch (e) {
+            // Ignore errors during status check
+          }
+        }
+      }, 50); // Update metering every 50ms for smooth visualization
     } catch (err) {
       console.error('Failed to start recording:', err);
     }
