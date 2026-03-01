@@ -47,13 +47,23 @@ export async function saveEclatAudio(tempUri: string): Promise<string> {
 /**
  * Create and store a new Eclat
  */
-export async function createEclat(
-  audioPath: string,
-  duration: number,
-  territoire: string = 'Fort-de-France',
-  lat: number = 14.6,
-  lng: number = -61.0
-): Promise<Eclat> {
+export async function createEclat(params: {
+  audioPath: string;
+  duration: number;
+  territoire?: string;
+  lat?: number;
+  lng?: number;
+  transcription?: string;
+}): Promise<Eclat> {
+  const {
+    audioPath,
+    duration,
+    territoire = 'Fort-de-France',
+    lat = 14.6,
+    lng = -61.0,
+    transcription,
+  } = params;
+  
   const eclat: Eclat = {
     id: Date.now().toString(),
     audioPath,
@@ -62,6 +72,7 @@ export async function createEclat(
     lng,
     createdAt: new Date().toISOString(),
     duration,
+    transcription,
   };
   
   // Get existing eclats
