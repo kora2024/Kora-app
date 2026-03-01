@@ -42,13 +42,14 @@ const PALETTE = {
 };
 
 // ============================================
-// AXE 1 — CYCLE CIRCADIEN
+// AXE 1 — CYCLE CIRCADIEN (UPGRADE 8 ENHANCED)
 // Calculate sun position based on real UTC time
 // ============================================
 
-function getSunPosition(): { longitude: number; isNight: (lng: number, utcOffset: number) => boolean } {
+function getSunPosition(): { longitude: number; latitude: number; isNight: (lng: number, utcOffset: number) => boolean } {
   const now = new Date();
   const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const dayOfYear = Math.floor((now.getTime() - new Date(now.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
   
   // Sun longitude: at 12:00 UTC, sun is at longitude 0°
   // Sun moves 15° per hour westward (360° / 24h = 15°/h)
@@ -57,8 +58,13 @@ function getSunPosition(): { longitude: number; isNight: (lng: number, utcOffset
   // Normalize to -180 to 180
   const normalizedSunLng = ((sunLongitude + 180) % 360) - 180;
   
+  // Solar declination (latitude of the sun) varies throughout the year
+  // Maximum ~23.45° at summer solstice, minimum ~-23.45° at winter solstice
+  const declination = 23.45 * Math.sin((2 * Math.PI / 365) * (dayOfYear - 81));
+  
   return {
     longitude: normalizedSunLng,
+    latitude: declination,
     isNight: (lng: number, utcOffset: number) => {
       // Calculate local hour at this longitude
       const localHour = (utcHours + utcOffset + 24) % 24;
@@ -69,6 +75,7 @@ function getSunPosition(): { longitude: number; isNight: (lng: number, utcOffset
 }
 
 // Check if a point is in nighttime (for territory dimming)
+// Enhanced with more accurate calculation
 function isPointInNight(lng: number): boolean {
   const now = new Date();
   const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
@@ -77,8 +84,33 @@ function isPointInNight(lng: number): boolean {
   // Solar noon occurs when the sun is directly overhead
   const localSolarHour = (utcHours + lng / 15 + 24) % 24;
   
-  // Consider night between 20:00 and 06:00 solar time (generous twilight)
-  return localSolarHour >= 20 || localSolarHour < 6;
+  // Consider night between 19:00 and 05:00 solar time
+  return localSolarHour >= 19 || localSolarHour < 5;
+}
+
+// Calculate twilight factor (0 = full night, 1 = full day)
+function getTwilightFactor(lng: number): number {
+  const now = new Date();
+  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+  const localSolarHour = (utcHours + lng / 15 + 24) % 24;
+  
+  // Smooth transitions:
+  // 05:00-07:00 = dawn (0 to 1)
+  // 07:00-17:00 = day (1)
+  // 17:00-19:00 = dusk (1 to 0)
+  // 19:00-05:00 = night (0)
+  
+  if (localSolarHour >= 7 && localSolarHour < 17) return 1.0; // Full day
+  if (localSolarHour >= 19 || localSolarHour < 5) return 0.0; // Full night
+  if (localSolarHour >= 5 && localSolarHour < 7) {
+    // Dawn transition
+    return (localSolarHour - 5) / 2;
+  }
+  if (localSolarHour >= 17 && localSolarHour < 19) {
+    // Dusk transition
+    return 1 - (localSolarHour - 17) / 2;
+  }
+  return 0.5;
 }
 
 // ============================================
