@@ -478,4 +478,20 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     letterSpacing: 0.5,
   },
+  // AXE 2 — Floating Action Button
+  fabButton: {
+    position: 'absolute',
+    alignSelf: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.gold,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 8,
+    zIndex: 100,
+  },
+  fabIcon: {
+    fontSize: 24,
+  },
 });
