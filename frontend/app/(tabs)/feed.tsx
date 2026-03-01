@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
+import { useKoraStore } from '../../src/store/useKoraStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
