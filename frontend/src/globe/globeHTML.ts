@@ -312,8 +312,14 @@ export function getGlobeHTML(): string {
     renderer.setSize(w,h);
   });
 
+  // Messaging helper (works on both native and web iframe)
+  function sendMsg(data){
+    var msg=JSON.stringify(data);
+    if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage(msg);}
+    else{window.parent.postMessage(msg,'*');}
+  }
   // Signal ready
-  window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'ready'}));
+  sendMsg({type:'ready'});
 })();
 </script>
 </body>
