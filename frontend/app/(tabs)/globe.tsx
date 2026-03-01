@@ -369,7 +369,7 @@ export default function GlobeScreen() {
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.webGlobeCircle}>
-              <Text style={styles.webGlobeEmoji}>🌍</Text>
+              <GlobeIcon size={60} color={COLORS.blue} />
             </View>
             <Text style={styles.webFallbackText}>Globe 3D interactif</Text>
             <Text style={styles.webFallbackSubtext}>Disponible sur l'app mobile</Text>
