@@ -540,11 +540,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(166,93,71,0.2)',
     borderColor: COLORS.terra,
   },
-  reactionIcon: {
-    fontSize: 12,
-  },
-  reactionIconActive: {
-    // Same icon, active state handled by bubble
+  reactionIconContainer: {
+    width: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   reactionLabel: {
     fontFamily: FONTS.jostLight,
