@@ -244,6 +244,68 @@ export default function EveilScreen() {
     });
   }, [fadeAnim, slideAnim]);
 
+  // UPGRADE 16 — Handle logo tap for developer menu
+  const handleLogoTap = useCallback(() => {
+    // Clear previous timeout
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+
+    const newCount = logoTapCount + 1;
+    setLogoTapCount(newCount);
+
+    if (newCount >= 5) {
+      // Show developer menu after 5 taps
+      haptic.success();
+      setShowDevMenu(true);
+      setLogoTapCount(0);
+    } else {
+      // Reset count after 2 seconds of no taps
+      tapTimeoutRef.current = setTimeout(() => {
+        setLogoTapCount(0);
+      }, 2000);
+    }
+  }, [logoTapCount]);
+
+  // UPGRADE 16 — Reset Éveil (for developers)
+  const handleResetEveil = useCallback(async () => {
+    Alert.alert(
+      'Réinitialiser l\'Éveil',
+      'Cette action effacera toutes vos données et redémarrera l\'application. Êtes-vous sûr ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Réinitialiser',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear all KORA storage
+              await AsyncStorage.multiRemove([
+                EVEIL_COMPLETED_KEY,
+                EVEIL_DATE_KEY,
+                'kora_eclats',
+                'kora_first_eclat_created',
+              ]);
+              
+              haptic.heavy();
+              
+              // Try to reload app (works in development)
+              try {
+                await Updates.reloadAsync();
+              } catch {
+                // In development, just navigate back to index
+                router.replace('/');
+              }
+            } catch (error) {
+              console.error('Reset error:', error);
+              Alert.alert('Erreur', 'Impossible de réinitialiser. Réessayez.');
+            }
+          },
+        },
+      ]
+    );
+  }, [router]);
+
   const handleContinueStep1 = () => {
     animateStepTransition(1);
   };
