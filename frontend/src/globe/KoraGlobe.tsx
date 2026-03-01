@@ -1022,7 +1022,8 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
         globeGroupRef.current.quaternion.copy(quaternion);
 
         // ============================================
-        // NEBULA FLOAT ANIMATION (Zero-gravity drift)
+        // UPGRADE 10: VIBRANT PARTICLE ANIMATION
+        // Vibration, scintillation, and satellite orbits
         // ============================================
         
         territoryNodesRef.current.forEach((node) => {
@@ -1035,6 +1036,68 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
             const direction = data.basePosition.clone().normalize();
             const newPos = data.basePosition.clone().add(direction.multiplyScalar(floatOffset));
             node.position.copy(newPos);
+            
+            // ────────────────────────────────────────────
+            // PARTICLE SYSTEM ANIMATION
+            // ────────────────────────────────────────────
+            
+            if (data.particleConfig && data.particles) {
+              const config = data.particleConfig;
+              const particles = data.particles as THREE.Mesh[];
+              
+              particles.forEach((particle) => {
+                const pData = particle.userData;
+                
+                // ─── CENTRAL PARTICLE: Vibration + Scintillation ───
+                if (pData.isCentral && config.vibrationSpeed > 0) {
+                  // Vibration: scale sin(t * speed + phase) * amount + 1
+                  const vibration = Math.sin(t * config.vibrationSpeed + pData.vibrationPhase) * config.vibrationAmount + 1;
+                  
+                  // Apply magnetic scale if present
+                  const baseScale = data.magneticScale || 1;
+                  particle.scale.set(vibration * baseScale, vibration * baseScale, vibration * baseScale);
+                  
+                  // Scintillation: opacity sin(t * 3) * 0.3 + 0.7
+                  const scintillation = Math.sin(t * 3 + pData.scintillationPhase) * 0.3 + 0.7;
+                  const mat = particle.material as THREE.MeshPhongMaterial;
+                  mat.opacity = scintillation * (data.isNightTime ? 0.7 : 1.0);
+                  
+                  // Pulsing emissive intensity
+                  const emissivePulse = Math.sin(t * 2 + pData.vibrationPhase) * 0.2 + 0.5;
+                  mat.emissiveIntensity = emissivePulse * (data.isNightTime ? 0.4 : 1.0);
+                }
+                
+                // ─── SATELLITE PARTICLES: Orbiting + Scintillation ───
+                if (pData.isSatellite && pData.orbitRadius) {
+                  // Orbit animation
+                  const newAngle = pData.orbitAngle + t * pData.orbitSpeed;
+                  const verticalWobble = Math.sin(t * 2 + pData.scintillationPhase) * 0.005;
+                  
+                  particle.position.set(
+                    Math.cos(newAngle) * pData.orbitRadius,
+                    pData.verticalOffset + verticalWobble,
+                    Math.sin(newAngle) * pData.orbitRadius
+                  );
+                  
+                  // Scintillation for satellites
+                  const satScint = Math.sin(t * 4 + pData.scintillationPhase) * 0.4 + 0.6;
+                  const satMat = particle.material as THREE.MeshPhongMaterial;
+                  satMat.opacity = satScint * (data.isNightTime ? 0.5 : 0.8);
+                }
+              });
+              
+              // ─── GLOW AURA: Breathing ───
+              node.children.forEach((child: THREE.Object3D) => {
+                if (child instanceof THREE.Mesh && child.userData.isGlow) {
+                  const glowBreath = Math.sin(t * 1.5 + data.floatPhase) * 0.05 + 0.15;
+                  (child.material as THREE.MeshBasicMaterial).opacity = glowBreath * (data.isNightTime ? 0.5 : 1.0);
+                  
+                  // Subtle scale breathing
+                  const glowScale = 1 + Math.sin(t * 1.2 + data.floatPhase) * 0.1;
+                  child.scale.set(glowScale, glowScale, glowScale);
+                }
+              });
+            }
             
             // ============================================
             // UPGRADE 9: Animate magnetic scale
