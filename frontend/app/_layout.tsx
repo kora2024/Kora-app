@@ -30,6 +30,7 @@ import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import * as SplashScreen from 'expo-splash-screen';
 import { COLORS } from '../src/theme';
 import TransitionOverlay from '../src/components/TransitionOverlay';
+import { ToastContainer } from '../src/components/Toast';
 
 SplashScreen.preventAutoHideAsync();
 
