@@ -637,6 +637,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Voice Wave
+  voiceWaveContainer: {
+    marginTop: 30,
+    alignItems: 'center',
+  },
   // Timer
   timerContainer: {
     flexDirection: 'row',
