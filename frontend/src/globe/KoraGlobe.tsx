@@ -926,6 +926,18 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
             const direction = data.basePosition.clone().normalize();
             const newPos = data.basePosition.clone().add(direction.multiplyScalar(floatOffset));
             node.position.copy(newPos);
+            
+            // ============================================
+            // UPGRADE 9: Animate magnetic scale
+            // Smooth transition to/from magnetic glow state
+            // ============================================
+            
+            if (data.magneticScale !== undefined) {
+              const targetScale = data.magneticScale;
+              const currentScale = node.scale.x;
+              const newScale = currentScale + (targetScale - currentScale) * 0.15; // Smooth lerp
+              node.scale.set(newScale, newScale, newScale);
+            }
           }
         });
 
