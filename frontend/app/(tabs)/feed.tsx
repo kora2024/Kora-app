@@ -414,10 +414,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  globeIcon: {
-    fontSize: 16,
-    color: COLORS.cream,
-  },
   // Feed item
   feedItem: {
     width: SW,
