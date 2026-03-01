@@ -118,12 +118,11 @@ const styles = StyleSheet.create({
     minWidth: 56,
     position: 'relative',
   },
-  tabIcon: {
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.4)',
-  },
-  tabIconActive: {
-    color: COLORS.terra,
+  tabIconContainer: {
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabLabel: {
     fontFamily: FONTS.jostLight,
