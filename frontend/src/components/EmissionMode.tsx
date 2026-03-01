@@ -304,6 +304,10 @@ export default function EmissionMode({
       if (durationIntervalRef.current) {
         clearInterval(durationIntervalRef.current);
       }
+      if (meteringIntervalRef.current) {
+        clearInterval(meteringIntervalRef.current);
+      }
+      setMetering(-160); // Reset metering
 
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
