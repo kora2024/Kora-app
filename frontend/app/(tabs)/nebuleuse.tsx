@@ -437,9 +437,7 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
   },
   starName: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.5)',
+    ...TYPOGRAPHY.meta,
     marginTop: 8,
     textAlign: 'center',
   },
