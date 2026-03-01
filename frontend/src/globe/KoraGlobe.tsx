@@ -1,15 +1,29 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useImperativeHandle, forwardRef } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { GLView, ExpoWebGLRenderingContext } from 'expo-gl';
 import * as THREE from 'three';
 import { TERRITORIES, Territory } from '../store/useKoraStore';
 import { haptic } from '../utils/haptics';
 
+// ============================================
+// TYPES & INTERFACES
+// ============================================
+
 interface GlobeProps {
   onTerritorySelect?: (territory: Territory) => void;
   onTerritoryDoubleTap?: (territory: Territory) => void;
   onGPSClick?: (lat: number, lng: number) => void;
+  userLocation?: { lat: number; lng: number };
+  isUserSovereign?: boolean;
 }
+
+export interface GlobeRef {
+  focusOnTarget: (lat: number, lng: number) => void;
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
 
 // Convert lat/lng to 3D coordinates
 function latLngToVector3(lat: number, lng: number, radius: number = 1): THREE.Vector3 {
@@ -33,28 +47,103 @@ function vector3ToLatLng(point: THREE.Vector3): { lat: number; lng: number } {
   };
 }
 
-export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onGPSClick }: GlobeProps) {
+// Convert lat/lng to spherical angles for camera
+function latLngToSpherical(lat: number, lng: number): { theta: number; phi: number } {
+  return {
+    theta: (lng + 180) * (Math.PI / 180),
+    phi: (90 - lat) * (Math.PI / 180),
+  };
+}
+
+// ============================================
+// PROCEDURAL EARTH TEXTURE (No document needed)
+// ============================================
+
+function createProceduralEarthTexture(size: number = 512): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  
+  // Simple procedural earth colors
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      
+      // Normalized coordinates
+      const nx = x / size;
+      const ny = y / size;
+      
+      // Simple noise for continents
+      const noise1 = Math.sin(nx * 12 + ny * 8) * Math.cos(ny * 15 - nx * 5);
+      const noise2 = Math.sin(nx * 25) * Math.sin(ny * 20);
+      const combined = (noise1 + noise2 * 0.5) / 1.5;
+      
+      // Land vs ocean threshold
+      const isLand = combined > 0.1;
+      
+      if (isLand) {
+        // Land colors - greens and browns
+        const green = 40 + Math.floor(combined * 60);
+        const brown = 80 + Math.floor(combined * 40);
+        data[i] = brown;      // R
+        data[i + 1] = green + 40; // G
+        data[i + 2] = 30;     // B
+        data[i + 3] = 255;    // A
+      } else {
+        // Ocean colors - deep blue to black
+        const depth = Math.abs(combined) * 0.5;
+        data[i] = Math.floor(10 + depth * 20);     // R
+        data[i + 1] = Math.floor(30 + depth * 40); // G
+        data[i + 2] = Math.floor(60 + depth * 80); // B
+        data[i + 3] = 255;    // A
+      }
+    }
+  }
+  
+  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  texture.needsUpdate = true;
+  return texture;
+}
+
+// ============================================
+// MAIN GLOBE COMPONENT
+// ============================================
+
+const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({ 
+  onTerritorySelect, 
+  onTerritoryDoubleTap, 
+  onGPSClick,
+  userLocation,
+  isUserSovereign = false,
+}, ref) => {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const globeGroupRef = useRef<THREE.Group | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
-  const animationRef = useRef<number | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
 
+  // Sovereign aura mesh
+  const sovereignAuraRef = useRef<THREE.Mesh | null>(null);
+  
+  // Cultural resonance arcs
+  const resonanceArcsRef = useRef<THREE.Line[]>([]);
+  
   // Ripple effects
   const ripplesRef = useRef<THREE.Mesh[]>([]);
 
-  // Spherical rotation state (for 360° freedom)
+  // Spherical rotation state
   const spherical = useRef({
-    theta: 0,      // Yaw (horizontal rotation)
-    phi: Math.PI / 2, // Pitch (vertical rotation) - start at equator view
+    theta: 0,
+    phi: Math.PI / 2,
   });
+  
+  // Target for smooth camera interpolation
+  const targetSpherical = useRef<{ theta: number; phi: number } | null>(null);
+  const isAnimatingToTarget = useRef(false);
 
   // Interaction state
   const isDragging = useRef(false);
   const prevPointer = useRef({ x: 0, y: 0 });
-  const velocity = useRef({ x: 0, y: 0 }); // Now tracking both axes
+  const velocity = useRef({ x: 0, y: 0 });
   const autoRotate = useRef(true);
   const lastTap = useRef(0);
   const selectedId = useRef<string | null>(null);
@@ -67,9 +156,26 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
 
   const [isReady, setIsReady] = useState(false);
 
+  // ============================================
+  // EXPOSE focusOnTarget VIA REF
+  // ============================================
+  
+  useImperativeHandle(ref, () => ({
+    focusOnTarget: (lat: number, lng: number) => {
+      const target = latLngToSpherical(lat, lng);
+      // Adjust to face the camera towards the target
+      targetSpherical.current = {
+        theta: target.theta + Math.PI,
+        phi: target.phi,
+      };
+      isAnimatingToTarget.current = true;
+      autoRotate.current = false;
+    },
+  }));
+
   // Create ripple effect at a point
   const createRipple = useCallback((point: THREE.Vector3, scene: THREE.Scene) => {
-    const rippleGeo = new THREE.RingGeometry(0.02, 0.03, 32);
+    const rippleGeo = new THREE.RingGeometry(0.02, 0.035, 32);
     const rippleMat = new THREE.MeshBasicMaterial({
       color: 0xFFD700,
       transparent: true,
@@ -78,23 +184,26 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     });
     const ripple = new THREE.Mesh(rippleGeo, rippleMat);
     
-    // Position slightly above surface
-    const surfacePoint = point.clone().normalize().multiplyScalar(1.02);
+    const surfacePoint = point.clone().normalize().multiplyScalar(1.025);
     ripple.position.copy(surfacePoint);
     ripple.lookAt(0, 0, 0);
-    ripple.userData = { startTime: clockRef.current?.getElapsedTime() || 0, startScale: 1 };
+    ripple.userData = { startTime: clockRef.current?.getElapsedTime() || 0 };
     
     scene.add(ripple);
     ripplesRef.current.push(ripple);
   }, []);
 
+  // ============================================
+  // GL CONTEXT CREATION
+  // ============================================
+  
   const onContextCreate = useCallback((gl: ExpoWebGLRenderingContext) => {
     glRef.current = gl;
     clockRef.current = new THREE.Clock();
 
     // Create renderer
     const renderer = new THREE.WebGLRenderer({
-      // @ts-ignore - expo-gl provides a compatible context
+      // @ts-ignore
       context: gl,
       canvas: {
         width: gl.drawingBufferWidth,
@@ -113,9 +222,9 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     renderer.setClearColor(0x0D0D0D, 1);
     rendererRef.current = renderer;
 
-    // Create scene
+    // Create scene with fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.08);
+    scene.fog = new THREE.FogExp2(0x000000, 0.08); // Phase 4 fog
     sceneRef.current = scene;
 
     // Create camera
@@ -129,25 +238,21 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     cameraRef.current = camera;
 
     // ============================================
-    // LIGHTING - Critical for visibility!
+    // LIGHTING
     // ============================================
     
-    // Strong ambient light for base visibility
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    // Main directional light (sun-like)
-    const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
 
-    // Secondary fill light
-    const fillLight = new THREE.DirectionalLight(0x4A7FA5, 0.4);
+    const fillLight = new THREE.DirectionalLight(0x4A7FA5, 0.5);
     fillLight.position.set(-5, -2, -5);
     scene.add(fillLight);
 
-    // Golden accent light for territories
-    const accentLight = new THREE.PointLight(0xFFD700, 0.5, 10);
+    const accentLight = new THREE.PointLight(0xFFD700, 0.6, 10);
     accentLight.position.set(3, 2, 3);
     scene.add(accentLight);
 
@@ -157,60 +262,29 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     globeGroupRef.current = globeGroup;
 
     // ============================================
-    // EARTH SPHERE WITH TEXTURE
+    // EARTH SPHERE (Procedural - No document)
     // ============================================
     
     const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
     
-    // Create texture loader
-    const textureLoader = new THREE.TextureLoader();
+    // Create procedural earth texture
+    const earthTexture = createProceduralEarthTexture(512);
     
-    // High-contrast Earth texture URL
-    const textureURL = 'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg';
-    
-    // Create initial material with a visible color while texture loads
     const earthMaterial = new THREE.MeshPhongMaterial({
-      color: 0x2244aa, // Blue fallback color
-      shininess: 25,
-      specular: 0x333333,
+      map: earthTexture,
+      shininess: 15,
+      specular: 0x222222,
     });
     
     const earthMesh = new THREE.Mesh(sphereGeo, earthMaterial);
     globeGroup.add(earthMesh);
     earthMeshRef.current = earthMesh;
 
-    // Load texture
-    textureLoader.load(
-      textureURL,
-      (texture) => {
-        // Texture loaded successfully
-        texture.colorSpace = THREE.SRGBColorSpace;
-        earthMaterial.map = texture;
-        earthMaterial.color.setHex(0xffffff); // Reset color to show texture properly
-        earthMaterial.needsUpdate = true;
-        console.log('Earth texture loaded successfully');
-      },
-      undefined,
-      (error) => {
-        // Texture failed to load - use procedural fallback
-        console.log('Texture load failed, using procedural material');
-        
-        // Create a more visible procedural material
-        const fallbackMaterial = new THREE.MeshPhongMaterial({
-          color: 0x1a4d7a,
-          emissive: 0x0a2040,
-          emissiveIntensity: 0.3,
-          shininess: 30,
-        });
-        earthMesh.material = fallbackMaterial;
-      }
-    );
-
     // ============================================
     // ATMOSPHERE GLOW
     // ============================================
     
-    const atmosGeo = new THREE.SphereGeometry(1.15, 32, 32);
+    const atmosGeo = new THREE.SphereGeometry(1.12, 32, 32);
     const atmosMat = new THREE.ShaderMaterial({
       uniforms: { glowColor: { value: new THREE.Color(0x4A7FA5) } },
       vertexShader: `
@@ -225,8 +299,8 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
         uniform vec3 glowColor;
         varying vec3 vNormal;
         void main() {
-          float intensity = pow(0.65 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
-          gl_FragColor = vec4(glowColor, intensity * 0.5);
+          float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+          gl_FragColor = vec4(glowColor, intensity * 0.4);
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -245,7 +319,6 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
       globeGroup.add(new THREE.Line(geo, mat));
     };
 
-    // Latitude lines
     for (let lat = -60; lat <= 60; lat += 30) {
       const pts: THREE.Vector3[] = [];
       const phi = (90 - lat) * Math.PI / 180;
@@ -257,10 +330,9 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
           1.005 * Math.sin(phi) * Math.sin(theta)
         ));
       }
-      addGridLine(pts, 0.15);
+      addGridLine(pts, 0.12);
     }
 
-    // Longitude lines
     for (let lng = 0; lng < 360; lng += 30) {
       const pts: THREE.Vector3[] = [];
       const theta = (lng + 180) * Math.PI / 180;
@@ -272,7 +344,7 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
           1.005 * Math.sin(phi) * Math.sin(theta)
         ));
       }
-      addGridLine(pts, 0.12);
+      addGridLine(pts, 0.10);
     }
 
     // ============================================
@@ -281,15 +353,14 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     
     dotMeshes.current = [];
     TERRITORIES.forEach((t) => {
-      const pos = latLngToVector3(t.lat, t.lng, 1.03);
+      const pos = latLngToVector3(t.lat, t.lng, 1.025);
       const size = t.size / 350;
 
-      // Core dot - now using MeshPhongMaterial for better visibility
       const dotGeo = new THREE.SphereGeometry(size, 16, 16);
       const dotMat = new THREE.MeshPhongMaterial({ 
         color: new THREE.Color(t.color),
         emissive: new THREE.Color(t.color),
-        emissiveIntensity: 0.5,
+        emissiveIntensity: 0.4,
       });
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.copy(pos);
@@ -298,54 +369,112 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
       dotMeshes.current.push(dot);
 
       // Pulse ring
-      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 3, 32);
+      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.5, 32);
       const ringMat = new THREE.MeshBasicMaterial({
         color: new THREE.Color(t.color),
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.5,
         side: THREE.DoubleSide,
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
       ring.position.copy(pos);
       ring.lookAt(0, 0, 0);
-      ring.userData = { baseScale: 1, phase: Math.random() * Math.PI * 2, isRing: true };
+      ring.userData = { phase: Math.random() * Math.PI * 2, isRing: true };
       globeGroup.add(ring);
     });
 
     // ============================================
-    // CONNECTION ARCS
+    // PHASE 3: SOVEREIGN IDENTITY AURA
     // ============================================
     
-    const arcs = [
+    if (userLocation && isUserSovereign) {
+      const userPos = latLngToVector3(userLocation.lat, userLocation.lng, 1.03);
+      
+      // Golden aura shader material
+      const auraMat = new THREE.ShaderMaterial({
+        uniforms: {
+          time: { value: 0 },
+          color: { value: new THREE.Color(0xFFD700) },
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          precision mediump float;
+          uniform float time;
+          uniform vec3 color;
+          varying vec2 vUv;
+          void main() {
+            float dist = length(vUv - vec2(0.5));
+            float alpha = smoothstep(0.5, 0.2, dist);
+            alpha *= 0.6 + 0.4 * sin(time * 2.0); // Breathing effect
+            gl_FragColor = vec4(color, alpha * 0.8);
+          }
+        `,
+        transparent: true,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+      });
+      
+      const auraGeo = new THREE.PlaneGeometry(0.15, 0.15);
+      const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+      auraMesh.position.copy(userPos);
+      auraMesh.lookAt(0, 0, 0);
+      auraMesh.userData = { isSovereignAura: true };
+      globeGroup.add(auraMesh);
+      sovereignAuraRef.current = auraMesh;
+    }
+
+    // ============================================
+    // PHASE 4: CULTURAL RESONANCE ARCS
+    // ============================================
+    
+    const culturalArcs = [
       { from: 'ftf', to: 'par' },
       { from: 'ftf', to: 'lag' },
       { from: 'ftf', to: 'lon' },
       { from: 'ftf', to: 'dak' },
       { from: 'par', to: 'lag' },
       { from: 'nyc', to: 'lon' },
+      { from: 'dak', to: 'abi' },
     ];
 
-    arcs.forEach((a) => {
+    resonanceArcsRef.current = [];
+
+    culturalArcs.forEach((a, index) => {
       const from = TERRITORIES.find((t) => t.id === a.from);
       const to = TERRITORIES.find((t) => t.id === a.to);
       if (!from || !to) return;
 
-      const start = latLngToVector3(from.lat, from.lng, 1.03);
-      const end = latLngToVector3(to.lat, to.lng, 1.03);
+      const start = latLngToVector3(from.lat, from.lng, 1.025);
+      const end = latLngToVector3(to.lat, to.lng, 1.025);
       const mid = start.clone().add(end).multiplyScalar(0.5);
       const dist = start.distanceTo(end);
-      mid.normalize().multiplyScalar(1.03 + dist * 0.4);
+      mid.normalize().multiplyScalar(1.025 + dist * 0.45);
 
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const pts = curve.getPoints(48);
+      const pts = curve.getPoints(64);
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
-      const mat = new THREE.LineBasicMaterial({
-        color: new THREE.Color(from.color),
+      
+      // Amber/Gold arc with dashed material for moving light effect
+      const mat = new THREE.LineDashedMaterial({
+        color: 0xFFD700,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.6,
+        dashSize: 0.03,
+        gapSize: 0.02,
+        linewidth: 2,
       });
+      
       const line = new THREE.Line(geo, mat);
+      line.computeLineDistances();
+      line.userData = { arcIndex: index, dashOffset: 0 };
       globeGroup.add(line);
+      resonanceArcsRef.current.push(line);
     });
 
     setIsReady(true);
@@ -359,58 +488,112 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     const animate = () => {
       animFrameId = requestAnimationFrame(animate);
       const t = clockRef.current?.getElapsedTime() || 0;
+      const delta = clockRef.current?.getDelta() || 0.016;
 
       if (globeGroupRef.current) {
-        // Auto rotate (only yaw when not dragging)
-        if (autoRotate.current && !isDragging.current) {
-          spherical.current.theta += 0.003;
+        // ============================================
+        // CAMERA SYNC (Slerp interpolation)
+        // ============================================
+        
+        if (isAnimatingToTarget.current && targetSpherical.current) {
+          const lerpFactor = 0.05; // Smooth interpolation
+          
+          // Interpolate theta (yaw)
+          let dTheta = targetSpherical.current.theta - spherical.current.theta;
+          // Normalize to shortest path
+          while (dTheta > Math.PI) dTheta -= Math.PI * 2;
+          while (dTheta < -Math.PI) dTheta += Math.PI * 2;
+          spherical.current.theta += dTheta * lerpFactor;
+          
+          // Interpolate phi (pitch)
+          spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * lerpFactor;
+          
+          // Check if close enough to stop
+          if (Math.abs(dTheta) < 0.01 && Math.abs(targetSpherical.current.phi - spherical.current.phi) < 0.01) {
+            isAnimatingToTarget.current = false;
+            setTimeout(() => { autoRotate.current = true; }, 3000);
+          }
+        } else {
+          // Auto rotate
+          if (autoRotate.current && !isDragging.current) {
+            spherical.current.theta += 0.003;
+          }
+
+          // Apply inertia (0.95 damping)
+          if (!isDragging.current) {
+            velocity.current.x *= 0.95;
+            velocity.current.y *= 0.95;
+            spherical.current.theta += velocity.current.x;
+            spherical.current.phi += velocity.current.y;
+          }
         }
 
-        // Apply inertia (0.95 damping) - BOTH AXES
-        if (!isDragging.current) {
-          velocity.current.x *= 0.95;
-          velocity.current.y *= 0.95;
-          spherical.current.theta += velocity.current.x;
-          spherical.current.phi += velocity.current.y;
-        }
-
-        // NO CLAMPING - Allow full 360° rotation through poles
-        // Just normalize phi to prevent floating point issues
+        // Normalize phi
         while (spherical.current.phi < 0) spherical.current.phi += Math.PI * 2;
         while (spherical.current.phi > Math.PI * 2) spherical.current.phi -= Math.PI * 2;
 
-        // Apply spherical rotation to globe
-        // Using quaternion for smooth pole traversal
+        // Apply rotation using quaternion
         const quaternion = new THREE.Quaternion();
         const euler = new THREE.Euler(
-          spherical.current.phi - Math.PI / 2, // Pitch
-          spherical.current.theta,              // Yaw
+          spherical.current.phi - Math.PI / 2,
+          spherical.current.theta,
           0,
           'YXZ'
         );
         quaternion.setFromEuler(euler);
         globeGroupRef.current.quaternion.copy(quaternion);
 
-        // Animate pulse rings
+        // ============================================
+        // ANIMATE PULSE RINGS
+        // ============================================
+        
         globeGroupRef.current.children.forEach((child) => {
           if (child instanceof THREE.Mesh && child.userData.isRing) {
             const phase = child.userData.phase;
-            const s = 1 + 0.6 * ((Math.sin(t * 2.5 + phase) + 1) / 2);
+            const s = 1 + 0.5 * ((Math.sin(t * 2.5 + phase) + 1) / 2);
             child.scale.set(s, s, s);
-            (child.material as THREE.MeshBasicMaterial).opacity = 0.6 * (1 - ((s - 1) / 0.6));
+            (child.material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - ((s - 1) / 0.5));
           }
+        });
+
+        // ============================================
+        // ANIMATE SOVEREIGN AURA (Breathing)
+        // ============================================
+        
+        if (sovereignAuraRef.current) {
+          const auraMat = sovereignAuraRef.current.material as THREE.ShaderMaterial;
+          auraMat.uniforms.time.value = t;
+          
+          // Breathing scale animation (1.0 to 1.2)
+          const breathScale = 1.0 + 0.2 * ((Math.sin(t * 1.5) + 1) / 2);
+          sovereignAuraRef.current.scale.set(breathScale, breathScale, breathScale);
+        }
+
+        // ============================================
+        // ANIMATE CULTURAL RESONANCE ARCS (Moving light)
+        // ============================================
+        
+        resonanceArcsRef.current.forEach((arc, index) => {
+          const mat = arc.material as THREE.LineDashedMaterial;
+          // Different speeds for each arc
+          const speed = 0.02 + (index * 0.005);
+          arc.userData.dashOffset -= speed;
+          mat.dashOffset = arc.userData.dashOffset;
         });
       }
 
-      // Animate ripples
+      // ============================================
+      // ANIMATE RIPPLES
+      // ============================================
+      
       const ripplesToRemove: THREE.Mesh[] = [];
       ripplesRef.current.forEach((ripple) => {
         const elapsed = t - ripple.userData.startTime;
-        const duration = 1.0; // 1 second animation
+        const duration = 1.0;
         const progress = elapsed / duration;
 
         if (progress < 1) {
-          const scale = 1 + progress * 8; // Expand from 1 to 9x
+          const scale = 1 + progress * 8;
           ripple.scale.set(scale, scale, scale);
           (ripple.material as THREE.MeshBasicMaterial).opacity = 1 - progress;
         } else {
@@ -418,7 +601,6 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
         }
       });
 
-      // Remove completed ripples
       ripplesToRemove.forEach((ripple) => {
         sceneRef.current?.remove(ripple);
         ripple.geometry.dispose();
@@ -432,22 +614,20 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     };
 
     animate();
-    animationRef.current = animFrameId;
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      cancelAnimationFrame(animFrameId);
     };
-  }, [createRipple]);
+  }, [createRipple, userLocation, isUserSovereign]);
 
   // ============================================
-  // TOUCH HANDLERS - 360° Spherical Rotation
+  // TOUCH HANDLERS
   // ============================================
 
   const handleTouchStart = useCallback((e: any) => {
     isDragging.current = true;
     autoRotate.current = false;
+    isAnimatingToTarget.current = false;
     const touch = e.nativeEvent.touches[0];
     prevPointer.current = { x: touch.pageX, y: touch.pageY };
   }, []);
@@ -459,14 +639,11 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     const dx = touch.pageX - prevPointer.current.x;
     const dy = touch.pageY - prevPointer.current.y;
     
-    // Sensitivity factor
     const sensitivity = 0.008;
     
-    // Update velocities for both axes
     velocity.current.x = dx * sensitivity;
     velocity.current.y = dy * sensitivity;
     
-    // Apply immediate rotation
     spherical.current.theta += velocity.current.x;
     spherical.current.phi += velocity.current.y;
     
@@ -476,14 +653,12 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
   const handleTouchEnd = useCallback((e: any) => {
     isDragging.current = false;
     
-    // Re-enable auto-rotate after 4 seconds of inactivity
     setTimeout(() => { 
-      if (!isDragging.current) {
+      if (!isDragging.current && !isAnimatingToTarget.current) {
         autoRotate.current = true; 
       }
     }, 4000);
 
-    // Handle tap for territory selection and ripple effect
     const touch = e.nativeEvent.changedTouches?.[0];
     if (!touch || !cameraRef.current || !globeGroupRef.current || !glRef.current) return;
 
@@ -494,19 +669,17 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
 
-    // Check territory dots first
+    // Check territory dots
     const territoryHits = raycaster.intersectObjects(dotMeshes.current);
     if (territoryHits.length > 0) {
       const territory = territoryHits[0].object.userData as Territory;
       const now = Date.now();
 
-      // Create ripple at hit point
       if (sceneRef.current) {
         createRipple(territoryHits[0].point, sceneRef.current);
       }
 
       if (selectedId.current === territory.id && now - lastTap.current < 400) {
-        // Double tap
         haptic.heavy();
         onTerritoryDoubleTap?.(territory);
       } else {
@@ -523,12 +696,9 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
       const globeHits = raycaster.intersectObject(earthMeshRef.current);
       if (globeHits.length > 0) {
         const point = globeHits[0].point;
-        
-        // Transform point from world to local coordinates
         const localPoint = globeGroupRef.current.worldToLocal(point.clone());
         const { lat, lng } = vector3ToLatLng(localPoint);
         
-        // Create ripple effect
         if (sceneRef.current) {
           createRipple(point, sceneRef.current);
         }
@@ -560,7 +730,11 @@ export default function KoraGlobe({ onTerritorySelect, onTerritoryDoubleTap, onG
       />
     </View>
   );
-}
+});
+
+KoraGlobe.displayName = 'KoraGlobe';
+
+export default KoraGlobe;
 
 const styles = StyleSheet.create({
   container: {
