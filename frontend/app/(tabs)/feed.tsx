@@ -331,7 +331,7 @@ export default function FeedScreen() {
           testID="feed-globe-btn"
           onPress={() => router.push('/(tabs)/globe')}
         >
-          <Text style={styles.globeIcon}>◉</Text>
+          <GlobeIcon size={18} color={COLORS.cream} />
         </TouchableOpacity>
       </View>
 
