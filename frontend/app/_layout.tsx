@@ -79,6 +79,9 @@ export default function RootLayout() {
       {/* Overlay de transition (flash subtil) */}
       <TransitionOverlay />
       
+      {/* Toast notifications — UPGRADE 19 */}
+      <ToastContainer />
+      
       <Stack
         screenOptions={{
           headerShown: false,
