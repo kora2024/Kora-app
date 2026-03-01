@@ -330,6 +330,7 @@ export default function FeedScreen() {
         pagingEnabled
         showsVerticalScrollIndicator={false}
         snapToInterval={itemHeight}
+        snapToAlignment="start"
         decelerationRate="fast"
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
