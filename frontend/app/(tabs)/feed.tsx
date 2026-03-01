@@ -105,13 +105,13 @@ const FEED_DATA: FeedItem[] = [
 // ──────────── REACTION BUBBLE ────────────
 
 function ReactionBubble({
-  icon,
+  IconComponent,
   label,
   count,
   active,
   onPress,
 }: {
-  icon: string;
+  IconComponent: React.FC<{size?: number; color?: string}>;
   label: string;
   count: number;
   active: boolean;
@@ -128,6 +128,8 @@ function ReactionBubble({
     onPress();
   };
 
+  const iconColor = active ? COLORS.terra : 'rgba(255,255,255,0.7)';
+
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
       <Animated.View
@@ -137,7 +139,9 @@ function ReactionBubble({
           { transform: [{ scale: scaleAnim }] },
         ]}
       >
-        <Text style={[styles.reactionIcon, active && styles.reactionIconActive]}>{icon}</Text>
+        <View style={styles.reactionIconContainer}>
+          <IconComponent size={14} color={iconColor} />
+        </View>
         <Text style={[styles.reactionLabel, active && styles.reactionLabelActive]}>{label}</Text>
         <Text style={[styles.reactionCount, active && styles.reactionCountActive]}>
           {active ? count + 1 : count}
