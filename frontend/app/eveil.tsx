@@ -335,7 +335,10 @@ export default function EveilScreen() {
                       key={item.id}
                       testID={`mem-option-${item.id}`}
                       style={[styles.optionCard, selected && styles.optionCardSelected]}
-                      onPress={() => toggleMemory(item.id)}
+                      onPress={() => {
+                      haptic.selection();
+                      toggleMemory(item.id);
+                    }}
                       activeOpacity={0.8}
                     >
                       <Text style={styles.optionIcon}>{item.icon}</Text>
