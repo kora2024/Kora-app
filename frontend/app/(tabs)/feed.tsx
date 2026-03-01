@@ -419,16 +419,6 @@ const styles = StyleSheet.create({
     width: SW,
     position: 'relative',
   },
-  emojiCenter: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 120,
-  },
-  emojiGiant: {
-    fontSize: 80,
-    opacity: 0.12,
-  },
   overlayGradient: {
     ...StyleSheet.absoluteFillObject,
   },
