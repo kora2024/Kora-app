@@ -496,6 +496,15 @@ export default function EmissionMode({
           </LinearGradient>
         </Animated.View>
 
+        {/* Voice Wave Visualization — UPGRADE 13 */}
+        <View style={styles.voiceWaveContainer}>
+          {Platform.OS === 'web' ? (
+            <VoiceWavePlaceholder isRecording={isRecording} />
+          ) : (
+            <VoiceWave metering={metering} isRecording={isRecording} />
+          )}
+        </View>
+
         {/* Timer display */}
         <View style={styles.timerContainer}>
           <Text style={styles.timerText}>{timeDisplay}</Text>
