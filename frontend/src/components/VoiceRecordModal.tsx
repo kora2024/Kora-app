@@ -231,7 +231,7 @@ export default function VoiceRecordModal({
           {isSaving ? (
             <>
               <Animated.View style={[styles.saveIndicator, { opacity: saveAnim }]}>
-                <Text style={styles.saveEmoji}>✨</Text>
+                <SparkleIcon size={60} color={COLORS.gold} />
               </Animated.View>
               <Text style={styles.saveText}>Création de l'Éclat...</Text>
             </>
