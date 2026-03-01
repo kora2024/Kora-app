@@ -779,6 +779,23 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
           arc.userData.dashOffset -= speed;
           mat.dashOffset = arc.userData.dashOffset;
         });
+
+        // ============================================
+        // ANIMATE ÉCLATS AURAS (Pulse: scale 1→1.8, opacity 1→0)
+        // ============================================
+        
+        eclatAurasRef.current.forEach((aura) => {
+          const startTime = aura.userData.startTime || 0;
+          const elapsed = (t - startTime) % 2; // 2 second cycle
+          const progress = elapsed / 2;
+          
+          // Scale from 1 to 1.8
+          const scale = 1 + progress * 0.8;
+          aura.scale.set(scale, scale, scale);
+          
+          // Opacity from 0.8 to 0
+          (aura.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - progress);
+        });
       }
 
       // Animate ripples
