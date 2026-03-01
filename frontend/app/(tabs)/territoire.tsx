@@ -383,7 +383,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  // AXE 3 — Sovereign ID
+  sovereignIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.2)',
+  },
+  sovereignIdLabel: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 10,
+    color: COLORS.gold,
+    letterSpacing: 1,
+    marginRight: 8,
+  },
+  sovereignIdValue: {
+    fontFamily: FONTS.jetbrainsMono,
+    fontSize: 12,
+    color: COLORS.cream,
   },
   // Stats
   statsRow: {
