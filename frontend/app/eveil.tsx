@@ -314,9 +314,19 @@ export default function EveilScreen() {
     animateStepTransition(2);
   };
 
-  const handleEnterKora = () => {
+  const handleEnterKora = async () => {
     haptic.heavy();
     completeOnboarding();
+    
+    // UPGRADE 16 — Save completion to AsyncStorage
+    try {
+      await AsyncStorage.setItem(EVEIL_COMPLETED_KEY, 'true');
+      await AsyncStorage.setItem(EVEIL_DATE_KEY, new Date().toISOString());
+      console.log('✨ Éveil complété et sauvegardé');
+    } catch (error) {
+      console.error('Error saving eveil completion:', error);
+    }
+    
     router.replace('/(tabs)/globe');
   };
 
