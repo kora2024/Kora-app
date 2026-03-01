@@ -205,6 +205,11 @@ export default function EveilScreen() {
   const [step, setStep] = useState(0);
   const { frequencies, memories, toggleFrequency, toggleMemory, completeOnboarding } = useKoraStore();
 
+  // UPGRADE 16 — Developer menu (5 taps on logo)
+  const [logoTapCount, setLogoTapCount] = useState(0);
+  const [showDevMenu, setShowDevMenu] = useState(false);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Fade animations per step
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
