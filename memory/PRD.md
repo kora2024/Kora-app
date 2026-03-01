@@ -69,10 +69,16 @@ KORA est le premier réseau social où l'identité culturelle est l'infrastructu
 - Label thématique "Musique" en or
 
 ### 7. NoyauScreen (`/noyau`) — Dashboard CVLN
-- Sphère centrale animée (1,247 CVLN)
-- Racines: barres de progression animées
-- Tronc: grille 4 stats
-- Feuilles: nouvelles connexions avec +CVLN
+- Header avec back button, "Le Noyau", badge "Mars 2026"
+- Sphère centrale 160px avec gradient terracotta (#e8a882→#A65D47→#6b2d1a)
+- Triple couche de glow (260px, 210px, 180px ring)
+- Animation pulse scale 1↔1.03 + glow oscillation + inner ring
+- Tap sphère: bounce + tooltip "Toucher pour déployer les statistiques"
+- **L'Arbre de Vie** (3 sections):
+  - 🌿 Racines — Résonance passive: 3 barres gradient terracotta→or animées avec CVLN
+  - 🪵 Tronc — Solde & transactions: grille 2x2 (2847 total, +313 mois, 12 FREK, 3 artefacts)
+  - 🍃 Feuilles — Nouvelles connexions: 3 événements avec emoji, description, temps, CVLN
+- Ambiance: radial gradient terracotta 12% + or 6% sur fond sombre
 
 ### 8. CreateScreen (`/(tabs)/create`) — Création
 - 4 types d'éclat (Texte/Sonore/Visuel/Vidéo)
