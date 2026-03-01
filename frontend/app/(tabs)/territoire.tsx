@@ -105,6 +105,13 @@ export default function TerritoireScreen() {
   const router = useRouter();
   const { frequencies, memories } = useKoraStore();
   const scrollY = useRef(new Animated.Value(0)).current;
+  
+  // AXE 3 — Sovereign Hardware ID
+  const [sovereignId, setSovereignId] = useState<string>('');
+  
+  useEffect(() => {
+    getSovereignId().then((id) => setSovereignId(id));
+  }, []);
 
   const avatarEmoji = getAvatarEmoji(frequencies);
   const role = getRole(frequencies);
