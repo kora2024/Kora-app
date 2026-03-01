@@ -243,7 +243,7 @@ export function getGlobeHTML(): string {
       const dy=startY-e.clientY;
       if(dy>80){
         // Trigger dissolve navigation
-        window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'longpress_navigate',territory:selectedId||'ftf'}));
+        sendMsg({type:'longpress_navigate',territory:selectedId||'ftf'});
         isLongPress=false;
       }
       return;
