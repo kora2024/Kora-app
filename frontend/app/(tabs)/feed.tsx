@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore } from '../../src/store/useKoraStore';
+import { haptic } from '../../src/utils/haptics';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const TAB_BAR_HEIGHT = 80; // approximate tab bar height
