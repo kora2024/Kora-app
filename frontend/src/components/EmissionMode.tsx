@@ -356,6 +356,10 @@ export default function EmissionMode({
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current);
     }
+    if (meteringIntervalRef.current) {
+      clearInterval(meteringIntervalRef.current);
+    }
+    setMetering(-160);
 
     haptic.light();
     await animateOut();
