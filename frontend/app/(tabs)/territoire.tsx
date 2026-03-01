@@ -248,6 +248,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: SPACING.xl,
   },
+  settingsBtn: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: 0,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   avatarWrap: {
     marginBottom: SPACING.md,
   },
