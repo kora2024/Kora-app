@@ -429,9 +429,6 @@ const styles = StyleSheet.create({
   saveIndicator: {
     marginBottom: 20,
   },
-  saveEmoji: {
-    fontSize: 60,
-  },
   saveText: {
     fontFamily: FONTS.playfairBold,
     fontSize: 22,
