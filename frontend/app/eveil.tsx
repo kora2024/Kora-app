@@ -241,6 +241,7 @@ export default function EveilScreen() {
   };
 
   const handleEnterKora = () => {
+    haptic.heavy();
     completeOnboarding();
     router.replace('/(tabs)/globe');
   };
