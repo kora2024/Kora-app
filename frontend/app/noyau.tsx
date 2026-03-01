@@ -126,6 +126,7 @@ function CentralSphere() {
   }, []);
 
   const handleTap = () => {
+    haptic.light();
     // Bounce
     Animated.sequence([
       Animated.spring(pulseScale, { toValue: 0.95, useNativeDriver: true, speed: 50 }),
