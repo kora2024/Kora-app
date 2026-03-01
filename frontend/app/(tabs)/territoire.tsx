@@ -191,7 +191,10 @@ export default function TerritoireScreen() {
         <TouchableOpacity
           style={styles.noyauBtn}
           testID="territoire-noyau-btn"
-          onPress={() => router.push('/noyau')}
+          onPress={() => {
+            haptic.medium();
+            router.push('/noyau');
+          }}
           activeOpacity={0.8}
         >
           <NoyauSphere />
