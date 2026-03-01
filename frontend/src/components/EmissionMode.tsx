@@ -52,6 +52,20 @@ const MAX_DURATION_MS = 120000; // 2 minutes
 const NOYAU_SIZE = 180;
 const NOYAU_RADIUS = NOYAU_SIZE / 2;
 
+// UPGRADE 14 — Mock transcriptions (simulation)
+const MOCK_TRANSCRIPTIONS = [
+  "La mémoire de nos ancêtres voyage dans chaque son que nous créons. C'est ce qui nous relie, au-delà des frontières et du temps.",
+  "Quand je ferme les yeux et que j'écoute les rythmes de chez nous, je sens la terre vibrer sous mes pieds, même à des milliers de kilomètres.",
+  "Chaque voix est une constellation unique dans l'univers sonore. La tienne porte l'histoire de ceux qui t'ont précédé.",
+  "Le créole n'est pas juste une langue, c'est une musique. Une mélodie qui traverse les générations et les océans.",
+  "Dans le silence entre les notes, il y a toute la sagesse de ceux qui ont créé avant nous. Écoute bien.",
+  "On dit que la kora peut faire pleurer les étoiles. Je crois que c'est parce qu'elle leur rappelle leur propre naissance.",
+];
+
+function getRandomMockTranscription(): string {
+  return MOCK_TRANSCRIPTIONS[Math.floor(Math.random() * MOCK_TRANSCRIPTIONS.length)];
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // CIRCULAR PROGRESS TIMER
 // ══════════════════════════════════════════════════════════════════════════════
