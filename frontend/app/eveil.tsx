@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS, SPACING } from '../src/theme';
 import { useKoraStore } from '../src/store/useKoraStore';
 import { haptic } from '../src/utils/haptics';
+import { initializeSacredWords } from '../src/utils/sacredWords';
 
 // UPGRADE 16 — Storage keys
 const EVEIL_COMPLETED_KEY = 'kora_eveil_completed';
