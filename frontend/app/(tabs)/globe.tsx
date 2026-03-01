@@ -398,25 +398,17 @@ export default function GlobeScreen() {
         )}
       </View>
 
-      {/* GPS Coordinates Toast */}
-      <Animated.View
-        style={[styles.gpsToast, { opacity: gpsToastOpacity }]}
-        pointerEvents="none"
-      >
-        <View style={styles.gpsToastContent}>
-          <View style={styles.gpsToastIconContainer}>
-            <PinIcon size={22} color={COLORS.gold} />
-          </View>
-          <View>
-            <Text style={styles.gpsToastLabel}>Coordonnées GPS</Text>
-            {lastGPSClick && (
-              <Text style={styles.gpsToastCoords}>
-                {lastGPSClick.lat.toFixed(3)}°, {lastGPSClick.lng.toFixed(3)}°
-              </Text>
-            )}
-          </View>
-        </View>
-      </Animated.View>
+      {/* GPS Coordinates Toast — Épuré */}
+      {lastGPSClick && (
+        <Animated.View
+          style={[styles.gpsToast, { opacity: gpsToastOpacity }]}
+          pointerEvents="none"
+        >
+          <Text style={styles.gpsToastCoords}>
+            {lastGPSClick.lat.toFixed(2)}° {lastGPSClick.lng.toFixed(2)}°
+          </Text>
+        </Animated.View>
+      )}
 
       {/* Territory preview card */}
       <Animated.View
