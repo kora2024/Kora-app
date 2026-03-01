@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   // Text
   feedText: {
-    fontFamily: FONTS.jostLight,
+    fontFamily: FONTS.playfairItalic,
     fontSize: 16,
     color: COLORS.cream,
     lineHeight: 24,
