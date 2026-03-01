@@ -733,6 +733,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
 });
 
 KoraGlobe.displayName = 'KoraGlobe';
+// Version: 2.0 - Procedural texture, no document dependency
 
 export default KoraGlobe;
 
