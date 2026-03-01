@@ -136,7 +136,6 @@ export default function TerritoireScreen() {
             <BackIcon size={20} color={COLORS.gray} />
           </NoyauTransitionButton>
         </FadeInView>
-        </TouchableOpacity>
 
         {/* ═══════════════════════════════════════════════════════════════
             ÉCLATS — Minimal grid
