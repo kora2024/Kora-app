@@ -1028,6 +1028,14 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   }, [createRipple, userLocation, isUserSovereign]);
 
   // ============================================
+  // UPGRADE 9 — MAGNETIC ATTRACTION STATE
+  // ============================================
+  
+  const magneticTargetRef = useRef<Territory | null>(null);
+  const magneticStrengthRef = useRef(0);
+  const lastMagneticCheckRef = useRef(0);
+
+  // ============================================
   // TOUCH HANDLERS
   // ============================================
 
@@ -1035,12 +1043,14 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     isDragging.current = true;
     autoRotate.current = false;
     isAnimatingToTarget.current = false;
+    magneticTargetRef.current = null;
+    magneticStrengthRef.current = 0;
     const touch = e.nativeEvent.touches[0];
     prevPointer.current = { x: touch.pageX, y: touch.pageY };
   }, []);
 
   const handleTouchMove = useCallback((e: any) => {
-    if (!isDragging.current || !globeGroupRef.current) return;
+    if (!isDragging.current || !globeGroupRef.current || !cameraRef.current || !glRef.current) return;
     const touch = e.nativeEvent.touches[0];
     
     const dx = touch.pageX - prevPointer.current.x;
@@ -1055,6 +1065,127 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     spherical.current.phi += velocity.current.y;
     
     prevPointer.current = { x: touch.pageX, y: touch.pageY };
+    
+    // ============================================
+    // UPGRADE 9: MAGNETIC ATTRACTION CHECK
+    // Check every 100ms for performance
+    // ============================================
+    
+    const now = Date.now();
+    if (now - lastMagneticCheckRef.current < 100) return;
+    lastMagneticCheckRef.current = now;
+    
+    const gl = glRef.current;
+    const touchX = touch.pageX;
+    const touchY = touch.pageY;
+    
+    // Find the closest territory to the current touch position
+    let closestTerritory: Territory | null = null;
+    let closestDistance = Infinity;
+    const ATTRACTION_ZONE = 60; // pixels - zone d'attraction
+    
+    // Get camera matrices for projection
+    const camera = cameraRef.current;
+    const globeGroup = globeGroupRef.current;
+    
+    TERRITORIES.forEach((territory) => {
+      // Get territory position in world space
+      const pos = latLngToVector3(territory.lat, territory.lng, 1.02);
+      const worldPos = pos.clone().applyMatrix4(globeGroup.matrixWorld);
+      
+      // Project to screen coordinates
+      const projected = worldPos.clone().project(camera);
+      const screenX = ((projected.x + 1) / 2) * gl.drawingBufferWidth;
+      const screenY = ((1 - projected.y) / 2) * gl.drawingBufferHeight;
+      
+      // Check if territory is facing the camera (not on the back side)
+      if (projected.z > 1) return; // Behind camera
+      
+      // Calculate distance to touch
+      const distance = Math.sqrt(
+        Math.pow(screenX - touchX, 2) + 
+        Math.pow(screenY - touchY, 2)
+      );
+      
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestTerritory = territory;
+      }
+    });
+    
+    // Apply magnetic attraction if within zone
+    if (closestTerritory && closestDistance < ATTRACTION_ZONE) {
+      const previousTarget = magneticTargetRef.current;
+      magneticTargetRef.current = closestTerritory;
+      
+      // Calculate magnetic strength (stronger when closer)
+      // 1.0 at center, 0.0 at edge of attraction zone
+      const strength = 1 - (closestDistance / ATTRACTION_ZONE);
+      magneticStrengthRef.current = strength;
+      
+      // Highlight the territory being attracted to
+      if (previousTarget?.id !== closestTerritory.id) {
+        // Haptic feedback when entering a new territory's magnetic field
+        haptic.light();
+        
+        // Illuminate the attracted territory
+        territoryNodesRef.current.forEach((node) => {
+          const t = node.userData as Territory;
+          if (t.id === closestTerritory!.id) {
+            // Scale up and brighten
+            node.userData.magneticScale = 1.3;
+            node.userData.magneticGlow = true;
+            const mat = node.material as THREE.MeshPhongMaterial;
+            mat.emissiveIntensity = 0.8;
+          } else if (node.userData.magneticGlow) {
+            // Reset other territories
+            node.userData.magneticScale = 1.0;
+            node.userData.magneticGlow = false;
+            const mat = node.material as THREE.MeshPhongMaterial;
+            mat.emissiveIntensity = 0.4;
+          }
+        });
+      }
+      
+      // Apply subtle attraction force (30°/s max = 0.52 rad/s)
+      // At 60fps, max angular velocity per frame = 0.0087 rad
+      const MAX_ANGULAR_VELOCITY = 0.0087;
+      const attractionForce = strength * MAX_ANGULAR_VELOCITY * 0.5; // Subtle
+      
+      // Calculate direction to territory
+      const targetTheta = (closestTerritory.lng + 180) * (Math.PI / 180);
+      const targetPhi = (90 - closestTerritory.lat) * (Math.PI / 180);
+      
+      let dTheta = targetTheta - spherical.current.theta;
+      while (dTheta > Math.PI) dTheta -= Math.PI * 2;
+      while (dTheta < -Math.PI) dTheta += Math.PI * 2;
+      
+      const dPhi = targetPhi - spherical.current.phi;
+      
+      // Apply gentle pull toward territory
+      if (Math.abs(dTheta) > 0.01) {
+        spherical.current.theta += Math.sign(dTheta) * attractionForce;
+      }
+      if (Math.abs(dPhi) > 0.01) {
+        spherical.current.phi += Math.sign(dPhi) * attractionForce * 0.5;
+      }
+    } else {
+      // Clear magnetic target when out of zone
+      if (magneticTargetRef.current) {
+        magneticTargetRef.current = null;
+        magneticStrengthRef.current = 0;
+        
+        // Reset all territory highlights
+        territoryNodesRef.current.forEach((node) => {
+          if (node.userData.magneticGlow) {
+            node.userData.magneticScale = 1.0;
+            node.userData.magneticGlow = false;
+            const mat = node.material as THREE.MeshPhongMaterial;
+            mat.emissiveIntensity = 0.4;
+          }
+        });
+      }
+    }
   }, []);
 
   const handleTouchEnd = useCallback((e: any) => {
