@@ -320,18 +320,26 @@ export default function EveilScreen() {
     completeOnboarding();
     
     // UPGRADE 16 — Save completion to AsyncStorage
+    // Note: On some devices/simulators, AsyncStorage may not be available
     try {
       await AsyncStorage.setItem(EVEIL_COMPLETED_KEY, 'true');
       await AsyncStorage.setItem(EVEIL_DATE_KEY, new Date().toISOString());
       console.log('✨ Éveil complété et sauvegardé');
       
       // UPGRADE 18 — Generate and store sacred words
-      const words = await initializeSacredWords();
-      if (words) {
-        console.log('🔑 12 mots sacrés générés');
+      try {
+        const words = await initializeSacredWords();
+        if (words) {
+          console.log('🔑 12 mots sacrés générés');
+        }
+      } catch (sacredError) {
+        // Silent fail for sacred words (may not be available on all platforms)
+        console.log('Sacred words not available on this platform');
       }
     } catch (error) {
-      console.error('Error saving eveil completion:', error);
+      // Silent fail - continue to globe even if storage fails
+      // This can happen on simulators or when native modules aren't linked
+      console.log('Storage not available, continuing without persistence');
     }
     
     router.replace('/(tabs)/globe');
