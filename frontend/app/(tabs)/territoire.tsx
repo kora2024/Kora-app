@@ -337,15 +337,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   collabName: {
-    fontFamily: FONTS.jostRegular,
-    fontSize: 16,
-    color: COLORS.cream,
-    lineHeight: 16 * 1.6,
+    ...TYPOGRAPHY.body,
   },
   collabPartner: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    ...TYPOGRAPHY.meta,
     marginTop: 4,
   },
   frekBadge: {
@@ -355,10 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   frekBadgeText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 12,
-    color: COLORS.terra,
-    letterSpacing: 1,
+    ...TYPOGRAPHY.badge,
   },
   
   // ═══════════ SOVEREIGN ID ═══════════
@@ -366,15 +358,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sovereignLabel: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    letterSpacing: 2,
+    ...TYPOGRAPHY.label,
     marginBottom: 8,
   },
   sovereignValue: {
-    fontFamily: FONTS.jetbrainsMono,
-    fontSize: 14,
+    ...TYPOGRAPHY.id,
     color: 'rgba(255,255,255,0.3)',
   },
 });
