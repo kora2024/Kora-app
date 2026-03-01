@@ -337,6 +337,54 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     console.log('Éclat ajouté au globe:', eclat.id);
   }, []);
   
+  // Function to add a Mock Éclat to the globe (with custom color and fade-in)
+  const addMockEclatToGlobe = useCallback((mockEclat: MockEclat, delay: number = 0) => {
+    setTimeout(() => {
+      if (!globeGroupRef.current || !sceneRef.current) return;
+      
+      const pos = latLngToVector3(mockEclat.lat, mockEclat.lng, 1.04);
+      const colorHex = parseInt(mockEclat.color.replace('#', ''), 16);
+      
+      // Create core point
+      const coreGeo = new THREE.SphereGeometry(0.018, 16, 16);
+      const coreMat = new THREE.MeshPhongMaterial({
+        color: colorHex,
+        emissive: colorHex,
+        emissiveIntensity: 0.5,
+        transparent: true,
+        opacity: 0, // Start invisible for fade-in
+      });
+      const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+      coreMesh.position.copy(pos);
+      coreMesh.userData = { mockEclat, isMockEclat: true, fadeIn: true, fadeStart: clockRef.current?.getElapsedTime() || 0 };
+      globeGroupRef.current.add(coreMesh);
+      mockEclatMeshesRef.current.push(coreMesh);
+      
+      // Create pulsing aura
+      const auraGeo = new THREE.RingGeometry(0.022, 0.045, 32);
+      const auraMat = new THREE.MeshBasicMaterial({
+        color: colorHex,
+        transparent: true,
+        opacity: 0, // Start invisible
+        side: THREE.DoubleSide,
+      });
+      const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+      auraMesh.position.copy(pos);
+      auraMesh.lookAt(0, 0, 0);
+      auraMesh.userData = { 
+        isMockEclatAura: true, 
+        startTime: clockRef.current?.getElapsedTime() || 0,
+        mockEclatId: mockEclat.id,
+        fadeIn: true,
+        fadeStart: clockRef.current?.getElapsedTime() || 0,
+      };
+      globeGroupRef.current.add(auraMesh);
+      mockEclatAurasRef.current.push(auraMesh);
+      
+      console.log('Mock Éclat ajouté au globe:', mockEclat.id, mockEclat.territoire);
+    }, delay);
+  }, []);
+  
   useImperativeHandle(ref, () => ({
     focusOnTarget: (lat: number, lng: number) => {
       const target = latLngToSpherical(lat, lng);
@@ -348,6 +396,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       autoRotate.current = false;
     },
     addEclat: addEclatToGlobe,
+    addMockEclat: addMockEclatToGlobe,
   }));
 
   // Create ripple effect
