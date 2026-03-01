@@ -17,6 +17,8 @@ import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraSto
 import { haptic } from '../../src/utils/haptics';
 import KoraGlobe, { GlobeRef } from '../../src/globe/KoraGlobe';
 import VoiceRecordModal from '../../src/components/VoiceRecordModal';
+import EclatPlayerModal from '../../src/components/EclatPlayerModal';
+import { Eclat, getEclats, deleteEclat } from '../../src/utils/eclatStorage';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -46,8 +48,11 @@ export default function GlobeScreen() {
   const [globeReady, setGlobeReady] = useState(false);
   const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+  const [eclats, setEclats] = useState<Eclat[]>([]);
+  const [selectedEclat, setSelectedEclat] = useState<Eclat | null>(null);
+  const [eclatPlayerVisible, setEclatPlayerVisible] = useState(false);
   
-  // Globe ref for camera control
+  // Globe ref for camera control and adding eclats
   const globeRef = useRef<GlobeRef>(null);
 
   // Animations
@@ -57,11 +62,39 @@ export default function GlobeScreen() {
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const gpsToastOpacity = useRef(new Animated.Value(0)).current;
 
+  // Load stored eclats on mount
+  useEffect(() => {
+    loadEclats();
+  }, []);
+
+  const loadEclats = async () => {
+    const storedEclats = await getEclats();
+    setEclats(storedEclats);
+    console.log('Éclats chargés:', storedEclats.length);
+  };
+
   // Mark globe as ready after mount
   useEffect(() => {
-    const timer = setTimeout(() => setGlobeReady(true), 1500);
+    const timer = setTimeout(() => {
+      setGlobeReady(true);
+      // Add existing eclats to globe after it's ready
+      setTimeout(() => {
+        eclats.forEach(eclat => {
+          globeRef.current?.addEclat(eclat);
+        });
+      }, 500);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
+
+  // Add eclats to globe when they change (and globe is ready)
+  useEffect(() => {
+    if (globeReady && eclats.length > 0) {
+      eclats.forEach(eclat => {
+        globeRef.current?.addEclat(eclat);
+      });
+    }
+  }, [globeReady]);
 
   useEffect(() => {
     // Show hint after 2s, hide after 6s
@@ -127,10 +160,36 @@ export default function GlobeScreen() {
     setVoiceModalVisible(true);
   }, []);
 
-  const handleRecordingComplete = useCallback((uri: string, durationMs: number) => {
-    console.log('Recording complete:', uri, 'Duration:', durationMs);
+  // Handle new eclat created
+  const handleEclatCreated = useCallback((eclat: Eclat) => {
+    console.log('Nouvel Éclat créé:', eclat);
+    
+    // Add to local state
+    setEclats(prev => [...prev, eclat]);
+    
+    // Add to globe immediately
+    globeRef.current?.addEclat(eclat);
+    
+    // Focus on the new eclat location
+    setTimeout(() => {
+      globeRef.current?.focusOnTarget(eclat.lat, eclat.lng);
+    }, 500);
+    
     haptic.propulse();
-    // TODO: Upload to backend or process recording
+  }, []);
+
+  // Handle eclat tap on globe
+  const handleEclatTap = useCallback((eclat: Eclat) => {
+    console.log('Éclat tappé:', eclat);
+    setSelectedEclat(eclat);
+    setEclatPlayerVisible(true);
+  }, []);
+
+  // Handle eclat delete
+  const handleDeleteEclat = useCallback(async (id: string) => {
+    await deleteEclat(id);
+    setEclats(prev => prev.filter(e => e.id !== id));
+    // Note: The 3D mesh will remain until globe is reloaded, but that's ok for MVP
   }, []);
 
   return (
@@ -139,6 +198,13 @@ export default function GlobeScreen() {
       <View style={styles.topBar}>
         <Text style={styles.logoText} testID="globe-logo">KORA</Text>
         <View style={styles.topBarRight}>
+          {/* Eclat count badge */}
+          {eclats.length > 0 && (
+            <View style={styles.eclatBadge}>
+              <Text style={styles.eclatBadgeText}>{eclats.length}</Text>
+              <Text style={styles.eclatBadgeLabel}>éclats</Text>
+            </View>
+          )}
           {/* Home button - focus on sovereign territory */}
           <TouchableOpacity 
             style={styles.homeBtn} 
@@ -174,8 +240,10 @@ export default function GlobeScreen() {
             onTerritorySelect={handleTerritorySelect}
             onTerritoryDoubleTap={handleTerritoryDoubleTap}
             onGPSClick={handleGPSClick}
+            onEclatTap={handleEclatTap}
             userLocation={USER_LOCATION}
             isUserSovereign={IS_USER_SOVEREIGN}
+            eclats={eclats}
           />
         )}
 
@@ -262,7 +330,20 @@ export default function GlobeScreen() {
       <VoiceRecordModal
         visible={voiceModalVisible}
         onClose={() => setVoiceModalVisible(false)}
-        onRecordingComplete={handleRecordingComplete}
+        onEclatCreated={handleEclatCreated}
+        userLocation={USER_LOCATION}
+        territoire="Fort-de-France"
+      />
+
+      {/* Eclat Player Modal */}
+      <EclatPlayerModal
+        visible={eclatPlayerVisible}
+        eclat={selectedEclat}
+        onClose={() => {
+          setEclatPlayerVisible(false);
+          setSelectedEclat(null);
+        }}
+        onDelete={handleDeleteEclat}
       />
     </View>
   );
@@ -291,6 +372,27 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: COLORS.cream,
     letterSpacing: 2,
+  },
+  eclatBadge: {
+    backgroundColor: 'rgba(166, 93, 71, 0.2)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(166, 93, 71, 0.3)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  eclatBadgeText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.terra,
+  },
+  eclatBadgeLabel: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 10,
+    color: COLORS.terra,
   },
   homeBtn: {
     width: 40,
