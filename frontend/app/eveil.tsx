@@ -358,13 +358,38 @@ export default function EveilScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}
       >
-        {/* Logo */}
-        <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ translateY: logoSlide }] }]}>
-          <Text style={styles.logo} testID="kora-logo">KORA</Text>
-        </Animated.View>
+        {/* Logo — 5 taps to reveal developer menu */}
+        <TouchableOpacity 
+          onPress={handleLogoTap}
+          activeOpacity={1}
+        >
+          <Animated.View style={[styles.logoContainer, { opacity: logoOpacity, transform: [{ translateY: logoSlide }] }]}>
+            <Text style={styles.logo} testID="kora-logo">KORA</Text>
+          </Animated.View>
+        </TouchableOpacity>
         <Animated.View style={{ opacity: subOpacity }}>
           <Text style={styles.subtitle} testID="kora-subtitle">TON MONDE T'ATTEND</Text>
         </Animated.View>
+
+        {/* UPGRADE 16 — Developer Menu (hidden) */}
+        {showDevMenu && (
+          <View style={styles.devMenuContainer}>
+            <Text style={styles.devMenuTitle}>Menu développeur</Text>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleResetEveil}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.resetButtonText}>Réinitialiser l'Éveil</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.closeDevMenu}
+              onPress={() => setShowDevMenu(false)}
+            >
+              <Text style={styles.closeDevMenuText}>Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Step content */}
         <Animated.View
