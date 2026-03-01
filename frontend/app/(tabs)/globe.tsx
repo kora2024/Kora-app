@@ -512,7 +512,7 @@ export default function GlobeScreen() {
             activeOpacity={0.8}
             testID="voice-capture-fab"
           >
-            <Text style={styles.fabIcon}>🎤</Text>
+            <MicIcon size={24} color={COLORS.dark} />
           </TouchableOpacity>
         </Animated.View>
         
