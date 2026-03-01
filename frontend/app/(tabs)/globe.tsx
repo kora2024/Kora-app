@@ -335,17 +335,10 @@ export default function GlobeScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="globe-screen">
-      {/* Top bar */}
+      {/* Top bar — Épuré : Logo uniquement */}
       <View style={styles.topBar}>
         <Text style={styles.logoText} testID="globe-logo">KORA</Text>
         <View style={styles.topBarRight}>
-          {/* Eclat count badge */}
-          {eclats.length > 0 && (
-            <View style={styles.eclatBadge}>
-              <Text style={styles.eclatBadgeText}>{eclats.length}</Text>
-              <Text style={styles.eclatBadgeLabel}>éclats</Text>
-            </View>
-          )}
           {/* Home button */}
           <TouchableOpacity 
             style={styles.homeBtn} 
@@ -353,9 +346,6 @@ export default function GlobeScreen() {
             activeOpacity={0.7}
           >
             <HomeIcon size={18} color={COLORS.gold} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsBtn} testID="globe-settings-btn" activeOpacity={0.7}>
-            <SettingsIcon size={16} color={COLORS.cream} />
           </TouchableOpacity>
         </View>
       </View>
