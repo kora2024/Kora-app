@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
@@ -25,6 +26,9 @@ const { width: SW } = Dimensions.get('window');
 // Mock user location (Fort-de-France - sovereign territory, UTC-4)
 const USER_LOCATION = { lat: 14.6, lng: -61.0 };
 const IS_USER_SOVEREIGN = true;
+
+// AsyncStorage key for first eclat state
+const FIRST_ECLAT_KEY = 'hasCreatedFirstEclat';
 
 // Loading component for Globe
 function GlobeLoader() {
@@ -52,6 +56,10 @@ export default function GlobeScreen() {
   const [selectedEclat, setSelectedEclat] = useState<Eclat | null>(null);
   const [eclatPlayerVisible, setEclatPlayerVisible] = useState(false);
   
+  // First launch state
+  const [hasCreatedFirstEclat, setHasCreatedFirstEclat] = useState(true); // Default true to hide animations initially
+  const [showFirstHint, setShowFirstHint] = useState(false);
+  
   // Globe ref for camera control and adding eclats
   const globeRef = useRef<GlobeRef>(null);
 
@@ -61,17 +69,114 @@ export default function GlobeScreen() {
   const cardSlide = useRef(new Animated.Value(20)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
   const gpsToastOpacity = useRef(new Animated.Value(0)).current;
+  
+  // UPGRADE 2 — First launch animations
+  const fabPulseAnim = useRef(new Animated.Value(1)).current;
+  const fabAuraAnim = useRef(new Animated.Value(0)).current;
+  const fabTextOpacity = useRef(new Animated.Value(1)).current;
+  const firstHintOpacity = useRef(new Animated.Value(0)).current;
+  const fabPulseAnimRef = useRef<Animated.CompositeAnimation | null>(null);
+  const fabAuraAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
-  // Load stored eclats on mount
+  // Load first eclat state and eclats on mount
   useEffect(() => {
+    loadFirstEclatState();
     loadEclats();
   }, []);
+
+  const loadFirstEclatState = async () => {
+    try {
+      const value = await AsyncStorage.getItem(FIRST_ECLAT_KEY);
+      const hasCreated = value === 'true';
+      setHasCreatedFirstEclat(hasCreated);
+      
+      // If first time user, show hint and start FAB animations
+      if (!hasCreated) {
+        setShowFirstHint(true);
+      }
+    } catch (e) {
+      console.log('Error loading first eclat state:', e);
+    }
+  };
 
   const loadEclats = async () => {
     const storedEclats = await getEclats();
     setEclats(storedEclats);
     console.log('Éclats chargés:', storedEclats.length);
+    
+    // If user has eclats but hasCreatedFirstEclat wasn't set, fix it
+    if (storedEclats.length > 0) {
+      setHasCreatedFirstEclat(true);
+      setShowFirstHint(false);
+      await AsyncStorage.setItem(FIRST_ECLAT_KEY, 'true');
+    }
   };
+
+  // Start FAB pulse and aura animations for first-time users
+  useEffect(() => {
+    if (!hasCreatedFirstEclat && globeReady) {
+      // FAB Pulse animation: Scale 1 → 1.12 → 1, duration 1.5s, loop
+      fabPulseAnimRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(fabPulseAnim, { 
+            toValue: 1.12, 
+            duration: 750, 
+            useNativeDriver: true 
+          }),
+          Animated.timing(fabPulseAnim, { 
+            toValue: 1, 
+            duration: 750, 
+            useNativeDriver: true 
+          }),
+        ])
+      );
+      fabPulseAnimRef.current.start();
+
+      // FAB Aura animation: expand and fade
+      fabAuraAnimRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(fabAuraAnim, { 
+            toValue: 1, 
+            duration: 1500, 
+            useNativeDriver: true 
+          }),
+          Animated.timing(fabAuraAnim, { 
+            toValue: 0, 
+            duration: 0, 
+            useNativeDriver: true 
+          }),
+        ])
+      );
+      fabAuraAnimRef.current.start();
+
+      // Show first hint on globe after 1 second
+      setTimeout(() => {
+        if (!hasCreatedFirstEclat) {
+          Animated.timing(firstHintOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }).start();
+
+          // Auto-hide after 5 seconds
+          setTimeout(() => {
+            Animated.timing(firstHintOpacity, {
+              toValue: 0,
+              duration: 500,
+              useNativeDriver: true,
+            }).start(() => {
+              setShowFirstHint(false);
+            });
+          }, 5000);
+        }
+      }, 1000);
+    }
+
+    return () => {
+      fabPulseAnimRef.current?.stop();
+      fabAuraAnimRef.current?.stop();
+    };
+  }, [hasCreatedFirstEclat, globeReady]);
 
   // Mark globe as ready after mount
   useEffect(() => {
@@ -154,14 +259,14 @@ export default function GlobeScreen() {
     globeRef.current?.focusOnTarget(USER_LOCATION.lat, USER_LOCATION.lng);
   }, []);
 
-  // AXE 2 — Capture Intuitive: Open voice recording modal
+  // Open voice recording modal
   const handleOpenVoiceCapture = useCallback(() => {
     haptic.eveille();
     setVoiceModalVisible(true);
   }, []);
 
   // Handle new eclat created
-  const handleEclatCreated = useCallback((eclat: Eclat) => {
+  const handleEclatCreated = useCallback(async (eclat: Eclat) => {
     console.log('Nouvel Éclat créé:', eclat);
     
     // Add to local state
@@ -175,8 +280,37 @@ export default function GlobeScreen() {
       globeRef.current?.focusOnTarget(eclat.lat, eclat.lng);
     }, 500);
     
+    // UPGRADE 2: Stop first-launch animations after first Eclat
+    if (!hasCreatedFirstEclat) {
+      setHasCreatedFirstEclat(true);
+      setShowFirstHint(false);
+      
+      // Stop animations
+      fabPulseAnimRef.current?.stop();
+      fabAuraAnimRef.current?.stop();
+      fabPulseAnim.setValue(1);
+      fabAuraAnim.setValue(0);
+      
+      // Fade out the text
+      Animated.timing(fabTextOpacity, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+      
+      // Fade out first hint
+      Animated.timing(firstHintOpacity, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Save state
+      await AsyncStorage.setItem(FIRST_ECLAT_KEY, 'true');
+    }
+    
     haptic.propulse();
-  }, []);
+  }, [hasCreatedFirstEclat]);
 
   // Handle eclat tap on globe
   const handleEclatTap = useCallback((eclat: Eclat) => {
@@ -189,7 +323,6 @@ export default function GlobeScreen() {
   const handleDeleteEclat = useCallback(async (id: string) => {
     await deleteEclat(id);
     setEclats(prev => prev.filter(e => e.id !== id));
-    // Note: The 3D mesh will remain until globe is reloaded, but that's ok for MVP
   }, []);
 
   return (
@@ -205,7 +338,7 @@ export default function GlobeScreen() {
               <Text style={styles.eclatBadgeLabel}>éclats</Text>
             </View>
           )}
-          {/* Home button - focus on sovereign territory */}
+          {/* Home button */}
           <TouchableOpacity 
             style={styles.homeBtn} 
             onPress={handleFocusHome}
@@ -222,7 +355,6 @@ export default function GlobeScreen() {
       {/* 3D Native Globe */}
       <View style={styles.globeContainer}>
         {Platform.OS === 'web' ? (
-          // Web fallback
           <View style={styles.webFallback}>
             <LinearGradient
               colors={['#0a1829', '#060d17', '#000000']}
@@ -249,14 +381,28 @@ export default function GlobeScreen() {
 
         {/* Loading overlay */}
         {!globeReady && Platform.OS !== 'web' && <GlobeLoader />}
+
+        {/* UPGRADE 2: First hint on globe center */}
+        {showFirstHint && eclats.length === 0 && (
+          <Animated.View 
+            style={[
+              styles.firstHintContainer,
+              { opacity: firstHintOpacity }
+            ]}
+            pointerEvents="none"
+          >
+            <View style={styles.firstHintBubble}>
+              <Text style={styles.firstHintText}>
+                Appuie sur ✦ pour créer ton premier Éclat
+              </Text>
+            </View>
+          </Animated.View>
+        )}
       </View>
 
       {/* GPS Coordinates Toast */}
       <Animated.View
-        style={[
-          styles.gpsToast,
-          { opacity: gpsToastOpacity },
-        ]}
+        style={[styles.gpsToast, { opacity: gpsToastOpacity }]}
         pointerEvents="none"
       >
         <View style={styles.gpsToastContent}>
@@ -316,15 +462,62 @@ export default function GlobeScreen() {
         </Text>
       </Animated.View>
 
-      {/* AXE 2 — Floating Voice Capture Button */}
-      <TouchableOpacity
-        style={[styles.fabButton, { bottom: insets.bottom + 90 }]}
-        onPress={handleOpenVoiceCapture}
-        activeOpacity={0.8}
-        testID="voice-capture-fab"
-      >
-        <Text style={styles.fabIcon}>🎤</Text>
-      </TouchableOpacity>
+      {/* UPGRADE 2: FAB with pulse animation for first-time users */}
+      <View style={[styles.fabContainer, { bottom: insets.bottom + 90 }]}>
+        {/* Expanding aura (first launch only) */}
+        {!hasCreatedFirstEclat && (
+          <Animated.View
+            style={[
+              styles.fabAura,
+              {
+                transform: [
+                  {
+                    scale: fabAuraAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 2],
+                    }),
+                  },
+                ],
+                opacity: fabAuraAnim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.6, 0.3, 0],
+                }),
+              },
+            ]}
+          />
+        )}
+        
+        {/* Main FAB button */}
+        <Animated.View
+          style={[
+            styles.fabButtonAnimated,
+            {
+              transform: [{ scale: hasCreatedFirstEclat ? 1 : fabPulseAnim }],
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.fabButton}
+            onPress={handleOpenVoiceCapture}
+            activeOpacity={0.8}
+            testID="voice-capture-fab"
+          >
+            <Text style={styles.fabIcon}>🎤</Text>
+          </TouchableOpacity>
+        </Animated.View>
+        
+        {/* First launch text */}
+        {!hasCreatedFirstEclat && (
+          <Animated.Text
+            style={[
+              styles.fabInviteText,
+              { opacity: fabTextOpacity },
+            ]}
+          >
+            Parle. Ton monde t'écoute.
+          </Animated.Text>
+        )}
+      </View>
 
       {/* Voice Recording Modal */}
       <VoiceRecordModal
@@ -480,6 +673,24 @@ const styles = StyleSheet.create({
     marginTop: 12,
     letterSpacing: 1,
   },
+  // UPGRADE 2: First hint on globe
+  firstHintContainer: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  firstHintBubble: {
+    backgroundColor: 'rgba(13, 13, 13, 0.7)',
+    borderRadius: 50,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  firstHintText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 13,
+    color: 'rgba(244, 241, 234, 0.8)',
+    letterSpacing: 0.5,
+  },
   // GPS Toast
   gpsToast: {
     position: 'absolute',
@@ -580,10 +791,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     letterSpacing: 0.5,
   },
-  // AXE 2 — Floating Action Button
-  fabButton: {
+  // UPGRADE 2: FAB with animations
+  fabContainer: {
     position: 'absolute',
     alignSelf: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  fabAura: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.gold,
+  },
+  fabButtonAnimated: {
+    // Wrapper for scale animation
+  },
+  fabButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -591,9 +816,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
-    zIndex: 100,
   },
   fabIcon: {
     fontSize: 24,
+  },
+  fabInviteText: {
+    fontFamily: FONTS.jostExtraLight,
+    fontSize: 11,
+    color: 'rgba(244, 241, 234, 0.5)',
+    letterSpacing: 1.5,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
