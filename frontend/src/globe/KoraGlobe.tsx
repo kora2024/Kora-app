@@ -1279,6 +1279,155 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
           // Opacity from 0.8 to 0
           (aura.material as THREE.MeshBasicMaterial).opacity = 0.8 * (1 - progress);
         });
+        
+        // ============================================
+        // UPGRADE 15: ANIMATE USER ÉCLATS (Birth → Travel → Orbit)
+        // The emotional heart of KORA
+        // ============================================
+        
+        const BIRTH_DURATION = 0.3; // 300ms
+        const TRAVEL_DURATION = 0.5; // 500ms (300-800ms total)
+        const ORBIT_RADIUS = 0.025; // ~20px equivalent
+        const ORBIT_PERIOD = 8; // 8 seconds per orbit
+        
+        userEclatSystemsRef.current.forEach((system) => {
+          const elapsed = t - system.birthStartTime;
+          const coreMat = system.core.material as THREE.MeshPhongMaterial;
+          const auraMat = system.aura.material as THREE.MeshBasicMaterial;
+          
+          // ─────────────────────────────────────────────────
+          // PHASE 1: BIRTH (0-300ms)
+          // Point lumineux naît au centre, scale 0→1, opacity 0→1
+          // ─────────────────────────────────────────────────
+          
+          if (system.birthPhase === 'birth') {
+            const birthProgress = Math.min(1, elapsed / BIRTH_DURATION);
+            
+            // Ease out cubic for smooth appearance
+            const eased = 1 - Math.pow(1 - birthProgress, 3);
+            
+            // Scale from 0.01 to 1
+            const scale = 0.01 + eased * 0.99;
+            system.core.scale.set(scale, scale, scale);
+            
+            // Opacity from 0 to 1
+            coreMat.opacity = eased;
+            auraMat.opacity = eased * 0.8;
+            
+            // Emissive intensity pulses during birth
+            coreMat.emissiveIntensity = 0.5 + eased * 1.5;
+            
+            // Transition to travel phase
+            if (birthProgress >= 1) {
+              system.birthPhase = 'travel';
+              console.log('🚀 User Éclat starting travel:', system.eclat.id);
+            }
+          }
+          
+          // ─────────────────────────────────────────────────
+          // PHASE 2: TRAVEL (300-800ms)
+          // Spring animation toward target with golden trail
+          // ─────────────────────────────────────────────────
+          
+          else if (system.birthPhase === 'travel') {
+            const travelElapsed = elapsed - BIRTH_DURATION;
+            const travelProgress = Math.min(1, travelElapsed / TRAVEL_DURATION);
+            
+            // Spring easing (tension: 40, friction: 8)
+            // Approximation: overshoot then settle
+            const springFactor = 1 - Math.exp(-5 * travelProgress) * Math.cos(2 * Math.PI * travelProgress * 0.5);
+            const eased = Math.min(1, springFactor);
+            
+            // Lerp position from center (0,0,0) to target
+            const newPos = new THREE.Vector3().lerpVectors(
+              new THREE.Vector3(0, 0, 0),
+              system.targetPosition,
+              eased
+            );
+            system.group.position.copy(newPos);
+            
+            // Update trail particles (golden trail fading behind)
+            system.trail.forEach((trailMesh, i) => {
+              const trailProgress = Math.max(0, travelProgress - (i * 0.05));
+              const trailPos = new THREE.Vector3().lerpVectors(
+                new THREE.Vector3(0, 0, 0),
+                system.targetPosition,
+                Math.min(1, trailProgress)
+              );
+              trailMesh.position.copy(trailPos.sub(system.group.position));
+              
+              // Fade trail opacity
+              const trailMat = trailMesh.material as THREE.MeshBasicMaterial;
+              trailMat.opacity = Math.max(0, (1 - travelProgress) * (1 - i / system.trail.length) * 0.8);
+            });
+            
+            // Pulsing during travel
+            const pulse = 1 + Math.sin(elapsed * 15) * 0.1;
+            system.core.scale.set(pulse, pulse, pulse);
+            
+            // Emissive intensity high during travel
+            coreMat.emissiveIntensity = 1.5 + Math.sin(elapsed * 10) * 0.5;
+            
+            // Transition to orbit phase
+            if (travelProgress >= 1) {
+              system.birthPhase = 'orbit';
+              system.orbitAngle = 0;
+              // Hide trail particles
+              system.trail.forEach((trailMesh) => {
+                const trailMat = trailMesh.material as THREE.MeshBasicMaterial;
+                trailMat.opacity = 0;
+              });
+              console.log('🌍 User Éclat now orbiting:', system.eclat.id);
+            }
+          }
+          
+          // ─────────────────────────────────────────────────
+          // PHASE 3: ORBIT (800ms+)
+          // Éclat orbits around its territory, pulsing alive
+          // ─────────────────────────────────────────────────
+          
+          else if (system.birthPhase === 'orbit') {
+            // Calculate orbit position
+            const orbitTime = elapsed - BIRTH_DURATION - TRAVEL_DURATION;
+            system.orbitAngle = (orbitTime / ORBIT_PERIOD) * Math.PI * 2;
+            
+            // Get orbit plane perpendicular to the radius vector
+            const centerDir = system.orbitCenter.clone().normalize();
+            
+            // Create perpendicular vectors for orbit plane
+            const up = new THREE.Vector3(0, 1, 0);
+            const perpX = new THREE.Vector3().crossVectors(centerDir, up).normalize();
+            if (perpX.length() < 0.1) {
+              perpX.set(1, 0, 0);
+            }
+            const perpY = new THREE.Vector3().crossVectors(centerDir, perpX).normalize();
+            
+            // Calculate orbit offset
+            const orbitOffset = new THREE.Vector3()
+              .addScaledVector(perpX, Math.cos(system.orbitAngle) * ORBIT_RADIUS)
+              .addScaledVector(perpY, Math.sin(system.orbitAngle) * ORBIT_RADIUS);
+            
+            // Update group position (orbit center + offset)
+            system.group.position.copy(system.orbitCenter.clone().add(orbitOffset));
+            
+            // Update aura to face camera (lookAt center)
+            system.aura.lookAt(0, 0, 0);
+            
+            // Pulsing animation (alive feel)
+            const pulse = 1 + Math.sin(t * 3) * 0.15;
+            system.core.scale.set(pulse, pulse, pulse);
+            
+            // Breathing emissive
+            const breath = 0.8 + Math.sin(t * 2) * 0.4;
+            coreMat.emissiveIntensity = breath;
+            
+            // Aura pulse (2 second cycle, slightly out of phase)
+            const auraCycle = ((t * 0.5) % 1);
+            const auraScale = 1 + auraCycle * 0.8;
+            system.aura.scale.set(auraScale, auraScale, auraScale);
+            auraMat.opacity = 0.8 * (1 - auraCycle);
+          }
+        });
       }
 
       // Animate ripples
