@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
+import { getSovereignId, truncateSovereignId } from '../../src/utils/sovereignId';
 
 const { width: SW } = Dimensions.get('window');
 const HEADER_H = 380;
