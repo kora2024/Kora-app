@@ -948,6 +948,23 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
           const breathScale = 1.0 + 0.2 * ((Math.sin(t * 1.5) + 1) / 2);
           sovereignAuraRef.current.scale.set(breathScale, breathScale, breathScale);
         }
+        
+        // ============================================
+        // UPGRADE 8: Update night sphere sun position
+        // Updates every frame for real-time day/night cycle
+        // ============================================
+        
+        if (nightSphereRef.current) {
+          const currentSunPos = getSunPosition();
+          const sunRotY = -currentSunPos.longitude * (Math.PI / 180);
+          const sunDir = new THREE.Vector3(
+            Math.cos(sunRotY), 
+            Math.sin(currentSunPos.latitude * Math.PI / 180) * 0.2,
+            Math.sin(sunRotY)
+          ).normalize();
+          
+          nightSphereRef.current.material.uniforms.sunDirection.value.copy(sunDir);
+        }
 
         // Animate cultural resonance arcs (moving light)
         resonanceArcsRef.current.forEach((arc, index) => {
