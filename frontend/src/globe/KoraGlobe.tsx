@@ -344,7 +344,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   // EXPOSE focusOnTarget VIA REF
   // ============================================
   
-  // Function to add an Éclat to the globe
+  // Function to add an Éclat to the globe (from another user - terracotta, static)
   const addEclatToGlobe = useCallback((eclat: Eclat) => {
     if (!globeGroupRef.current || !sceneRef.current) return;
     
@@ -384,6 +384,97 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     eclatAurasRef.current.push(auraMesh);
     
     console.log('Éclat ajouté au globe:', eclat.id);
+  }, []);
+  
+  // ============================================
+  // UPGRADE 15 — ADD USER'S OWN ECLAT WITH BIRTH ANIMATION
+  // The emotional heart of KORA - seeing your Éclat born and orbit
+  // ============================================
+  
+  const addUserEclatToGlobe = useCallback((eclat: Eclat) => {
+    if (!globeGroupRef.current || !sceneRef.current || !clockRef.current) return;
+    
+    const GOLD = 0xFFD700;
+    const targetPos = latLngToVector3(eclat.lat, eclat.lng, 1.04);
+    const currentTime = clockRef.current.getElapsedTime();
+    
+    // Haptic feedback for birth
+    haptic.success();
+    
+    // Create group for the entire éclat system
+    const eclatGroup = new THREE.Group();
+    eclatGroup.position.set(0, 0, 0); // Start at center of globe
+    
+    // ─────────────────────────────────────────────────
+    // CORE PARTICLE (Gold, brighter than others)
+    // ─────────────────────────────────────────────────
+    
+    const coreGeo = new THREE.SphereGeometry(0.025, 24, 24);
+    const coreMat = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      emissive: GOLD,
+      emissiveIntensity: 1.0,
+      transparent: true,
+      opacity: 0, // Starts invisible for birth animation
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    coreMesh.scale.set(0.01, 0.01, 0.01); // Start tiny
+    coreMesh.userData = { eclat, isUserEclat: true };
+    eclatGroup.add(coreMesh);
+    
+    // ─────────────────────────────────────────────────
+    // GOLDEN AURA (More prominent than others)
+    // ─────────────────────────────────────────────────
+    
+    const auraGeo = new THREE.RingGeometry(0.03, 0.065, 32);
+    const auraMat = new THREE.MeshBasicMaterial({
+      color: GOLD,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+    });
+    const auraMesh = new THREE.Mesh(auraGeo, auraMat);
+    auraMesh.lookAt(new THREE.Vector3(0, 0, 1)); // Will be updated during orbit
+    auraMesh.userData = { isUserEclatAura: true };
+    eclatGroup.add(auraMesh);
+    
+    // ─────────────────────────────────────────────────
+    // TRAIL PARTICLES (Golden trail during travel)
+    // ─────────────────────────────────────────────────
+    
+    const trailParticles: THREE.Mesh[] = [];
+    const TRAIL_COUNT = 12;
+    
+    for (let i = 0; i < TRAIL_COUNT; i++) {
+      const trailGeo = new THREE.SphereGeometry(0.008 * (1 - i / TRAIL_COUNT), 8, 8);
+      const trailMat = new THREE.MeshBasicMaterial({
+        color: GOLD,
+        transparent: true,
+        opacity: 0,
+      });
+      const trailMesh = new THREE.Mesh(trailGeo, trailMat);
+      trailMesh.userData = { trailIndex: i };
+      eclatGroup.add(trailMesh);
+      trailParticles.push(trailMesh);
+    }
+    
+    globeGroupRef.current.add(eclatGroup);
+    
+    // Store the system for animation
+    userEclatSystemsRef.current.push({
+      eclat,
+      group: eclatGroup,
+      core: coreMesh,
+      aura: auraMesh,
+      trail: trailParticles,
+      birthPhase: 'birth',
+      birthStartTime: currentTime,
+      targetPosition: targetPos.clone(),
+      orbitAngle: 0,
+      orbitCenter: targetPos.clone(),
+    });
+    
+    console.log('🌟 User Éclat birth started:', eclat.id, 'at', eclat.lat, eclat.lng);
   }, []);
   
   // Function to add a Mock Éclat to the globe (with custom color and fade-in)
