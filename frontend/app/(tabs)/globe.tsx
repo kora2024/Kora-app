@@ -416,7 +416,7 @@ export default function GlobeScreen() {
         </Animated.View>
       )}
 
-      {/* Territory preview card */}
+      {/* Territory preview card — UPGRADE 11: Long press for quantum zoom */}
       <Animated.View
         style={[
           styles.previewWrapper,
@@ -430,6 +430,26 @@ export default function GlobeScreen() {
             haptic.medium();
             router.push('/(tabs)/territoire');
           }}
+          onLongPress={() => {
+            // UPGRADE 11: Quantum Zoom to Feed
+            haptic.heavy();
+            setQuantumZoomActive(true);
+            
+            // Animate globe container
+            Animated.parallel([
+              Animated.timing(globeContainerScale, {
+                toValue: 0.3,
+                duration: 400,
+                useNativeDriver: true,
+              }),
+              Animated.timing(globeContainerOpacity, {
+                toValue: 0,
+                duration: 350,
+                useNativeDriver: true,
+              }),
+            ]).start();
+          }}
+          delayLongPress={400}
           activeOpacity={0.8}
         >
           <View style={[styles.previewAvatar, { backgroundColor: activeTerritory.color }]}>
