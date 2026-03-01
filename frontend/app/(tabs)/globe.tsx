@@ -607,9 +607,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  homeBtnIcon: {
-    fontSize: 18,
-  },
   settingsBtn: {
     width: 40,
     height: 40,
@@ -619,10 +616,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  settingsIcon: {
-    fontSize: 16,
-    color: COLORS.cream,
   },
   // Globe
   globeContainer: {
