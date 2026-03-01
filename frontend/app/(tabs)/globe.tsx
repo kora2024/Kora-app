@@ -247,6 +247,23 @@ export default function GlobeScreen() {
           {'✋ Glissez pour explorer · Double-tap pour plonger'}
         </Text>
       </Animated.View>
+
+      {/* AXE 2 — Floating Voice Capture Button */}
+      <TouchableOpacity
+        style={[styles.fabButton, { bottom: insets.bottom + 90 }]}
+        onPress={handleOpenVoiceCapture}
+        activeOpacity={0.8}
+        testID="voice-capture-fab"
+      >
+        <Text style={styles.fabIcon}>🎤</Text>
+      </TouchableOpacity>
+
+      {/* Voice Recording Modal */}
+      <VoiceRecordModal
+        visible={voiceModalVisible}
+        onClose={() => setVoiceModalVisible(false)}
+        onRecordingComplete={handleRecordingComplete}
+      />
     </View>
   );
 }
