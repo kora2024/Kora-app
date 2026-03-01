@@ -639,9 +639,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(74, 127, 165, 0.3)',
   },
-  webGlobeEmoji: {
-    fontSize: 80,
-  },
   webFallbackText: {
     fontFamily: FONTS.playfairBold,
     fontSize: 24,
