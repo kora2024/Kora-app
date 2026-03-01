@@ -229,9 +229,11 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   onTerritoryDoubleTap, 
   onGPSClick,
   onEclatTap,
+  onMockEclatTap,
   userLocation,
   isUserSovereign = false,
   eclats = [],
+  mockEclats = [],
 }, ref) => {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -255,6 +257,10 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   // Éclats vocaux (terracotta points)
   const eclatMeshesRef = useRef<THREE.Mesh[]>([]);
   const eclatAurasRef = useRef<THREE.Mesh[]>([]);
+  
+  // Mock Éclats (text-based, custom colors)
+  const mockEclatMeshesRef = useRef<THREE.Mesh[]>([]);
+  const mockEclatAurasRef = useRef<THREE.Mesh[]>([]);
   
   // Ripple effects
   const ripplesRef = useRef<THREE.Mesh[]>([]);
