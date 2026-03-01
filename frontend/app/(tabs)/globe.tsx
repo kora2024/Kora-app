@@ -707,8 +707,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  gpsToastIcon: {
-    fontSize: 24,
+  gpsToastIconContainer: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   gpsToastLabel: {
