@@ -1,10 +1,14 @@
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
+import { recordHapticInteraction } from './humanProof';
 
 // Safe haptic wrapper (no-op on web/unsupported)
+// UPGRADE 25: Records haptic interaction for human proof
 function safe(fn: () => Promise<void>) {
   if (Platform.OS === 'web') return;
   fn().catch(() => {});
+  // Record haptic interaction for human proof
+  recordHapticInteraction().catch(() => {});
 }
 
 async function delay(ms: number) {
