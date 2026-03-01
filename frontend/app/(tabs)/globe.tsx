@@ -1,97 +1,80 @@
-import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  Platform,
+} from 'react-native';
+import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
+import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
+import { getGlobeHTML } from '../../src/globe/globeHTML';
 
 const { width: SW } = Dimensions.get('window');
-
-const TERRITORY_DOTS = [
-  { x: 0.3, y: 0.35, color: COLORS.terra, name: 'Dakar', size: 10 },
-  { x: 0.55, y: 0.25, color: COLORS.gold, name: 'Paris', size: 8 },
-  { x: 0.7, y: 0.55, color: COLORS.blue, name: 'Lagos', size: 12 },
-  { x: 0.2, y: 0.6, color: '#7FD89A', name: 'Kingston', size: 9 },
-  { x: 0.65, y: 0.4, color: COLORS.terra, name: 'Abidjan', size: 7 },
-  { x: 0.4, y: 0.7, color: COLORS.gold, name: 'Bahia', size: 8 },
-];
-
-function GlobeDot({ dot, delay }: { dot: typeof TERRITORY_DOTS[0]; delay: number }) {
-  const pulse = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.sequence([
-      Animated.delay(delay),
-      Animated.timing(opacity, { toValue: 1, duration: 500, useNativeDriver: true }),
-    ]).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.8, duration: 1500, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 1500, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  const globeSize = SW * 0.78;
-
-  return (
-    <Animated.View
-      style={[
-        styles.dotContainer,
-        {
-          left: dot.x * globeSize - dot.size / 2,
-          top: dot.y * globeSize - dot.size / 2,
-          opacity,
-        },
-      ]}
-    >
-      <Animated.View
-        style={{
-          position: 'absolute',
-          width: dot.size * 3,
-          height: dot.size * 3,
-          borderRadius: dot.size * 1.5,
-          backgroundColor: dot.color,
-          opacity: 0.15,
-          transform: [{ scale: pulse }],
-          left: -dot.size,
-          top: -dot.size,
-        }}
-      />
-      <View
-        style={{
-          width: dot.size,
-          height: dot.size,
-          borderRadius: dot.size / 2,
-          backgroundColor: dot.color,
-          shadowColor: dot.color,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 6,
-          elevation: 4,
-        }}
-      />
-    </Animated.View>
-  );
-}
 
 export default function GlobeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const globeSize = SW * 0.78;
+  const { activeTerritory, setActiveTerritory } = useKoraStore();
+  const [globeReady, setGlobeReady] = useState(false);
+
+  // Hint animation
+  const hintOpacity = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const cardSlide = useRef(new Animated.Value(20)).current;
+  const cardOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Show hint after 2s, hide after 6s
+    Animated.sequence([
+      Animated.delay(2000),
+      Animated.timing(hintOpacity, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.delay(4000),
+      Animated.timing(hintOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+
+    // Card entrance
+    Animated.parallel([
+      Animated.timing(cardOpacity, { toValue: 1, duration: 600, delay: 500, useNativeDriver: true }),
+      Animated.timing(cardSlide, { toValue: 0, duration: 600, delay: 500, useNativeDriver: true }),
+    ]).start();
+
+    // Pulse animation
     Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 60000,
-        useNativeDriver: true,
-      })
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.4, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
     ).start();
   }, []);
+
+  const handleWebViewMessage = useCallback((event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === 'ready') {
+        setGlobeReady(true);
+      } else if (data.type === 'select') {
+        const territory = TERRITORIES.find((t) => t.id === data.territory.id);
+        if (territory) setActiveTerritory(territory);
+      } else if (data.type === 'doubletap') {
+        const territory = TERRITORIES.find((t) => t.id === data.territory);
+        if (territory) setActiveTerritory(territory);
+        router.push('/(tabs)/feed');
+      } else if (data.type === 'longpress_navigate') {
+        router.push('/(tabs)/feed');
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, [setActiveTerritory, router]);
+
+  const globeHtml = getGlobeHTML();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="globe-screen">
@@ -103,55 +86,76 @@ export default function GlobeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Globe */}
-      <View style={styles.globeArea}>
-        <LinearGradient
-          colors={['#0a1a2c', '#1a3a5c', '#0D1520']}
-          start={{ x: 0.3, y: 0.2 }}
-          end={{ x: 0.8, y: 0.9 }}
-          style={[styles.globe, { width: globeSize, height: globeSize, borderRadius: globeSize / 2 }]}
-        >
-          {/* Grid lines */}
-          <View style={[styles.gridLineH, { top: '30%' }]} />
-          <View style={[styles.gridLineH, { top: '50%' }]} />
-          <View style={[styles.gridLineH, { top: '70%' }]} />
-          <View style={[styles.gridLineV, { left: '35%' }]} />
-          <View style={[styles.gridLineV, { left: '50%' }]} />
-          <View style={[styles.gridLineV, { left: '65%' }]} />
-
-          {/* Dots */}
-          {TERRITORY_DOTS.map((dot, i) => (
-            <GlobeDot key={i} dot={dot} delay={i * 200} />
-          ))}
-        </LinearGradient>
+      {/* 3D Globe WebView */}
+      <View style={styles.globeContainer}>
+        <WebView
+          testID="globe-webview"
+          source={{ html: globeHtml }}
+          style={styles.webview}
+          scrollEnabled={false}
+          bounces={false}
+          javaScriptEnabled={true}
+          onMessage={handleWebViewMessage}
+          originWhitelist={['*']}
+          allowsInlineMediaPlayback={true}
+          mediaPlaybackRequiresUserAction={false}
+          overScrollMode="never"
+          {...(Platform.OS === 'android' ? { hardwareAccelerationDisabledAndroid: false } : {})}
+        />
+        {/* Loading overlay */}
+        {!globeReady && (
+          <View style={styles.loadingOverlay}>
+            <LinearGradient
+              colors={['#0a1829', '#060d17']}
+              style={styles.loadingGlobe}
+            >
+              <Text style={styles.loadingText}>◉</Text>
+            </LinearGradient>
+            <Text style={styles.loadingLabel}>Chargement du globe...</Text>
+          </View>
+        )}
       </View>
 
-      {/* Territory preview */}
-      <TouchableOpacity
-        style={styles.previewCard}
-        testID="globe-territory-preview"
-        onPress={() => router.push('/feed' as any)}
-        activeOpacity={0.8}
+      {/* Territory preview card */}
+      <Animated.View
+        style={[
+          styles.previewWrapper,
+          { opacity: cardOpacity, transform: [{ translateY: cardSlide }] },
+        ]}
       >
-        <LinearGradient
-          colors={[COLORS.terra, COLORS.gold]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.previewAvatar}
+        <TouchableOpacity
+          style={styles.previewCard}
+          testID="globe-territory-preview"
+          onPress={() => router.push('/(tabs)/territoire')}
+          activeOpacity={0.8}
         >
-          <Text style={styles.previewAvatarText}>A</Text>
-        </LinearGradient>
-        <View style={styles.previewInfo}>
-          <Text style={styles.previewName}>Amina Diallo</Text>
-          <Text style={styles.previewSub}>Griot · Dakar, Sénégal</Text>
-        </View>
-        <View style={styles.previewPulse} />
-      </TouchableOpacity>
+          <View style={[styles.previewAvatar, { backgroundColor: activeTerritory.color }]}>
+            <Text style={styles.previewAvatarText}>
+              {activeTerritory.name.charAt(0)}
+            </Text>
+          </View>
+          <View style={styles.previewInfo}>
+            <Text style={styles.previewName} testID="territory-name">{activeTerritory.name}</Text>
+            <Text style={styles.previewSub} testID="territory-desc">
+              {activeTerritory.population} habitants actifs ce soir
+            </Text>
+          </View>
+          <Animated.View
+            style={[
+              styles.previewPulse,
+              { backgroundColor: activeTerritory.color, transform: [{ scale: pulseAnim }] },
+            ]}
+          />
+          <View style={[styles.previewPulseCore, { backgroundColor: activeTerritory.color }]} />
+        </TouchableOpacity>
+      </Animated.View>
 
-      {/* Pinch hint */}
-      <View style={styles.hintContainer}>
-        <Text style={styles.hintText}>Pince pour zoomer · Tap un territoire</Text>
-      </View>
+      {/* Hint */}
+      <Animated.View style={[styles.hintContainer, { opacity: hintOpacity }]}>
+        <Text style={styles.hintText} testID="globe-hint">
+          {'✋ Appui long + glisse pour plonger'}
+        </Text>
+      </Animated.View>
     </View>
   );
 }
@@ -166,7 +170,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingVertical: 12,
+    zIndex: 10,
   },
   logoText: {
     fontFamily: FONTS.playfairBold,
@@ -175,9 +180,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   settingsBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -188,44 +193,54 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: COLORS.cream,
   },
-  globeArea: {
+  // Globe
+  globeContainer: {
     flex: 1,
+    marginTop: -10,
+  },
+  webview: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.dark,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  globe: {
-    overflow: 'hidden',
-    shadowColor: COLORS.blue,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 30,
-    elevation: 10,
+  loadingGlobe: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.6,
   },
-  gridLineH: {
-    position: 'absolute',
-    width: '100%',
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+  loadingText: {
+    fontSize: 24,
+    color: COLORS.blue,
   },
-  gridLineV: {
-    position: 'absolute',
-    height: '100%',
-    width: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+  loadingLabel: {
+    fontFamily: FONTS.jostExtraLight,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.3)',
+    marginTop: 12,
+    letterSpacing: 1,
   },
-  dotContainer: {
-    position: 'absolute',
+  // Preview card
+  previewWrapper: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: 6,
   },
   previewCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    padding: 14,
+    backgroundColor: 'rgba(26,26,26,0.85)',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
   },
   previewAvatar: {
     width: 44,
@@ -249,22 +264,27 @@ const styles = StyleSheet.create({
     color: COLORS.cream,
   },
   previewSub: {
-    fontFamily: FONTS.jostLight,
+    fontFamily: FONTS.jostExtraLight,
     fontSize: 12,
     color: COLORS.gray,
     marginTop: 2,
   },
   previewPulse: {
+    position: 'absolute',
+    right: 18,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    opacity: 0.3,
+  },
+  previewPulseCore: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.terra,
-    shadowColor: COLORS.terra,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 3,
+    position: 'absolute',
+    right: 22,
   },
+  // Hint
   hintContainer: {
     alignItems: 'center',
     paddingBottom: 8,
@@ -272,7 +292,7 @@ const styles = StyleSheet.create({
   hintText: {
     fontFamily: FONTS.jostExtraLight,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 1,
+    color: 'rgba(255,255,255,0.35)',
+    letterSpacing: 0.5,
   },
 });
