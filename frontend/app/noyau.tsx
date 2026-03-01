@@ -233,6 +233,14 @@ export default function NoyauScreen() {
 
         <View style={{ height: SPACING.xxl }} />
       </ScrollView>
+      
+      {/* UPGRADE 12: Emission Mode Overlay */}
+      <EmissionMode
+        visible={emissionModeActive}
+        onClose={() => setEmissionModeActive(false)}
+        onEclatCreated={handleEclatCreated}
+        userLocation={userLocation}
+      />
     </View>
   );
 }
