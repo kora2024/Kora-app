@@ -13,6 +13,7 @@ import { Audio } from 'expo-av';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING } from '../theme';
 import { haptic } from '../utils/haptics';
+import { saveEclatAudio, createEclat, Eclat } from '../utils/eclatStorage';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const MAX_DURATION_MS = 120000; // 2 minutes
@@ -20,22 +21,28 @@ const MAX_DURATION_MS = 120000; // 2 minutes
 interface VoiceRecordModalProps {
   visible: boolean;
   onClose: () => void;
-  onRecordingComplete?: (uri: string, durationMs: number) => void;
+  onEclatCreated?: (eclat: Eclat) => void;
+  userLocation?: { lat: number; lng: number };
+  territoire?: string;
 }
 
 export default function VoiceRecordModal({
   visible,
   onClose,
-  onRecordingComplete,
+  onEclatCreated,
+  userLocation = { lat: 14.6, lng: -61.0 },
+  territoire = 'Fort-de-France',
 }: VoiceRecordModalProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const recordingRef = useRef<Audio.Recording | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const waveAnim = useRef(new Animated.Value(0)).current;
+  const saveAnim = useRef(new Animated.Value(0)).current;
 
   // Request audio permission on mount
   useEffect(() => {
@@ -65,6 +72,20 @@ export default function VoiceRecordModal({
       waveAnim.setValue(0);
     }
   }, [isRecording]);
+
+  // Save animation
+  useEffect(() => {
+    if (isSaving) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(saveAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+          Animated.timing(saveAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+        ])
+      ).start();
+    } else {
+      saveAnim.setValue(0);
+    }
+  }, [isSaving]);
 
   const requestPermission = async () => {
     try {
@@ -117,28 +138,51 @@ export default function VoiceRecordModal({
     if (!recordingRef.current) return;
 
     try {
-      haptic.propulse(); // Propulsion haptic on complete
-      
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
 
+      setIsSaving(true);
+      haptic.ancre(); // Anchoring haptic during save
+
       await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
+      const tempUri = recordingRef.current.getURI();
+      const duration = recordingTime;
       
       setIsRecording(false);
       
-      if (uri && onRecordingComplete) {
-        onRecordingComplete(uri, recordingTime);
+      if (tempUri && duration > 500) { // Minimum 0.5s recording
+        // Save the audio file permanently
+        const savedPath = await saveEclatAudio(tempUri);
+        
+        // Create the Eclat record
+        const eclat = await createEclat(
+          savedPath,
+          duration,
+          territoire,
+          userLocation.lat,
+          userLocation.lng
+        );
+        
+        console.log('Éclat créé:', eclat);
+        
+        haptic.propulse(); // Success haptic
+        
+        // Notify parent
+        if (onEclatCreated) {
+          onEclatCreated(eclat);
+        }
       }
       
       recordingRef.current = null;
       setRecordingTime(0);
+      setIsSaving(false);
       onClose();
     } catch (e) {
       console.log('Stop recording error:', e);
       setIsRecording(false);
+      setIsSaving(false);
     }
   };
 
@@ -183,75 +227,100 @@ export default function VoiceRecordModal({
         )}
         
         <View style={styles.content}>
-          <Text style={styles.title}>
-            {isRecording ? 'Enregistrement...' : 'Capture Vocale'}
-          </Text>
-          <Text style={styles.subtitle}>
-            {isRecording 
-              ? `${formatTime(recordingTime)} / 2:00`
-              : 'Appuyez pour commencer (2 min max)'
-            }
-          </Text>
+          {isSaving ? (
+            <>
+              <Animated.View style={[styles.saveIndicator, { opacity: saveAnim }]}>
+                <Text style={styles.saveEmoji}>✨</Text>
+              </Animated.View>
+              <Text style={styles.saveText}>Création de l'Éclat...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.title}>
+                {isRecording ? 'Enregistrement...' : 'Capture Vocale'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {isRecording 
+                  ? `${formatTime(recordingTime)} / 2:00`
+                  : 'Appuyez pour commencer (2 min max)'
+                }
+              </Text>
 
-          {/* Progress ring */}
-          {isRecording && (
-            <View style={styles.progressContainer}>
-              <View style={[styles.progressRing, { transform: [{ rotate: `${progress * 360}deg` }] }]} />
-            </View>
-          )}
+              {/* Progress ring */}
+              {isRecording && (
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBg} />
+                  <View 
+                    style={[
+                      styles.progressRing, 
+                      { 
+                        borderColor: COLORS.terra,
+                        borderTopColor: 'transparent',
+                        borderRightColor: progress > 0.25 ? COLORS.terra : 'transparent',
+                        borderBottomColor: progress > 0.5 ? COLORS.terra : 'transparent',
+                        borderLeftColor: progress > 0.75 ? COLORS.terra : 'transparent',
+                        transform: [{ rotate: `${progress * 360}deg` }],
+                      }
+                    ]} 
+                  />
+                </View>
+              )}
 
-          {/* Main record button */}
-          <TouchableOpacity
-            style={styles.recordBtnContainer}
-            onPress={isRecording ? stopRecording : startRecording}
-            activeOpacity={0.8}
-          >
-            <Animated.View
-              style={[
-                styles.recordBtnOuter,
-                { transform: [{ scale: pulseAnim }] },
-              ]}
-            >
-              <View style={[
-                styles.recordBtnInner,
-                isRecording && styles.recordBtnRecording,
-              ]}>
-                <Text style={styles.recordBtnIcon}>
-                  {isRecording ? '■' : '🎤'}
-                </Text>
-              </View>
-            </Animated.View>
-          </TouchableOpacity>
-
-          {/* Wave visualization */}
-          {isRecording && (
-            <View style={styles.waveContainer}>
-              {[...Array(5)].map((_, i) => (
+              {/* Main record button */}
+              <TouchableOpacity
+                style={styles.recordBtnContainer}
+                onPress={isRecording ? stopRecording : startRecording}
+                activeOpacity={0.8}
+              >
                 <Animated.View
-                  key={i}
                   style={[
-                    styles.waveBar,
-                    {
-                      height: 20 + Math.random() * 30,
-                      opacity: waveAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.3, 0.8],
-                      }),
-                    },
+                    styles.recordBtnOuter,
+                    { transform: [{ scale: pulseAnim }] },
+                    isRecording && styles.recordBtnOuterActive,
                   ]}
-                />
-              ))}
-            </View>
-          )}
+                >
+                  <View style={[
+                    styles.recordBtnInner,
+                    isRecording && styles.recordBtnRecording,
+                  ]}>
+                    <Text style={styles.recordBtnIcon}>
+                      {isRecording ? '◼' : '🎤'}
+                    </Text>
+                  </View>
+                </Animated.View>
+              </TouchableOpacity>
 
-          {/* Cancel button */}
-          <TouchableOpacity
-            style={styles.cancelBtn}
-            onPress={cancelRecording}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.cancelBtnText}>Annuler</Text>
-          </TouchableOpacity>
+              {/* Wave visualization */}
+              {isRecording && (
+                <View style={styles.waveContainer}>
+                  {[...Array(7)].map((_, i) => (
+                    <Animated.View
+                      key={i}
+                      style={[
+                        styles.waveBar,
+                        {
+                          height: 15 + Math.sin(i * 0.8) * 20 + Math.random() * 15,
+                          opacity: waveAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.4, 1],
+                          }),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Cancel button */}
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={cancelRecording}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.cancelBtnText}>Annuler</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -285,25 +354,26 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     position: 'absolute',
-    top: 100,
+    top: 80,
+    width: 120,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressBg: {
+    position: 'absolute',
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: 'rgba(255, 215, 0, 0.2)',
+    borderColor: 'rgba(166, 93, 71, 0.2)',
   },
   progressRing: {
     position: 'absolute',
-    top: -3,
-    left: -3,
     width: 120,
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: COLORS.gold,
-    borderTopColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderBottomColor: 'transparent',
   },
   recordBtnContainer: {
     marginBottom: 30,
@@ -312,24 +382,27 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 215, 0, 0.15)',
+    backgroundColor: 'rgba(166, 93, 71, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  recordBtnOuterActive: {
+    backgroundColor: 'rgba(166, 93, 71, 0.3)',
   },
   recordBtnInner: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.gold,
+    backgroundColor: COLORS.terra,
     alignItems: 'center',
     justifyContent: 'center',
   },
   recordBtnRecording: {
-    backgroundColor: '#FF4444',
+    backgroundColor: '#CC4444',
   },
   recordBtnIcon: {
     fontSize: 28,
-    color: COLORS.dark,
+    color: COLORS.cream,
   },
   waveContainer: {
     flexDirection: 'row',
@@ -340,9 +413,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   waveBar: {
-    width: 4,
-    backgroundColor: COLORS.gold,
-    borderRadius: 2,
+    width: 5,
+    backgroundColor: COLORS.terra,
+    borderRadius: 3,
   },
   cancelBtn: {
     paddingVertical: 12,
@@ -352,5 +425,17 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.jostMedium,
     fontSize: 16,
     color: COLORS.gray,
+  },
+  // Saving state
+  saveIndicator: {
+    marginBottom: 20,
+  },
+  saveEmoji: {
+    fontSize: 60,
+  },
+  saveText: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 22,
+    color: COLORS.terra,
   },
 });
