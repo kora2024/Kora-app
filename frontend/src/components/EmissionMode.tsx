@@ -29,6 +29,7 @@ import { haptic } from '../utils/haptics';
 import { saveEclatAudio, createEclat, Eclat } from '../utils/eclatStorage';
 import { MicIcon } from './icons/KoraIcons';
 import VoiceWave, { VoiceWavePlaceholder } from './VoiceWave';
+import TranscriptionText from './TranscriptionText';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
