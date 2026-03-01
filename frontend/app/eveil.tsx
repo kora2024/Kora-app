@@ -7,13 +7,20 @@ import {
   Dimensions,
   Animated,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
 import { COLORS, FONTS, SPACING } from '../src/theme';
 import { useKoraStore } from '../src/store/useKoraStore';
 import { haptic } from '../src/utils/haptics';
+
+// UPGRADE 16 — Storage keys
+const EVEIL_COMPLETED_KEY = 'kora_eveil_completed';
+const EVEIL_DATE_KEY = 'kora_eveil_date';
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
