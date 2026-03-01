@@ -378,23 +378,14 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   authorName: {
-    fontFamily: FONTS.jostRegular,
-    fontSize: 16,
-    color: COLORS.cream,
-    lineHeight: 16 * 1.6,
+    ...TYPOGRAPHY.name,
   },
   authorMeta: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    letterSpacing: 1,
+    ...TYPOGRAPHY.role,
   },
   // Text — breathing room
   feedText: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 18,
-    color: COLORS.cream,
-    lineHeight: 18 * 1.6,
+    ...TYPOGRAPHY.bodyLarge,
     marginBottom: SPACING.lg,
   },
   // Reactions — icons only
@@ -410,12 +401,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reactionCount: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
+    ...TYPOGRAPHY.count,
     marginTop: 4,
   },
   reactionCountActive: {
-    color: COLORS.terra,
+    ...TYPOGRAPHY.countActive,
   },
 });
