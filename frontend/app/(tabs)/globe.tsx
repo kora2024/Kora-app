@@ -401,7 +401,7 @@ export default function GlobeScreen() {
           >
             <View style={styles.firstHintBubble}>
               <Text style={styles.firstHintText}>
-                Appuie sur ✦ pour créer ton premier Éclat
+                Appuie sur le bouton doré pour créer ton premier Éclat
               </Text>
             </View>
           </Animated.View>
