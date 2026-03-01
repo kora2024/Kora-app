@@ -110,8 +110,10 @@ export default function EmissionMode({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [metering, setMetering] = useState(-160); // Audio metering in dB
   const recordingRef = useRef<Audio.Recording | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const meteringIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Animation refs
   const overlayOpacity = useRef(new Animated.Value(0)).current;
