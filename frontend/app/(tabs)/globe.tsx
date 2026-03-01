@@ -455,13 +455,6 @@ export default function GlobeScreen() {
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Hint */}
-      <Animated.View style={[styles.hintContainer, { opacity: hintOpacity }]}>
-        <Text style={styles.hintText} testID="globe-hint">
-          {'✋ Glissez pour explorer · Double-tap pour plonger'}
-        </Text>
-      </Animated.View>
-
       {/* UPGRADE 2: FAB with pulse animation for first-time users */}
       <View style={[styles.fabContainer, { bottom: insets.bottom + 90 }]}>
         {/* Expanding aura (first launch only) */}
