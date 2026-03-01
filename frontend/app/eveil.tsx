@@ -13,7 +13,6 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Updates from 'expo-updates';
 import { COLORS, FONTS, SPACING } from '../src/theme';
 import { useKoraStore } from '../src/store/useKoraStore';
 import { haptic } from '../src/utils/haptics';
