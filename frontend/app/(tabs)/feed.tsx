@@ -1,5 +1,15 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Dimensions,
+  Animated,
+  ScrollView,
+  ViewToken,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -8,146 +18,358 @@ import { useKoraStore } from '../../src/store/useKoraStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
-const FEED_ITEMS = [
+// ──────────── DATA ────────────
+
+interface FeedItem {
+  id: string;
+  emoji: string;
+  gradient: [string, string];
+  author: string;
+  location: string;
+  role: string;
+  initial: string;
+  avatarColors: [string, string];
+  text: string;
+  reactions: { key: string; icon: string; label: string; count: number }[];
+}
+
+const FEED_DATA: FeedItem[] = [
   {
     id: '1',
     emoji: '🎵',
-    bg: ['#2a1520', '#1a2535'] as const,
-    author: 'Amina Diallo',
-    location: 'Dakar, Sénégal',
-    text: 'La kora résonne dans chaque algorithme. Nos ancêtres codaient en musique.',
-    auras: [
-      { emoji: '🔥', label: 'Feu', count: 234 },
-      { emoji: '💎', label: 'Rare', count: 89 },
-      { emoji: '🌊', label: 'Flow', count: 156 },
+    gradient: ['#0a1a12', '#081510'],
+    author: 'Kévin Désir',
+    location: 'Fort-de-France',
+    role: 'Griot',
+    initial: 'K',
+    avatarColors: [COLORS.terra, COLORS.gold],
+    text: 'La kora résonne dans chaque algorithme. Nos ancêtres codaient en musique, chaque note une ligne de code vivante.',
+    reactions: [
+      { key: 'resonne', icon: '✦', label: 'Résonne', count: 127 },
+      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 34 },
+      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 22 },
+      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 89 },
+      { key: 'transmet', icon: '📡', label: 'Transmet', count: 67 },
     ],
   },
   {
     id: '2',
-    emoji: '🎨',
-    bg: ['#1a2a20', '#201a2a'] as const,
-    author: 'Kwame Asante',
-    location: 'Accra, Ghana',
-    text: "L'art n'est pas ce que tu vois, c'est ce que tu fais voir aux autres.",
-    auras: [
-      { emoji: '✨', label: 'Étoile', count: 312 },
-      { emoji: '🔥', label: 'Feu', count: 178 },
+    emoji: '🌊',
+    gradient: ['#0a0f1e', '#060a15'],
+    author: 'Marcel Théodore',
+    location: 'Saint-Pierre',
+    role: 'Griot',
+    initial: 'M',
+    avatarColors: [COLORS.blue, '#2a5a7a'],
+    text: "L'océan ne connaît pas de frontières. Notre mémoire voyage sur chaque vague, de continent en continent.",
+    reactions: [
+      { key: 'resonne', icon: '✦', label: 'Résonne', count: 203 },
+      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 56 },
+      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 41 },
+      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 178 },
+      { key: 'transmet', icon: '📡', label: 'Transmet', count: 92 },
     ],
   },
   {
     id: '3',
-    emoji: '💭',
-    bg: ['#1a1a2e', '#2a1a1a'] as const,
-    author: 'Fatoumata Keita',
-    location: 'Bamako, Mali',
-    text: 'Chaque pensée est une graine. Le territoire est notre jardin collectif.',
-    auras: [
-      { emoji: '🌱', label: 'Pousse', count: 445 },
-      { emoji: '💎', label: 'Rare', count: 67 },
+    emoji: '🔥',
+    gradient: ['#1a0a08', '#120605'],
+    author: 'Pulse Records',
+    location: 'Lagos',
+    role: 'Bâtisseur',
+    initial: 'P',
+    avatarColors: ['#C9A84C', '#A65D47'],
+    text: 'Le feu ne demande pas la permission de brûler. Créer, c\'est allumer des incendies qui éclairent.',
+    reactions: [
+      { key: 'resonne', icon: '✦', label: 'Résonne', count: 445 },
+      { key: 'propulse', icon: '⚡', label: 'Propulse', count: 112 },
+      { key: 'eveille', icon: '🌱', label: 'Éveille', count: 67 },
+      { key: 'ancre', icon: '⚓', label: 'Ancre', count: 234 },
+      { key: 'transmet', icon: '📡', label: 'Transmet', count: 189 },
     ],
   },
 ];
+
+// ──────────── REACTION BUBBLE ────────────
+
+function ReactionBubble({
+  icon,
+  label,
+  count,
+  active,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  count: number;
+  active: boolean;
+  onPress: () => void;
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePress = () => {
+    Animated.sequence([
+      Animated.spring(scaleAnim, { toValue: 1.15, useNativeDriver: true, speed: 50, bounciness: 12 }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 30 }),
+    ]).start();
+    onPress();
+  };
+
+  return (
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
+      <Animated.View
+        style={[
+          styles.reactionBubble,
+          active && styles.reactionBubbleActive,
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        <Text style={[styles.reactionIcon, active && styles.reactionIconActive]}>{icon}</Text>
+        <Text style={[styles.reactionLabel, active && styles.reactionLabelActive]}>{label}</Text>
+        <Text style={[styles.reactionCount, active && styles.reactionCountActive]}>
+          {active ? count + 1 : count}
+        </Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// ──────────── ACTION BUTTON ────────────
+
+function ActionButton({
+  icon,
+  label,
+  onPress,
+  testId,
+}: {
+  icon: string;
+  label: string;
+  onPress?: () => void;
+  testId: string;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.actionBtn}
+      onPress={onPress}
+      activeOpacity={0.7}
+      testID={testId}
+    >
+      <Text style={styles.actionIcon}>{icon}</Text>
+      <Text style={styles.actionLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ──────────── FEED ITEM ────────────
+
+function FeedItemCard({ item, itemHeight }: { item: FeedItem; itemHeight: number }) {
+  const router = useRouter();
+  const [activeReactions, setActiveReactions] = useState<Record<string, boolean>>({});
+
+  const toggleReaction = (key: string) => {
+    setActiveReactions((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <View style={[styles.feedItem, { height: itemHeight }]} testID={`feed-item-${item.id}`}>
+      {/* Full-screen background */}
+      <LinearGradient colors={item.gradient} style={StyleSheet.absoluteFill} />
+
+      {/* Centered emoji */}
+      <View style={styles.emojiCenter}>
+        <Text style={styles.emojiGiant}>{item.emoji}</Text>
+      </View>
+
+      {/* Bottom gradient overlay */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.9)']}
+        locations={[0.3, 0.5, 1]}
+        style={styles.overlayGradient}
+      />
+
+      {/* Right side actions */}
+      <View style={styles.actionsColumn}>
+        <ActionButton icon="✦" label="Résonne" testId={`action-resonne-${item.id}`} />
+        <ActionButton
+          icon="💬"
+          label="Orbite"
+          testId={`action-orbite-${item.id}`}
+          onPress={() => router.push('/orbite')}
+        />
+        <ActionButton
+          icon="📡"
+          label="Transmet"
+          testId={`action-transmet-${item.id}`}
+          onPress={() => router.push('/(tabs)/nebuleuse')}
+        />
+        <ActionButton icon="🔗" label="Lien" testId={`action-lien-${item.id}`} />
+      </View>
+
+      {/* Bottom content */}
+      <View style={styles.bottomContent}>
+        {/* Author row */}
+        <View style={styles.authorRow}>
+          <LinearGradient colors={item.avatarColors} style={styles.authorAvatar}>
+            <Text style={styles.authorInitial}>{item.initial}</Text>
+          </LinearGradient>
+          <View style={styles.authorInfo}>
+            <Text style={styles.authorName}>{item.author}</Text>
+            <Text style={styles.authorMeta}>{item.role} · {item.location}</Text>
+          </View>
+          <TouchableOpacity style={styles.habiterBtn} activeOpacity={0.7} testID={`habiter-btn-${item.id}`}>
+            <Text style={styles.habiterText}>Habiter</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Text */}
+        <Text style={styles.feedText} numberOfLines={3}>{item.text}</Text>
+
+        {/* Frequency reactions */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.reactionsScroll}
+        >
+          {item.reactions.map((r) => (
+            <ReactionBubble
+              key={r.key}
+              icon={r.icon}
+              label={r.label}
+              count={r.count}
+              active={!!activeReactions[r.key]}
+              onPress={() => toggleReaction(r.key)}
+            />
+          ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+// ──────────── SCROLL DOTS ────────────
+
+function ScrollDots({ total, active }: { total: number; active: number }) {
+  return (
+    <View style={styles.dotsColumn} testID="feed-scroll-dots">
+      {Array.from({ length: total }).map((_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.dot,
+            i === active ? styles.dotActive : styles.dotInactive,
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+// ──────────── MAIN ────────────
 
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { activeTerritory } = useKoraStore();
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Tab bar height + insets
+  const tabBarH = 70 + insets.bottom;
+  const headerH = insets.top + 60;
+  const itemHeight = SH - tabBarH;
+
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0 && viewableItems[0].index !== null) {
+        setCurrentIndex(viewableItems[0].index);
+      }
+    },
+    []
+  );
+
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+  const renderItem = useCallback(
+    ({ item }: { item: FeedItem }) => <FeedItemCard item={item} itemHeight={itemHeight} />,
+    [itemHeight]
+  );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]} testID="feed-screen">
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.territoryTag}>
+    <View style={styles.container} testID="feed-screen">
+      {/* Floating header */}
+      <View style={[styles.floatingHeader, { paddingTop: insets.top + 8 }]}>
+        <LinearGradient
+          colors={[COLORS.dark, 'rgba(13,13,13,0.6)', 'transparent']}
+          style={StyleSheet.absoluteFill}
+        />
+        <TouchableOpacity
+          style={styles.territoryTag}
+          activeOpacity={0.8}
+          testID="feed-territory-tag"
+        >
           <View style={[styles.territoryDot, { backgroundColor: activeTerritory.color }]} />
-          <Text style={styles.territoryName}>Territoire {activeTerritory.name}</Text>
-        </View>
+          <Text style={styles.territoryName}>{activeTerritory.name}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.globeBtn}
+          activeOpacity={0.7}
+          testID="feed-globe-btn"
+          onPress={() => router.push('/(tabs)/globe')}
+        >
+          <Text style={styles.globeIcon}>◉</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Feed items */}
-      <ScrollView
-        style={styles.feedScroll}
+      {/* Feed list */}
+      <FlatList
+        data={FEED_DATA}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
         pagingEnabled
         showsVerticalScrollIndicator={false}
+        snapToInterval={itemHeight}
         decelerationRate="fast"
-        snapToInterval={SH - insets.top - 60 - 78}
-      >
-        {FEED_ITEMS.map((item) => (
-          <View key={item.id} style={[styles.feedItem, { height: SH - insets.top - 60 - 78 }]}>
-            <LinearGradient
-              colors={[...item.bg]}
-              style={styles.feedItemBg}
-            >
-              <Text style={styles.feedEmoji}>{item.emoji}</Text>
-            </LinearGradient>
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={(_, index) => ({
+          length: itemHeight,
+          offset: itemHeight * index,
+          index,
+        })}
+      />
 
-            {/* Gradient overlay */}
-            <LinearGradient
-              colors={['transparent', 'rgba(13,13,13,0.8)', COLORS.dark]}
-              style={styles.feedGradient}
-            />
-
-            {/* Content */}
-            <View style={styles.feedContent}>
-              {/* Author */}
-              <View style={styles.authorRow}>
-                <LinearGradient
-                  colors={[COLORS.terra, COLORS.gold]}
-                  style={styles.authorAvatar}
-                >
-                  <Text style={styles.authorInitial}>{item.author[0]}</Text>
-                </LinearGradient>
-                <View style={styles.authorInfo}>
-                  <Text style={styles.authorName}>{item.author}</Text>
-                  <Text style={styles.authorLocation}>{item.location}</Text>
-                </View>
-                <TouchableOpacity style={styles.followBtn} activeOpacity={0.7}>
-                  <Text style={styles.followText}>Suivre</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Text */}
-              <Text style={styles.feedText}>{item.text}</Text>
-
-              {/* Auras */}
-              <View style={styles.aurasRow}>
-                {item.auras.map((aura, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.auraBubble}
-                    onPress={() => router.push('/orbite' as any)}
-                    activeOpacity={0.7}
-                    testID={`aura-${item.id}-${idx}`}
-                  >
-                    <Text style={styles.auraEmoji}>{aura.emoji}</Text>
-                    <Text style={styles.auraCount}>{aura.count}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      {/* Scroll indicator dots */}
+      <ScrollDots total={FEED_DATA.length} active={currentIndex} />
     </View>
   );
 }
+
+// ──────────── STYLES ────────────
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.dark,
   },
-  header: {
+  // Floating header
+  floatingHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 12,
+    zIndex: 20,
   },
   territoryTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    borderRadius: 50,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
@@ -156,58 +378,99 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginRight: 8,
-    backgroundColor: COLORS.terra,
   },
   territoryName: {
     fontFamily: FONTS.jostLight,
     fontSize: 13,
     color: COLORS.cream,
   },
-  feedScroll: {
-    flex: 1,
+  globeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  globeIcon: {
+    fontSize: 16,
+    color: COLORS.cream,
+  },
+  // Feed item
   feedItem: {
     width: SW,
     position: 'relative',
   },
-  feedItemBg: {
+  emojiCenter: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingBottom: 120,
   },
-  feedEmoji: {
-    fontSize: 120,
-    opacity: 0.15,
+  emojiGiant: {
+    fontSize: 80,
+    opacity: 0.12,
   },
-  feedGradient: {
+  overlayGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  // Right actions
+  actionsColumn: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
+    right: 16,
+    bottom: 200,
+    gap: 20,
+    alignItems: 'center',
+    zIndex: 10,
   },
-  feedContent: {
+  actionBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionIcon: {
+    fontSize: 18,
+  },
+  actionLabel: {
+    fontFamily: FONTS.jostExtraLight,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 2,
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: SPACING.lg,
+    bottom: -14,
   },
+  // Bottom content
+  bottomContent: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 72,
+    paddingHorizontal: SPACING.lg,
+    zIndex: 10,
+  },
+  // Author
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   authorAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   authorInitial: {
     fontFamily: FONTS.playfairBold,
-    fontSize: 16,
+    fontSize: 18,
     color: COLORS.cream,
   },
   authorInfo: {
@@ -219,52 +482,97 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.cream,
   },
-  authorLocation: {
+  authorMeta: {
     fontFamily: FONTS.jostExtraLight,
     fontSize: 12,
     color: 'rgba(255,255,255,0.5)',
+    marginTop: 1,
   },
-  followBtn: {
+  habiterBtn: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 50,
     paddingVertical: 6,
     paddingHorizontal: 16,
   },
-  followText: {
+  habiterText: {
     fontFamily: FONTS.jostLight,
     fontSize: 12,
     color: COLORS.cream,
     letterSpacing: 0.5,
   },
+  // Text
   feedText: {
     fontFamily: FONTS.jostLight,
     fontSize: 16,
     color: COLORS.cream,
     lineHeight: 24,
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  aurasRow: {
-    flexDirection: 'row',
+  // Reactions
+  reactionsScroll: {
     gap: 8,
+    paddingRight: 16,
   },
-  auraBubble: {
+  reactionBubble: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     borderRadius: 50,
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 14,
-    gap: 6,
+    gap: 5,
   },
-  auraEmoji: {
-    fontSize: 14,
+  reactionBubbleActive: {
+    backgroundColor: 'rgba(166,93,71,0.2)',
+    borderColor: COLORS.terra,
   },
-  auraCount: {
+  reactionIcon: {
+    fontSize: 12,
+  },
+  reactionIconActive: {
+    // Same icon, active state handled by bubble
+  },
+  reactionLabel: {
     fontFamily: FONTS.jostLight,
     fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
+  },
+  reactionLabelActive: {
+    color: COLORS.terra,
+  },
+  reactionCount: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    marginLeft: 2,
+  },
+  reactionCountActive: {
+    color: COLORS.terra,
+  },
+  // Scroll dots
+  dotsColumn: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    transform: [{ translateY: -30 }],
+    gap: 8,
+    alignItems: 'center',
+    zIndex: 15,
+  },
+  dot: {
+    borderRadius: 4,
+  },
+  dotActive: {
+    width: 6,
+    height: 6,
+    backgroundColor: COLORS.terra,
+  },
+  dotInactive: {
+    width: 4,
+    height: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
 });
