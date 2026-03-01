@@ -25,6 +25,8 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING, TYPOGRAPHY } from '../src/theme';
 import { haptic } from '../src/utils/haptics';
 import { BackIcon } from '../src/components/icons/KoraIcons';
+import EmissionMode from '../src/components/EmissionMode';
+import { Eclat } from '../src/utils/eclatStorage';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
