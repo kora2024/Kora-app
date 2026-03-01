@@ -268,10 +268,10 @@ export function getGlobeHTML(): string {
         const now=Date.now();
         if(selectedId===t.id&&now-lastTap<400){
           // Double tap
-          window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'doubletap',territory:t.id}));
+          sendMsg({type:'doubletap',territory:t.id});
         }else{
           selectedId=t.id;
-          window.ReactNativeWebView&&window.ReactNativeWebView.postMessage(JSON.stringify({type:'select',territory:t}));
+          sendMsg({type:'select',territory:t});
         }
         lastTap=now;
       }
