@@ -154,12 +154,12 @@ function ReactionBubble({
 // ──────────── ACTION BUTTON ────────────
 
 function ActionButton({
-  icon,
+  IconComponent,
   label,
   onPress,
   testId,
 }: {
-  icon: string;
+  IconComponent: React.FC<{size?: number; color?: string}>;
   label: string;
   onPress?: () => void;
   testId: string;
@@ -171,7 +171,9 @@ function ActionButton({
       activeOpacity={0.7}
       testID={testId}
     >
-      <Text style={styles.actionIcon}>{icon}</Text>
+      <View style={styles.actionIconContainer}>
+        <IconComponent size={20} color={COLORS.cream} />
+      </View>
       <Text style={styles.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );
