@@ -657,7 +657,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     globeGroup.add(nightSphere);
     
     // Store reference for animation updates
-    const nightSphereRef = { mesh: nightSphere, material: nightShaderMat };
+    nightSphereRef.current = { mesh: nightSphere, material: nightShaderMat };
 
     // ============================================
     // SUBTLE GRID LINES
