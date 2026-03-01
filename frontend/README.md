@@ -1,50 +1,161 @@
-# Welcome to your Expo app 👋
+# KORA — Le premier réseau social culturel
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+> *"Le bois des anciens parlait encore."*
 
-## Get started
+KORA est le premier réseau social où l'identité culturelle est l'infrastructure. Pas un clone de plus — un nouveau paradigme de connexion humaine.
 
-1. Install dependencies
+## 🌍 Vision
 
-   ```bash
-   npm install
-   ```
+KORA connecte la diaspora globale à travers un réseau social où la culture, la mémoire et l'identité sont les fondations, pas des accessoires. L'application remplace les likes par des **Fréquences**, les commentaires par des **Orbites**, et les followers par des **Habitants de territoire**.
 
-2. Start the app
+## 🏗️ Architecture
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+frontend/                   # Application React Native (Expo SDK 54)
+├── app/                    # Expo Router (file-based routing)
+│   ├── _layout.tsx         # Root layout (fonts, stack navigator)
+│   ├── index.tsx           # Entry → redirect /eveil
+│   ├── eveil.tsx           # Onboarding (3 étapes sensorielles)
+│   ├── orbite.tsx          # Commentaires orbitaux
+│   ├── noyau.tsx           # Dashboard CVLN
+│   └── (tabs)/             # Bottom tab navigation
+│       ├── _layout.tsx     # Tab bar configuration
+│       ├── globe.tsx       # Globe 3D Three.js
+│       ├── feed.tsx        # Feed vertical plein écran
+│       ├── create.tsx      # Création d'éclats
+│       ├── nebuleuse.tsx   # Messagerie constellation
+│       └── territoire.tsx  # Profil/espace personnel
+├── src/
+│   ├── theme.ts            # Design system KORA (couleurs, fonts, spacing)
+│   ├── store/
+│   │   └── useKoraStore.ts # Zustand global state
+│   ├── globe/
+│   │   └── globeHTML.ts    # Three.js globe HTML template
+│   ├── utils/
+│   │   └── haptics.ts      # Retour haptique
+│   └── components/
+│       └── common/
+│           ├── GlowText.tsx
+│           ├── BackButton.tsx
+│           ├── FREKBadge.tsx
+│           ├── CVLNAmount.tsx
+│           └── Shimmer.tsx  # Skeleton loading
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## 🎨 Design System
 
-## Learn more
+| Token | Couleur | Usage |
+|-------|---------|-------|
+| Terracotta | `#A65D47` | Actions, Griots, éléments actifs |
+| Or | `#C9A84C` | CVLN, économie, récompenses |
+| Dark | `#0D0D0D` | Fond principal |
+| Dark2 | `#1A1A1A` | Cartes, éléments secondaires |
+| Cream | `#F4F1EA` | Texte principal |
+| Gray | `#888888` | Texte secondaire |
 
-To learn more about developing your project with Expo, look at the following resources:
+**Typographie :**
+- Titres : Playfair Display (serif, italique pour citations)
+- Corps & UI : Jost (sans-serif, weights 200-500)
+- Code/données : JetBrains Mono
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 📱 Les 7 Écrans
 
-## Join the community
+### 1. L'Éveil (Onboarding)
+Expérience sensorielle de 60 secondes. 3 étapes : Calibration → Mémoire → Matérialisation.
 
-Join our community of developers creating universal apps.
+### 2. Le Globe (Interface principale)
+Globe 3D Three.js avec 8 territoires géoréférencés, arcs de connexion animés.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 3. Le Feed (Contenu vertical)
+Scroll snap plein écran. Système de Fréquences (pas de likes) : Résonne, Propulse, Éveille, Ancre, Transmet.
+
+### 4. Le Territoire (Profil)
+Header immersif avec gradient dérivé de l'Éveil. Avatar et rôle dynamiques.
+
+### 5. L'Orbite (Commentaires)
+Les réactions gravitent autour du contenu central. Toggle profondeur pour dialogues.
+
+### 6. La Nébuleuse (Messagerie)
+Constellation : contacts = étoiles. Plus actif = plus chaud et proche.
+
+### 7. Le Noyau (Dashboard CVLN)
+Sphère économique avec L'Arbre de Vie : Racines, Tronc, Feuilles.
+
+## 🚀 Installation
+
+```bash
+# Prérequis
+node >= 18
+yarn
+
+# Installation
+cd frontend
+yarn install
+
+# Lancement (développement)
+npx expo start
+
+# Lancement avec tunnel (pour test sur mobile)
+npx expo start --tunnel
+```
+
+## 📲 Test sur mobile
+
+1. Installer **Expo Go** sur votre téléphone (iOS/Android)
+2. Lancer `npx expo start --tunnel`
+3. Scanner le QR code avec Expo Go
+4. L'application se charge automatiquement
+
+## 🔧 Technologies
+
+| Package | Version | Usage |
+|---------|---------|-------|
+| expo | ~52.0.37 | Framework React Native |
+| expo-router | ~4.0.20 | Navigation file-based |
+| zustand | 5.0.11 | State management |
+| expo-linear-gradient | ~15.0.8 | Gradients natifs |
+| expo-haptics | ~14.0.1 | Retour haptique |
+| react-native-webview | 13.13.5 | Globe 3D (Three.js) |
+| react-native-svg | 15.12.1 | SVG natif |
+| @expo-google-fonts/* | 0.4.x | Playfair, Jost, JetBrains |
+
+## 🗺️ Navigation
+
+```
+┌─────────────────────────────────────────────────┐
+│  ÉVEIL (isolé, pas de tabs)                      │
+│  ┌─── Calibration → Mémoire → Matérialisation   │
+│  └──→ GLOBE                                     │
+├─────────────────────────────────────────────────┤
+│  TABS (navigation bottom)                        │
+│  ┌─ Globe ─ Feed ─ Créer ─ Nébuleuse ─ Territ. │
+│  │                                               │
+│  │  Globe ──tap──→ Feed (territoire actif)       │
+│  │  Feed ──Orbite──→ ORBITE (stack)              │
+│  │  Feed ──Transmet─→ Nébuleuse (tab)            │
+│  │  Territoire ──Noyau──→ NOYAU (stack)          │
+│  │                                               │
+│  │  ORBITE ──back──→ Feed                        │
+│  │  NOYAU ──back──→ Territoire                   │
+│  └───────────────────────────────────────────────│
+└─────────────────────────────────────────────────┘
+```
+
+## ⚠️ Ce qui N'EST PAS dans ce MVP
+
+- Authentification utilisateur
+- Messages temps réel (WebSockets)
+- Upload de voix réelles
+- Algorithme de fréquence réel
+- Blockchain FREK
+- CVLN tokenomics réel
+- Notifications push
+- Backend API (toutes données mockées)
+
+## 📄 Licence
+
+Ce prototype est la propriété de son créateur. Usage interne uniquement.
+
+---
+
+*Ce prototype est le territoire zéro de KORA. Il n'est pas parfait. Il est réel.*
