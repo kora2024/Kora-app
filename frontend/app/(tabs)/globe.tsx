@@ -414,7 +414,9 @@ export default function GlobeScreen() {
         pointerEvents="none"
       >
         <View style={styles.gpsToastContent}>
-          <Text style={styles.gpsToastIcon}>📍</Text>
+          <View style={styles.gpsToastIconContainer}>
+            <PinIcon size={22} color={COLORS.gold} />
+          </View>
           <View>
             <Text style={styles.gpsToastLabel}>Coordonnées GPS</Text>
             {lastGPSClick && (
