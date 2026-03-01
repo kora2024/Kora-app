@@ -119,25 +119,23 @@ export default function TerritoireScreen() {
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════
-            NOYAU CTA — Séparé par beaucoup d'espace
+            NOYAU CTA — Séparé par beaucoup d'espace (avec transition animée)
         ═══════════════════════════════════════════════════════════════ */}
         <View style={styles.sectionSpacing} />
         
-        <TouchableOpacity
-          style={styles.noyauBtn}
-          testID="territoire-noyau-btn"
-          onPress={() => {
-            haptic.medium();
-            router.push('/noyau');
-          }}
-          activeOpacity={0.8}
-        >
-          <NoyauSphere />
-          <View style={styles.noyauInfo}>
-            <Text style={styles.noyauLabel}>NOYAU</Text>
-            <Text style={styles.noyauValue}>2,847 CVLN</Text>
-          </View>
-          <BackIcon size={20} color={COLORS.gray} />
+        <FadeInView delay={200} direction="up">
+          <NoyauTransitionButton
+            style={styles.noyauBtn}
+            testID="territoire-noyau-btn"
+          >
+            <NoyauSphere />
+            <View style={styles.noyauInfo}>
+              <Text style={styles.noyauLabel}>NOYAU</Text>
+              <Text style={styles.noyauValue}>2,847 CVLN</Text>
+            </View>
+            <BackIcon size={20} color={COLORS.gray} />
+          </NoyauTransitionButton>
+        </FadeInView>
         </TouchableOpacity>
 
         {/* ═══════════════════════════════════════════════════════════════
