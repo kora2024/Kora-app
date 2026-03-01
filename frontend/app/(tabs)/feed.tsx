@@ -312,9 +312,7 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   logo: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 20,
-    color: COLORS.cream,
+    ...TYPOGRAPHY.heading2,
     letterSpacing: 4,
   },
   globeBtn: {
