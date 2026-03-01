@@ -110,6 +110,7 @@ function ReactionBubble({
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePress = () => {
+    haptic.medium();
     Animated.sequence([
       Animated.spring(scaleAnim, { toValue: 1.15, useNativeDriver: true, speed: 50, bounciness: 12 }),
       Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, speed: 30 }),
