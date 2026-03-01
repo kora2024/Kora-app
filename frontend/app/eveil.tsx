@@ -324,6 +324,12 @@ export default function EveilScreen() {
       await AsyncStorage.setItem(EVEIL_COMPLETED_KEY, 'true');
       await AsyncStorage.setItem(EVEIL_DATE_KEY, new Date().toISOString());
       console.log('✨ Éveil complété et sauvegardé');
+      
+      // UPGRADE 18 — Generate and store sacred words
+      const words = await initializeSacredWords();
+      if (words) {
+        console.log('🔑 12 mots sacrés générés');
+      }
     } catch (error) {
       console.error('Error saving eveil completion:', error);
     }
