@@ -31,6 +31,8 @@ import {
 import QuantumZoom, { SimpleQuantumZoom } from '../../src/components/QuantumZoom';
 import { showToast } from '../../src/components/Toast';
 import { liveStream, LiveEclatEvent, useLiveStreamManager } from '../../src/utils/liveStream';
+import NetworkIndicator from '../../src/components/NetworkIndicator';
+import { startMovementDetection, stopMovementDetection } from '../../src/utils/humanProof';
 
 const { width: SW } = Dimensions.get('window');
 
