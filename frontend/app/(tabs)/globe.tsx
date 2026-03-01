@@ -410,7 +410,21 @@ export default function GlobeScreen() {
             </View>
           </Animated.View>
         )}
-      </View>
+      </Animated.View>
+
+      {/* UPGRADE 11: Quantum Zoom Overlay */}
+      <QuantumZoom 
+        visible={quantumZoomActive}
+        territoryColor={activeTerritory.color}
+        onComplete={() => {
+          setQuantumZoomActive(false);
+          // Reset globe animations
+          globeContainerScale.setValue(1);
+          globeContainerOpacity.setValue(1);
+          // Navigate to Feed
+          router.push('/(tabs)/feed');
+        }}
+      />
 
       {/* GPS Coordinates Toast — Épuré */}
       {lastGPSClick && (
