@@ -39,7 +39,7 @@ export default function GlobeScreen() {
   const router = useRouter();
   const { activeTerritory, setActiveTerritory } = useKoraStore();
   const [globeReady, setGlobeReady] = useState(false);
-  const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
+  const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null as { lat: number; lng: number } | null);
 
   // Animations
   const hintOpacity = useRef(new Animated.Value(0)).current;
