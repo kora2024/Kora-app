@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, Suspense } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,7 @@ export default function GlobeScreen() {
   const router = useRouter();
   const { activeTerritory, setActiveTerritory } = useKoraStore();
   const [globeReady, setGlobeReady] = useState(false);
-  const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null as { lat: number; lng: number } | null);
+  const [lastGPSClick, setLastGPSClick] = useState<{ lat: number; lng: number } | null>(null);
 
   // Animations
   const hintOpacity = useRef(new Animated.Value(0)).current;
@@ -129,13 +129,11 @@ export default function GlobeScreen() {
             <Text style={styles.webFallbackSubtext}>Disponible sur l'app mobile</Text>
           </View>
         ) : (
-          <Suspense fallback={<GlobeLoader />}>
-            <KoraGlobe
-              onTerritorySelect={handleTerritorySelect}
-              onTerritoryDoubleTap={handleTerritoryDoubleTap}
-              onGPSClick={handleGPSClick}
-            />
-          </Suspense>
+          <KoraGlobe
+            onTerritorySelect={handleTerritorySelect}
+            onTerritoryDoubleTap={handleTerritoryDoubleTap}
+            onGPSClick={handleGPSClick}
+          />
         )}
 
         {/* Loading overlay */}
@@ -264,10 +262,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: 'rgba(74, 127, 165, 0.3)',
-    shadowColor: '#4A7FA5',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
   },
   webGlobeEmoji: {
     fontSize: 80,
@@ -317,11 +311,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.3)',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
   },
   gpsToastContent: {
     flexDirection: 'row',
