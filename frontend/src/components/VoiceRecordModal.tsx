@@ -403,10 +403,6 @@ const styles = StyleSheet.create({
   recordBtnRecording: {
     backgroundColor: '#CC4444',
   },
-  recordBtnIcon: {
-    fontSize: 28,
-    color: COLORS.cream,
-  },
   waveContainer: {
     flexDirection: 'row',
     alignItems: 'center',
