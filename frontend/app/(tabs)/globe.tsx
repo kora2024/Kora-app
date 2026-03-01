@@ -474,6 +474,9 @@ export default function GlobeScreen() {
         </Animated.View>
       )}
 
+      {/* UPGRADE 23 — Network/P2P Status Indicator */}
+      <NetworkIndicator />
+
       {/* Territory preview card — UPGRADE 11: Long press for quantum zoom */}
       <Animated.View
         style={[
