@@ -4,6 +4,7 @@ import { GLView, ExpoWebGLRenderingContext } from 'expo-gl';
 import * as THREE from 'three';
 import { TERRITORIES, Territory } from '../store/useKoraStore';
 import { haptic } from '../utils/haptics';
+import { Eclat } from '../utils/eclatStorage';
 
 // ============================================
 // TYPES & INTERFACES
@@ -13,12 +14,15 @@ interface GlobeProps {
   onTerritorySelect?: (territory: Territory) => void;
   onTerritoryDoubleTap?: (territory: Territory) => void;
   onGPSClick?: (lat: number, lng: number) => void;
+  onEclatTap?: (eclat: Eclat) => void;
   userLocation?: { lat: number; lng: number };
   isUserSovereign?: boolean;
+  eclats?: Eclat[];
 }
 
 export interface GlobeRef {
   focusOnTarget: (lat: number, lng: number) => void;
+  addEclat: (eclat: Eclat) => void;
 }
 
 // ============================================
