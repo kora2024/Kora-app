@@ -224,8 +224,10 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   onTerritorySelect, 
   onTerritoryDoubleTap, 
   onGPSClick,
+  onEclatTap,
   userLocation,
   isUserSovereign = false,
+  eclats = [],
 }, ref) => {
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
