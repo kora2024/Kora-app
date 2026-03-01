@@ -238,16 +238,12 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '-20deg' }],
   },
   sphereValue: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 36,
+    ...TYPOGRAPHY.cvlnLarge,
     color: '#FFFFFF',
   },
   sphereLabel: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
+    ...TYPOGRAPHY.labelSmall,
     color: 'rgba(255,255,255,0.5)',
-    letterSpacing: 4,
-    marginTop: 4,
   },
   
   // ═══════════ STATS ═══════════
