@@ -272,11 +272,9 @@ export default function FeedScreen() {
   const router = useRouter();
   const { activeTerritory } = useKoraStore();
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(SH - TAB_BAR_HEIGHT);
 
-  // Tab bar height + insets
-  const tabBarH = 70 + insets.bottom;
-  const headerH = insets.top + 60;
-  const itemHeight = SH - tabBarH;
+  const itemHeight = containerHeight;
 
   const onViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -295,7 +293,11 @@ export default function FeedScreen() {
   );
 
   return (
-    <View style={styles.container} testID="feed-screen">
+    <View
+      style={styles.container}
+      testID="feed-screen"
+      onLayout={(e) => setContainerHeight(e.nativeEvent.layout.height)}
+    >
       {/* Floating header */}
       <View style={[styles.floatingHeader, { paddingTop: insets.top + 8 }]}>
         <LinearGradient
