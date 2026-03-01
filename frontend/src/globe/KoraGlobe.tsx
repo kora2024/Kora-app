@@ -574,6 +574,89 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     globeGroup.add(new THREE.Mesh(atmosGeo, atmosMat));
 
     // ============================================
+    // UPGRADE 8 — OMBRE ATMOSPHÉRIQUE VISIBLE
+    // Hémisphère de nuit réaliste avec crépuscule
+    // ============================================
+    
+    // Get current sun position
+    const sunPos = getSunPosition();
+    const sunRotationY = -sunPos.longitude * (Math.PI / 180); // Convert to radians
+    
+    // Create night shadow sphere (slightly larger than Earth)
+    const nightSphereGeo = new THREE.SphereGeometry(1.002, 64, 64);
+    
+    const nightShaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        sunDirection: { 
+          value: new THREE.Vector3(
+            Math.cos(sunRotationY), 
+            Math.sin(sunPos.latitude * Math.PI / 180) * 0.2,
+            Math.sin(sunRotationY)
+          ).normalize() 
+        },
+        nightColor: { value: new THREE.Color(0x000008) }, // Deep night blue-black
+        twilightColor: { value: new THREE.Color(0xA65D47) }, // Terracotta twilight
+        nightIntensity: { value: 0.75 }, // Night darkness (0.75 = 75% opacity)
+        twilightWidth: { value: 0.15 }, // Width of twilight band
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform vec3 sunDirection;
+        uniform vec3 nightColor;
+        uniform vec3 twilightColor;
+        uniform float nightIntensity;
+        uniform float twilightWidth;
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        
+        void main() {
+          // Calculate how much this point faces the sun
+          vec3 worldNormal = normalize(vWorldPosition);
+          float sunDot = dot(worldNormal, sunDirection);
+          
+          // sunDot: 1 = facing sun (day), -1 = away from sun (night)
+          // We want shadow on the night side
+          
+          // Night intensity: 0 on day side, increases on night side
+          float nightFactor = smoothstep(twilightWidth, -twilightWidth, sunDot);
+          
+          // Twilight glow: peaks at the terminator (sunDot ≈ 0)
+          float twilightFactor = exp(-pow(sunDot / twilightWidth, 2.0) * 2.0) * 0.3;
+          
+          // Mix colors
+          vec3 shadowColor = mix(vec3(0.0), nightColor, nightFactor);
+          shadowColor += twilightColor * twilightFactor;
+          
+          // Final alpha: night gets dark, twilight gets warm glow
+          float alpha = nightFactor * nightIntensity + twilightFactor;
+          
+          gl_FragColor = vec4(shadowColor, alpha);
+        }
+      `,
+      transparent: true,
+      side: THREE.FrontSide,
+      blending: THREE.NormalBlending,
+      depthWrite: false,
+    });
+    
+    const nightSphere = new THREE.Mesh(nightSphereGeo, nightShaderMat);
+    nightSphere.userData = { isNightSphere: true };
+    globeGroup.add(nightSphere);
+    
+    // Store reference for animation updates
+    const nightSphereRef = { mesh: nightSphere, material: nightShaderMat };
+
+    // ============================================
     // SUBTLE GRID LINES
     // ============================================
     
