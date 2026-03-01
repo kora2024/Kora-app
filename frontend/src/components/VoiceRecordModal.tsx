@@ -284,9 +284,11 @@ export default function VoiceRecordModal({
                     styles.recordBtnInner,
                     isRecording && styles.recordBtnRecording,
                   ]}>
-                    <Text style={styles.recordBtnIcon}>
-                      {isRecording ? '◼' : '🎤'}
-                    </Text>
+                    {isRecording ? (
+                      <StopIcon size={28} color={COLORS.cream} />
+                    ) : (
+                      <MicIcon size={28} color={COLORS.cream} />
+                    )}
                   </View>
                 </Animated.View>
               </TouchableOpacity>
