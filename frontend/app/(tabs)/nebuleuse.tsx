@@ -485,20 +485,15 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   sheetName: {
-    fontFamily: FONTS.jostRegular,
-    fontSize: 16,
-    color: COLORS.cream,
+    ...TYPOGRAPHY.name,
   },
   sheetStatusActive: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
+    ...TYPOGRAPHY.labelLight,
     color: COLORS.terra,
     marginTop: 2,
   },
   sheetStatusInactive: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
+    ...TYPOGRAPHY.labelLight,
     marginTop: 2,
   },
   sheetClose: {
