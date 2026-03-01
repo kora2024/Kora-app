@@ -113,22 +113,31 @@ export default function GlobeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 3D Globe WebView */}
+      {/* 3D Globe - Platform adaptive */}
       <View style={styles.globeContainer}>
-        <WebView
-          testID="globe-webview"
-          source={{ html: globeHtml }}
-          style={styles.webview}
-          scrollEnabled={false}
-          bounces={false}
-          javaScriptEnabled={true}
-          onMessage={handleWebViewMessage}
-          originWhitelist={['*']}
-          allowsInlineMediaPlayback={true}
-          mediaPlaybackRequiresUserAction={false}
-          overScrollMode="never"
-          {...(Platform.OS === 'android' ? { hardwareAccelerationDisabledAndroid: false } : {})}
-        />
+        {Platform.OS === 'web' ? (
+          <iframe
+            srcDoc={globeHtml}
+            style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#0D0D0D' } as any}
+            title="KORA Globe"
+            allowFullScreen
+          />
+        ) : (
+          <WebView
+            testID="globe-webview"
+            source={{ html: globeHtml }}
+            style={styles.webview}
+            scrollEnabled={false}
+            bounces={false}
+            javaScriptEnabled={true}
+            onMessage={handleWebViewMessage}
+            originWhitelist={['*']}
+            allowsInlineMediaPlayback={true}
+            mediaPlaybackRequiresUserAction={false}
+            overScrollMode="never"
+            {...(Platform.OS === 'android' ? { hardwareAccelerationDisabledAndroid: false } : {})}
+          />
+        )}
         {/* Loading overlay */}
         {!globeReady && (
           <View style={styles.loadingOverlay}>
