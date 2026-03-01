@@ -30,6 +30,33 @@ export default function GlobeScreen() {
   const cardSlide = useRef(new Animated.Value(20)).current;
   const cardOpacity = useRef(new Animated.Value(0)).current;
 
+  // Timeout fallback for globe loading (web/iframe)
+  useEffect(() => {
+    const timer = setTimeout(() => setGlobeReady(true), 3000);
+    // Listen for iframe messages on web
+    if (Platform.OS === 'web') {
+      const handler = (event: MessageEvent) => {
+        try {
+          const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (data.type === 'ready') setGlobeReady(true);
+          else if (data.type === 'select') {
+            const territory = TERRITORIES.find((t) => t.id === data.territory.id);
+            if (territory) setActiveTerritory(territory);
+          } else if (data.type === 'doubletap') {
+            const territory = TERRITORIES.find((t) => t.id === data.territory);
+            if (territory) setActiveTerritory(territory);
+            router.push('/(tabs)/feed');
+          } else if (data.type === 'longpress_navigate') {
+            router.push('/(tabs)/feed');
+          }
+        } catch {}
+      };
+      window.addEventListener('message', handler);
+      return () => { clearTimeout(timer); window.removeEventListener('message', handler); };
+    }
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     // Show hint after 2s, hide after 6s
     Animated.sequence([
