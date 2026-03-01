@@ -121,6 +121,18 @@ export default function GlobeScreen() {
     globeRef.current?.focusOnTarget(USER_LOCATION.lat, USER_LOCATION.lng);
   }, []);
 
+  // AXE 2 — Capture Intuitive: Open voice recording modal
+  const handleOpenVoiceCapture = useCallback(() => {
+    haptic.eveille();
+    setVoiceModalVisible(true);
+  }, []);
+
+  const handleRecordingComplete = useCallback((uri: string, durationMs: number) => {
+    console.log('Recording complete:', uri, 'Duration:', durationMs);
+    haptic.propulse();
+    // TODO: Upload to backend or process recording
+  }, []);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="globe-screen">
       {/* Top bar */}
