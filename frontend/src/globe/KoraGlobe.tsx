@@ -882,6 +882,20 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(x, y), cameraRef.current);
 
+    // Check Éclats first (highest priority)
+    const eclatHits = raycaster.intersectObjects(eclatMeshesRef.current);
+    if (eclatHits.length > 0) {
+      const eclat = eclatHits[0].object.userData.eclat as Eclat;
+      if (eclat) {
+        haptic.resonne();
+        if (sceneRef.current) {
+          createRipple(eclatHits[0].point, sceneRef.current);
+        }
+        onEclatTap?.(eclat);
+        return;
+      }
+    }
+
     // Check territory dots
     const territoryHits = raycaster.intersectObjects(dotMeshes.current);
     if (territoryHits.length > 0) {
