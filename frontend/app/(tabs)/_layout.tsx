@@ -125,14 +125,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   tabLabel: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 0.5,
+    ...TYPOGRAPHY.nav,
     marginTop: 4,
   },
   tabLabelActive: {
-    color: COLORS.terra,
+    ...TYPOGRAPHY.navActive,
   },
   activeIndicator: {
     width: 4,
@@ -140,10 +137,5 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: COLORS.terra,
     marginTop: 4,
-    shadowColor: COLORS.terra,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 6,
-    elevation: 3,
   },
 });
