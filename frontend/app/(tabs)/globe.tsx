@@ -46,8 +46,10 @@ export default function GlobeScreen() {
           } else if (data.type === 'doubletap') {
             const territory = TERRITORIES.find((t) => t.id === data.territory);
             if (territory) setActiveTerritory(territory);
+            haptic.heavy();
             router.push('/(tabs)/feed');
           } else if (data.type === 'longpress_navigate') {
+            haptic.heavy();
             router.push('/(tabs)/feed');
           }
         } catch {}
