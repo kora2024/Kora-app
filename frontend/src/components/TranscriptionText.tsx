@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   transcriptionText: {
-    fontFamily: FONTS.jostLightItalic || FONTS.jostLight,
+    fontFamily: FONTS.jostLight,
     fontStyle: 'italic',
     fontSize: 14,
     color: 'rgba(248, 244, 227, 0.7)', // cream 70%
