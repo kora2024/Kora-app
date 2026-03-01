@@ -25,7 +25,7 @@ import { COLORS, FONTS, SPACING, TYPOGRAPHY } from '../../src/theme';
 import { useKoraStore } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
 import { getSovereignId, truncateSovereignId } from '../../src/utils/sovereignId';
-import { TerritoireIcon, CreateIcon, BackIcon } from '../../src/components/icons/KoraIcons';
+import { TerritoireIcon, CreateIcon, BackIcon, SettingsIcon } from '../../src/components/icons/KoraIcons';
 import { NoyauTransitionButton, FadeInView, StaggeredItem } from '../../src/components/AnimatedTransitions';
 
 const { width: SW } = Dimensions.get('window');
