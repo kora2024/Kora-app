@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore, TERRITORIES, Territory } from '../../src/store/useKoraStore';
 import { getGlobeHTML } from '../../src/globe/globeHTML';
+import { haptic } from '../../src/utils/haptics';
 
 const { width: SW } = Dimensions.get('window');
 
