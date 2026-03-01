@@ -45,6 +45,8 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom + 4,
         },
         tabBarShowLabel: false,
+        // UPGRADE 7: Transitions fluides entre tabs
+        animation: 'fade',
       }}
     >
       <Tabs.Screen
