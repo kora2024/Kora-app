@@ -51,17 +51,15 @@ const FEED_ITEMS = [
 export default function FeedScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { activeTerritory } = useKoraStore();
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} testID="feed-screen">
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.territoryTag}>
-          <LinearGradient
-            colors={[COLORS.terra, COLORS.gold]}
-            style={styles.territoryDot}
-          />
-          <Text style={styles.territoryName}>Territoire Dakar</Text>
+          <View style={[styles.territoryDot, { backgroundColor: activeTerritory.color }]} />
+          <Text style={styles.territoryName}>Territoire {activeTerritory.name}</Text>
         </View>
       </View>
 
