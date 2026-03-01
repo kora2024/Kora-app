@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 const ECLATS_STORAGE_KEY = 'KORA_ECLATS';
 const ECLATS_DIRECTORY = `${FileSystem.documentDirectory}eclats/`;
