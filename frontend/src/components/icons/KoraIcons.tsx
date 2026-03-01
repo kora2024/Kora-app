@@ -1159,3 +1159,146 @@ export function LockIcon({
   );
 }
 
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SETTINGS ICONS — UPGRADE 18
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Key Icon — For sacred words / memory key
+ */
+export function KeyIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle
+        cx="8"
+        cy="8"
+        r="5"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Path
+        d="M12 12l9 9"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M17 17l2 -2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Path
+        d="M19.5 19.5l2 -2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Copy Icon — For clipboard operations
+ */
+export function CopyIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect
+        x="9"
+        y="9"
+        width="13"
+        height="13"
+        rx="2"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Path
+        d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Alert/Warning Icon — For important messages
+ */
+export function AlertIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M12 2L2 22h20L12 2z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Line
+        x1="12"
+        y1="9"
+        x2="12"
+        y2="13"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Circle
+        cx="12"
+        cy="17"
+        r="0.5"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Settings Icon — Gear icon for settings
+ */
+export function SettingsIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle
+        cx="12"
+        cy="12"
+        r="3"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Path
+        d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
