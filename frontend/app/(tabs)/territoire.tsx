@@ -232,7 +232,9 @@ export default function TerritoireScreen() {
         {/* FREK Collaborations */}
         <Text style={styles.sectionTitle}>COLLABORATIONS FREK</Text>
         {COLLABS.map((c, i) => (
-          <TouchableOpacity key={i} style={styles.collabCard} activeOpacity={0.8} testID={`collab-card-${i}`}>
+          <TouchableOpacity key={i} style={styles.collabCard} activeOpacity={0.8} testID={`collab-card-${i}`}
+            onPress={() => { if (c.verified) haptic.success(); }}
+          >
             <Text style={styles.collabEmoji}>{c.emoji}</Text>
             <View style={styles.collabInfo}>
               <View style={styles.collabRow}>
