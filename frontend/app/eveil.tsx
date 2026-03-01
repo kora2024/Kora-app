@@ -720,4 +720,48 @@ const styles = StyleSheet.create({
   progressDotInactive: {
     backgroundColor: 'rgba(255,255,255,0.15)',
   },
+  // UPGRADE 16 — Developer Menu
+  devMenuContainer: {
+    position: 'absolute',
+    top: 120,
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(20, 20, 25, 0.98)',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    zIndex: 100,
+    alignItems: 'center',
+  },
+  devMenuTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.gray,
+    letterSpacing: 1,
+    marginBottom: 16,
+  },
+  resetButton: {
+    backgroundColor: 'rgba(200, 50, 50, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(200, 50, 50, 0.5)',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  resetButtonText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: '#ff6b6b',
+  },
+  closeDevMenu: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  closeDevMenuText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
+    color: COLORS.gray,
+  },
 });
