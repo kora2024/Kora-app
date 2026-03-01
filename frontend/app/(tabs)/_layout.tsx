@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { COLORS, FONTS } from '../../src/theme';
+import { COLORS, FONTS, SPACING, TYPOGRAPHY } from '../../src/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   GlobeIcon,
