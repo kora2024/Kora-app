@@ -702,58 +702,167 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     }
 
     // ============================================
-    // TERRITORY NODES with Nebula Float Animation
-    // + AXE 1: Circadian cycle dimming
+    // UPGRADE 10 — VIBRANT LIGHT PARTICLES
+    // Replace simple dots with particle clusters
     // ============================================
+    
+    // Mock activity data (Éclats in last 24h)
+    const ACTIVITY_DATA: Record<string, number> = {
+      'fort-de-france': 12, // Max intensity
+      'lagos': 8,           // High intensity
+      'paris': 5,           // Medium intensity
+      'london': 4,          // Medium intensity
+      'dakar': 6,           // Medium-high
+      'kinshasa': 3,        // Low-medium
+      'atlanta': 2,         // Low
+      'toronto': 2,         // Low
+      'montreal': 1,        // Very low
+    };
+    
+    // Get activity level for territory
+    const getActivityLevel = (id: string): { count: number; level: 'max' | 'high' | 'medium' | 'low' | 'inactive' } => {
+      const count = ACTIVITY_DATA[id] || 0;
+      if (count >= 10) return { count, level: 'max' };
+      if (count >= 6) return { count, level: 'high' };
+      if (count >= 3) return { count, level: 'medium' };
+      if (count >= 1) return { count, level: 'low' };
+      return { count, level: 'inactive' };
+    };
+    
+    // Particle configuration per activity level
+    const PARTICLE_CONFIG = {
+      max: { particleCount: 7, centralRadius: 0.045, satelliteRadius: 0.012, vibrationSpeed: 2, vibrationAmount: 0.15, glowRadius: 0.08 },
+      high: { particleCount: 5, centralRadius: 0.035, satelliteRadius: 0.010, vibrationSpeed: 1.8, vibrationAmount: 0.12, glowRadius: 0.06 },
+      medium: { particleCount: 3, centralRadius: 0.025, satelliteRadius: 0.008, vibrationSpeed: 1.2, vibrationAmount: 0.08, glowRadius: 0.04 },
+      low: { particleCount: 2, centralRadius: 0.018, satelliteRadius: 0.006, vibrationSpeed: 0.8, vibrationAmount: 0.05, glowRadius: 0.02 },
+      inactive: { particleCount: 1, centralRadius: 0.012, satelliteRadius: 0, vibrationSpeed: 0, vibrationAmount: 0, glowRadius: 0 },
+    };
     
     dotMeshes.current = [];
     territoryNodesRef.current = [];
+    const particleSystemsRef: THREE.Group[] = [];
     
     TERRITORIES.forEach((t, index) => {
-      const pos = latLngToVector3(t.lat, t.lng, 1.02);
-      const size = t.size / 350;
+      const basePos = latLngToVector3(t.lat, t.lng, 1.02);
+      const activity = getActivityLevel(t.id);
+      const config = PARTICLE_CONFIG[activity.level];
       
       // Check if territory is in nighttime
       const inNight = isPointInNight(t.lng);
-      const nightDimFactor = inNight ? 0.3 : 1.0;
-
-      // Core node - dimmed if in night
-      const dotGeo = new THREE.SphereGeometry(size, 16, 16);
-      const dotMat = new THREE.MeshPhongMaterial({ 
-        color: inNight ? 0x666666 : 0xcccccc,
-        emissive: new THREE.Color(t.color),
-        emissiveIntensity: 0.3 * nightDimFactor,
-        opacity: inNight ? 0.6 : 1.0,
-        transparent: inNight,
-      });
-      const dot = new THREE.Mesh(dotGeo, dotMat);
-      dot.position.copy(pos);
-      dot.userData = { 
-        ...t, 
-        basePosition: pos.clone(),
+      const nightDimFactor = inNight ? 0.4 : 1.0;
+      
+      // Create particle system group
+      const particleGroup = new THREE.Group();
+      particleGroup.position.copy(basePos);
+      particleGroup.userData = {
+        ...t,
+        basePosition: basePos.clone(),
         floatPhase: index * 0.5,
         floatAmplitude: 0.008 + Math.random() * 0.005,
         isNightTime: inNight,
         territoryLng: t.lng,
+        activityLevel: activity.level,
+        particleConfig: config,
+        particles: [] as THREE.Mesh[],
       };
-      globeGroup.add(dot);
-      dotMeshes.current.push(dot);
-      territoryNodesRef.current.push(dot);
-
-      // Pulse ring - subtle, not golden
-      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.2, 32);
-      const ringMat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(t.color),
+      
+      // Determine color based on territory and state
+      let particleColor = new THREE.Color(t.color);
+      if (activity.level === 'inactive') {
+        particleColor = new THREE.Color(0x2a2a3a); // Cold color for inactive
+      } else if (inNight) {
+        particleColor = particleColor.multiplyScalar(0.6); // Dim at night
+      }
+      
+      // ─────────────────────────────────────────────────
+      // CENTRAL PARTICLE (main node)
+      // ─────────────────────────────────────────────────
+      
+      const centralGeo = new THREE.SphereGeometry(config.centralRadius, 16, 16);
+      const centralMat = new THREE.MeshPhongMaterial({
+        color: inNight ? 0x444444 : 0xffffff,
+        emissive: particleColor,
+        emissiveIntensity: (activity.level === 'inactive' ? 0.1 : 0.5) * nightDimFactor,
         transparent: true,
-        opacity: 0.3,
-        side: THREE.DoubleSide,
+        opacity: activity.level === 'inactive' ? 0.2 : (inNight ? 0.7 : 1.0),
       });
-      const ring = new THREE.Mesh(ringGeo, ringMat);
-      ring.position.copy(pos);
-      ring.lookAt(0, 0, 0);
-      ring.userData = { phase: Math.random() * Math.PI * 2, isRing: true };
-      globeGroup.add(ring);
+      const centralParticle = new THREE.Mesh(centralGeo, centralMat);
+      centralParticle.userData = {
+        isCentral: true,
+        baseScale: 1,
+        vibrationPhase: Math.random() * Math.PI * 2,
+        scintillationPhase: Math.random() * Math.PI * 2,
+      };
+      particleGroup.add(centralParticle);
+      particleGroup.userData.particles.push(centralParticle);
+      
+      // ─────────────────────────────────────────────────
+      // SATELLITE PARTICLES (orbiting)
+      // ─────────────────────────────────────────────────
+      
+      const satelliteCount = config.particleCount - 1;
+      for (let i = 0; i < satelliteCount; i++) {
+        const angle = (i / satelliteCount) * Math.PI * 2;
+        const orbitRadius = config.centralRadius * 2.5 + Math.random() * config.centralRadius;
+        
+        const satGeo = new THREE.SphereGeometry(config.satelliteRadius, 8, 8);
+        const satMat = new THREE.MeshPhongMaterial({
+          color: 0xffffff,
+          emissive: particleColor,
+          emissiveIntensity: 0.4 * nightDimFactor,
+          transparent: true,
+          opacity: inNight ? 0.5 : 0.8,
+        });
+        const satellite = new THREE.Mesh(satGeo, satMat);
+        
+        // Position in orbit around central
+        satellite.position.set(
+          Math.cos(angle) * orbitRadius,
+          (Math.random() - 0.5) * orbitRadius * 0.5,
+          Math.sin(angle) * orbitRadius
+        );
+        
+        satellite.userData = {
+          isSatellite: true,
+          orbitAngle: angle,
+          orbitRadius: orbitRadius,
+          orbitSpeed: 0.3 + Math.random() * 0.4, // Variable orbit speed
+          verticalOffset: (Math.random() - 0.5) * 0.02,
+          scintillationPhase: Math.random() * Math.PI * 2,
+        };
+        
+        particleGroup.add(satellite);
+        particleGroup.userData.particles.push(satellite);
+      }
+      
+      // ─────────────────────────────────────────────────
+      // EXTERNAL GLOW AURA
+      // ─────────────────────────────────────────────────
+      
+      if (config.glowRadius > 0 && activity.level !== 'inactive') {
+        const glowGeo = new THREE.SphereGeometry(config.glowRadius, 16, 16);
+        const glowMat = new THREE.MeshBasicMaterial({
+          color: particleColor,
+          transparent: true,
+          opacity: 0.15 * nightDimFactor,
+          side: THREE.BackSide,
+        });
+        const glow = new THREE.Mesh(glowGeo, glowMat);
+        glow.userData = { isGlow: true };
+        particleGroup.add(glow);
+      }
+      
+      // Make the particle group look outward (normal to sphere surface)
+      particleGroup.lookAt(0, 0, 0);
+      
+      globeGroup.add(particleGroup);
+      dotMeshes.current.push(centralParticle); // For raycasting
+      territoryNodesRef.current.push(particleGroup);
+      particleSystemsRef.push(particleGroup);
     });
+    
+    // Store particle systems for animation
+    (globeGroup as any).particleSystems = particleSystemsRef;
 
     // ============================================
     // SOVEREIGN GOLDEN AURA (Only if sovereign)
