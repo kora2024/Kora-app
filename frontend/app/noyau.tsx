@@ -273,10 +273,7 @@ const styles = StyleSheet.create({
   
   // ═══════════ SECTION TITLE ═══════════
   sectionTitle: {
-    fontFamily: FONTS.jostExtraLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    letterSpacing: 4,
+    ...TYPOGRAPHY.label,
     marginBottom: SPACING.md,
   },
   
@@ -290,22 +287,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.04)',
   },
   activityDesc: {
+    ...TYPOGRAPHY.body,
     flex: 1,
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: COLORS.cream,
-    lineHeight: 14 * 1.6,
     marginRight: SPACING.sm,
   },
   activityCvln: {
-    fontFamily: FONTS.playfairRegular,
-    fontSize: 14,
-    color: COLORS.gold,
+    ...TYPOGRAPHY.cvlnSmall,
   },
   activityFrek: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 12,
-    color: COLORS.terra,
+    ...TYPOGRAPHY.badge,
     backgroundColor: 'rgba(166,93,71,0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
