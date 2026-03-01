@@ -22,10 +22,21 @@ export interface GlobeRef {
 }
 
 // ============================================
+// SOVEREIGN PALETTE COLORS
+// ============================================
+
+const PALETTE = {
+  ocean: 0x080808,        // Deep Black/Charcoal
+  land: 0x1A1D21,         // Dark Slate/Grey
+  gold: 0xFFD700,         // Golden (Arcs & Aura only)
+  atmosphere: 0x1a3a5c,   // Blue atmosphere glow
+  grid: 0x333333,         // Subtle grid
+};
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
-// Convert lat/lng to 3D coordinates
 function latLngToVector3(lat: number, lng: number, radius: number = 1): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
   const theta = (lng + 180) * (Math.PI / 180);
@@ -36,7 +47,6 @@ function latLngToVector3(lat: number, lng: number, radius: number = 1): THREE.Ve
   );
 }
 
-// Convert 3D point to lat/lng
 function vector3ToLatLng(point: THREE.Vector3): { lat: number; lng: number } {
   const normalized = point.clone().normalize();
   const lat = 90 - Math.acos(normalized.y) * (180 / Math.PI);
@@ -47,7 +57,6 @@ function vector3ToLatLng(point: THREE.Vector3): { lat: number; lng: number } {
   };
 }
 
-// Convert lat/lng to spherical angles for camera
 function latLngToSpherical(lat: number, lng: number): { theta: number; phi: number } {
   return {
     theta: (lng + 180) * (Math.PI / 180),
@@ -56,50 +65,110 @@ function latLngToSpherical(lat: number, lng: number): { theta: number; phi: numb
 }
 
 // ============================================
-// PROCEDURAL EARTH TEXTURE (No document needed)
+// HIGH-RES PROCEDURAL EARTH TEXTURE (2048x1024)
+// Smooth coastlines with Perlin-like noise
 // ============================================
 
-function createProceduralEarthTexture(size: number = 512): THREE.DataTexture {
-  const data = new Uint8Array(size * size * 4);
+function createHighResEarthTexture(): THREE.DataTexture {
+  const width = 2048;
+  const height = 1024;
+  const data = new Uint8Array(width * height * 4);
   
-  // Simple procedural earth colors
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const i = (y * size + x) * 4;
+  // Improved noise function for smooth coastlines
+  const hash = (x: number, y: number): number => {
+    const n = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+    return n - Math.floor(n);
+  };
+  
+  const smoothNoise = (x: number, y: number): number => {
+    const xi = Math.floor(x);
+    const yi = Math.floor(y);
+    const xf = x - xi;
+    const yf = y - yi;
+    
+    // Smooth interpolation
+    const u = xf * xf * (3 - 2 * xf);
+    const v = yf * yf * (3 - 2 * yf);
+    
+    const aa = hash(xi, yi);
+    const ab = hash(xi, yi + 1);
+    const ba = hash(xi + 1, yi);
+    const bb = hash(xi + 1, yi + 1);
+    
+    const x1 = aa + u * (ba - aa);
+    const x2 = ab + u * (bb - ab);
+    
+    return x1 + v * (x2 - x1);
+  };
+  
+  const fractalNoise = (x: number, y: number, octaves: number): number => {
+    let value = 0;
+    let amplitude = 1;
+    let frequency = 1;
+    let maxValue = 0;
+    
+    for (let i = 0; i < octaves; i++) {
+      value += smoothNoise(x * frequency, y * frequency) * amplitude;
+      maxValue += amplitude;
+      amplitude *= 0.5;
+      frequency *= 2;
+    }
+    
+    return value / maxValue;
+  };
+  
+  // Ocean color (Deep Black/Charcoal #080808)
+  const oceanR = 8, oceanG = 8, oceanB = 8;
+  
+  // Land color (Dark Slate/Grey #1A1D21)
+  const landR = 26, landG = 29, landB = 33;
+  
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 4;
       
       // Normalized coordinates
-      const nx = x / size;
-      const ny = y / size;
+      const nx = x / width;
+      const ny = y / height;
       
-      // Simple noise for continents
-      const noise1 = Math.sin(nx * 12 + ny * 8) * Math.cos(ny * 15 - nx * 5);
-      const noise2 = Math.sin(nx * 25) * Math.sin(ny * 20);
-      const combined = (noise1 + noise2 * 0.5) / 1.5;
+      // Generate smooth continental shapes
+      const continentNoise = fractalNoise(nx * 8, ny * 6, 6);
+      const detailNoise = fractalNoise(nx * 20, ny * 15, 4) * 0.3;
+      const combined = continentNoise + detailNoise;
       
-      // Land vs ocean threshold
-      const isLand = combined > 0.1;
+      // Latitude-based adjustment (more land near equator patterns)
+      const latFactor = Math.sin(ny * Math.PI);
+      const threshold = 0.42 + latFactor * 0.08;
       
-      if (isLand) {
-        // Land colors - greens and browns
-        const green = 40 + Math.floor(combined * 60);
-        const brown = 80 + Math.floor(combined * 40);
-        data[i] = brown;      // R
-        data[i + 1] = green + 40; // G
-        data[i + 2] = 30;     // B
-        data[i + 3] = 255;    // A
+      // Smooth coastline transition
+      const coastBlend = Math.max(0, Math.min(1, (combined - threshold + 0.05) * 10));
+      
+      if (coastBlend > 0.5) {
+        // Land with subtle variation
+        const variation = fractalNoise(nx * 50, ny * 40, 3) * 0.15;
+        data[i] = Math.floor(landR * (1 + variation));
+        data[i + 1] = Math.floor(landG * (1 + variation));
+        data[i + 2] = Math.floor(landB * (1 + variation));
       } else {
-        // Ocean colors - deep blue to black
-        const depth = Math.abs(combined) * 0.5;
-        data[i] = Math.floor(10 + depth * 20);     // R
-        data[i + 1] = Math.floor(30 + depth * 40); // G
-        data[i + 2] = Math.floor(60 + depth * 80); // B
-        data[i + 3] = 255;    // A
+        // Ocean with subtle depth variation
+        const depth = fractalNoise(nx * 30, ny * 25, 2) * 0.3;
+        data[i] = Math.floor(oceanR * (1 + depth));
+        data[i + 1] = Math.floor(oceanG * (1 + depth));
+        data[i + 2] = Math.floor(oceanB * (1 + depth));
       }
+      
+      data[i + 3] = 255; // Alpha
     }
   }
   
-  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+  
+  // Anti-aliasing & filtering
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.generateMipmaps = true;
   texture.needsUpdate = true;
+  
   return texture;
 }
 
@@ -121,8 +190,14 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const glRef = useRef<ExpoWebGLRenderingContext | null>(null);
 
+  // Camera-following light for golden aura glint
+  const cameraLightRef = useRef<THREE.PointLight | null>(null);
+  
   // Sovereign aura mesh
   const sovereignAuraRef = useRef<THREE.Mesh | null>(null);
+  
+  // Territory nodes for nebula float animation
+  const territoryNodesRef = useRef<THREE.Mesh[]>([]);
   
   // Cultural resonance arcs
   const resonanceArcsRef = useRef<THREE.Line[]>([]);
@@ -163,7 +238,6 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
   useImperativeHandle(ref, () => ({
     focusOnTarget: (lat: number, lng: number) => {
       const target = latLngToSpherical(lat, lng);
-      // Adjust to face the camera towards the target
       targetSpherical.current = {
         theta: target.theta + Math.PI,
         phi: target.phi,
@@ -173,11 +247,11 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     },
   }));
 
-  // Create ripple effect at a point
+  // Create ripple effect
   const createRipple = useCallback((point: THREE.Vector3, scene: THREE.Scene) => {
     const rippleGeo = new THREE.RingGeometry(0.02, 0.035, 32);
     const rippleMat = new THREE.MeshBasicMaterial({
-      color: 0xFFD700,
+      color: PALETTE.gold,
       transparent: true,
       opacity: 1,
       side: THREE.DoubleSide,
@@ -201,7 +275,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     glRef.current = gl;
     clockRef.current = new THREE.Clock();
 
-    // Create renderer
+    // Create renderer with anti-aliasing
     const renderer = new THREE.WebGLRenderer({
       // @ts-ignore
       context: gl,
@@ -216,15 +290,16 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       } as any,
       antialias: true,
       alpha: true,
+      powerPreference: 'high-performance',
     });
     renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(Math.min(2, 1)); // Limit for performance
     renderer.setClearColor(0x0D0D0D, 1);
     rendererRef.current = renderer;
 
     // Create scene with fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.08); // Phase 4 fog
+    scene.fog = new THREE.FogExp2(0x000000, 0.08);
     sceneRef.current = scene;
 
     // Create camera
@@ -238,23 +313,28 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     cameraRef.current = camera;
 
     // ============================================
-    // LIGHTING
+    // LIGHTING - Including camera-following light
     // ============================================
     
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    // Subtle ambient for base visibility
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    // Main directional light (subtle, not golden)
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
     sunLight.position.set(5, 3, 5);
     scene.add(sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0x4A7FA5, 0.5);
+    // Fill light
+    const fillLight = new THREE.DirectionalLight(0x4A7FA5, 0.3);
     fillLight.position.set(-5, -2, -5);
     scene.add(fillLight);
 
-    const accentLight = new THREE.PointLight(0xFFD700, 0.6, 10);
-    accentLight.position.set(3, 2, 3);
-    scene.add(accentLight);
+    // Camera-following PointLight for Golden Aura glint
+    const cameraLight = new THREE.PointLight(PALETTE.gold, 0.8, 8);
+    cameraLight.position.copy(camera.position);
+    scene.add(cameraLight);
+    cameraLightRef.current = cameraLight;
 
     // Create globe group
     const globeGroup = new THREE.Group();
@@ -262,18 +342,18 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     globeGroupRef.current = globeGroup;
 
     // ============================================
-    // EARTH SPHERE (Procedural - No document)
+    // EARTH SPHERE (High-Res 2048x1024)
     // ============================================
     
-    const sphereGeo = new THREE.SphereGeometry(1, 64, 64);
+    const sphereGeo = new THREE.SphereGeometry(1, 128, 64);
     
-    // Create procedural earth texture
-    const earthTexture = createProceduralEarthTexture(512);
+    // Create high-resolution procedural earth texture
+    const earthTexture = createHighResEarthTexture();
     
     const earthMaterial = new THREE.MeshPhongMaterial({
       map: earthTexture,
-      shininess: 15,
-      specular: 0x222222,
+      shininess: 5,
+      specular: 0x111111,
     });
     
     const earthMesh = new THREE.Mesh(sphereGeo, earthMaterial);
@@ -281,12 +361,12 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     earthMeshRef.current = earthMesh;
 
     // ============================================
-    // ATMOSPHERE GLOW
+    // ATMOSPHERE GLOW (Blue, not golden)
     // ============================================
     
-    const atmosGeo = new THREE.SphereGeometry(1.12, 32, 32);
+    const atmosGeo = new THREE.SphereGeometry(1.08, 48, 48);
     const atmosMat = new THREE.ShaderMaterial({
-      uniforms: { glowColor: { value: new THREE.Color(0x4A7FA5) } },
+      uniforms: { glowColor: { value: new THREE.Color(PALETTE.atmosphere) } },
       vertexShader: `
         varying vec3 vNormal;
         void main() {
@@ -299,8 +379,8 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
         uniform vec3 glowColor;
         varying vec3 vNormal;
         void main() {
-          float intensity = pow(0.6 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
-          gl_FragColor = vec4(glowColor, intensity * 0.4);
+          float intensity = pow(0.55 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+          gl_FragColor = vec4(glowColor, intensity * 0.25);
         }
       `,
       blending: THREE.AdditiveBlending,
@@ -310,12 +390,16 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     globeGroup.add(new THREE.Mesh(atmosGeo, atmosMat));
 
     // ============================================
-    // GRID LINES
+    // SUBTLE GRID LINES
     // ============================================
     
     const addGridLine = (points: THREE.Vector3[], opacity: number) => {
       const geo = new THREE.BufferGeometry().setFromPoints(points);
-      const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity });
+      const mat = new THREE.LineBasicMaterial({ 
+        color: PALETTE.grid, 
+        transparent: true, 
+        opacity 
+      });
       globeGroup.add(new THREE.Line(geo, mat));
     };
 
@@ -325,12 +409,12 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       for (let i = 0; i <= 64; i++) {
         const theta = i / 64 * Math.PI * 2;
         pts.push(new THREE.Vector3(
-          -1.005 * Math.sin(phi) * Math.cos(theta),
-          1.005 * Math.cos(phi),
-          1.005 * Math.sin(phi) * Math.sin(theta)
+          -1.003 * Math.sin(phi) * Math.cos(theta),
+          1.003 * Math.cos(phi),
+          1.003 * Math.sin(phi) * Math.sin(theta)
         ));
       }
-      addGridLine(pts, 0.12);
+      addGridLine(pts, 0.08);
     }
 
     for (let lng = 0; lng < 360; lng += 30) {
@@ -339,41 +423,50 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       for (let i = 0; i <= 64; i++) {
         const phi = i / 64 * Math.PI;
         pts.push(new THREE.Vector3(
-          -1.005 * Math.sin(phi) * Math.cos(theta),
-          1.005 * Math.cos(phi),
-          1.005 * Math.sin(phi) * Math.sin(theta)
+          -1.003 * Math.sin(phi) * Math.cos(theta),
+          1.003 * Math.cos(phi),
+          1.003 * Math.sin(phi) * Math.sin(theta)
         ));
       }
-      addGridLine(pts, 0.10);
+      addGridLine(pts, 0.06);
     }
 
     // ============================================
-    // TERRITORY DOTS
+    // TERRITORY NODES with Nebula Float Animation
     // ============================================
     
     dotMeshes.current = [];
-    TERRITORIES.forEach((t) => {
-      const pos = latLngToVector3(t.lat, t.lng, 1.025);
+    territoryNodesRef.current = [];
+    
+    TERRITORIES.forEach((t, index) => {
+      const pos = latLngToVector3(t.lat, t.lng, 1.02);
       const size = t.size / 350;
 
+      // Core node - subtle grey/white, not golden
       const dotGeo = new THREE.SphereGeometry(size, 16, 16);
       const dotMat = new THREE.MeshPhongMaterial({ 
-        color: new THREE.Color(t.color),
+        color: 0xcccccc,
         emissive: new THREE.Color(t.color),
-        emissiveIntensity: 0.4,
+        emissiveIntensity: 0.3,
       });
       const dot = new THREE.Mesh(dotGeo, dotMat);
       dot.position.copy(pos);
-      dot.userData = t;
+      dot.userData = { 
+        ...t, 
+        basePosition: pos.clone(),
+        floatPhase: index * 0.5, // Staggered float animation
+        floatAmplitude: 0.008 + Math.random() * 0.005,
+      };
       globeGroup.add(dot);
       dotMeshes.current.push(dot);
+      territoryNodesRef.current.push(dot);
 
-      // Pulse ring
-      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.5, 32);
+      // Pulse ring - subtle, not golden
+      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.2, 32);
       const ringMat = new THREE.MeshBasicMaterial({
         color: new THREE.Color(t.color),
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.3,
         side: THREE.DoubleSide,
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -384,17 +477,17 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     });
 
     // ============================================
-    // PHASE 3: SOVEREIGN IDENTITY AURA
+    // SOVEREIGN GOLDEN AURA (Only if sovereign)
     // ============================================
     
     if (userLocation && isUserSovereign) {
-      const userPos = latLngToVector3(userLocation.lat, userLocation.lng, 1.03);
+      const userPos = latLngToVector3(userLocation.lat, userLocation.lng, 1.035);
       
-      // Golden aura shader material
+      // Golden aura shader - the ONLY golden element
       const auraMat = new THREE.ShaderMaterial({
         uniforms: {
           time: { value: 0 },
-          color: { value: new THREE.Color(0xFFD700) },
+          color: { value: new THREE.Color(PALETTE.gold) },
         },
         vertexShader: `
           varying vec2 vUv;
@@ -410,17 +503,19 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
           varying vec2 vUv;
           void main() {
             float dist = length(vUv - vec2(0.5));
-            float alpha = smoothstep(0.5, 0.2, dist);
-            alpha *= 0.6 + 0.4 * sin(time * 2.0); // Breathing effect
-            gl_FragColor = vec4(color, alpha * 0.8);
+            float ring = smoothstep(0.4, 0.35, dist) * smoothstep(0.2, 0.3, dist);
+            float glow = smoothstep(0.5, 0.1, dist) * 0.5;
+            float alpha = (ring + glow) * (0.7 + 0.3 * sin(time * 1.8)); // Breathing
+            gl_FragColor = vec4(color, alpha);
           }
         `,
         transparent: true,
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
+        depthWrite: false,
       });
       
-      const auraGeo = new THREE.PlaneGeometry(0.15, 0.15);
+      const auraGeo = new THREE.PlaneGeometry(0.18, 0.18);
       const auraMesh = new THREE.Mesh(auraGeo, auraMat);
       auraMesh.position.copy(userPos);
       auraMesh.lookAt(0, 0, 0);
@@ -430,7 +525,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     }
 
     // ============================================
-    // PHASE 4: CULTURAL RESONANCE ARCS
+    // CULTURAL RESONANCE ARCS (Golden)
     // ============================================
     
     const culturalArcs = [
@@ -450,24 +545,23 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
       const to = TERRITORIES.find((t) => t.id === a.to);
       if (!from || !to) return;
 
-      const start = latLngToVector3(from.lat, from.lng, 1.025);
-      const end = latLngToVector3(to.lat, to.lng, 1.025);
+      const start = latLngToVector3(from.lat, from.lng, 1.02);
+      const end = latLngToVector3(to.lat, to.lng, 1.02);
       const mid = start.clone().add(end).multiplyScalar(0.5);
       const dist = start.distanceTo(end);
-      mid.normalize().multiplyScalar(1.025 + dist * 0.45);
+      mid.normalize().multiplyScalar(1.02 + dist * 0.5);
 
       const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
-      const pts = curve.getPoints(64);
+      const pts = curve.getPoints(80);
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
       
-      // Amber/Gold arc with dashed material for moving light effect
+      // Golden arcs with animated dashes
       const mat = new THREE.LineDashedMaterial({
-        color: 0xFFD700,
+        color: PALETTE.gold,
         transparent: true,
-        opacity: 0.6,
-        dashSize: 0.03,
-        gapSize: 0.02,
-        linewidth: 2,
+        opacity: 0.5,
+        dashSize: 0.025,
+        gapSize: 0.015,
       });
       
       const line = new THREE.Line(geo, mat);
@@ -488,27 +582,23 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
     const animate = () => {
       animFrameId = requestAnimationFrame(animate);
       const t = clockRef.current?.getElapsedTime() || 0;
-      const delta = clockRef.current?.getDelta() || 0.016;
+
+      // Update camera-following light position
+      if (cameraLightRef.current && cameraRef.current) {
+        cameraLightRef.current.position.copy(cameraRef.current.position);
+      }
 
       if (globeGroupRef.current) {
-        // ============================================
-        // CAMERA SYNC (Slerp interpolation)
-        // ============================================
-        
+        // Camera interpolation (Slerp)
         if (isAnimatingToTarget.current && targetSpherical.current) {
-          const lerpFactor = 0.05; // Smooth interpolation
+          const lerpFactor = 0.04;
           
-          // Interpolate theta (yaw)
           let dTheta = targetSpherical.current.theta - spherical.current.theta;
-          // Normalize to shortest path
           while (dTheta > Math.PI) dTheta -= Math.PI * 2;
           while (dTheta < -Math.PI) dTheta += Math.PI * 2;
           spherical.current.theta += dTheta * lerpFactor;
-          
-          // Interpolate phi (pitch)
           spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * lerpFactor;
           
-          // Check if close enough to stop
           if (Math.abs(dTheta) < 0.01 && Math.abs(targetSpherical.current.phi - spherical.current.phi) < 0.01) {
             isAnimatingToTarget.current = false;
             setTimeout(() => { autoRotate.current = true; }, 3000);
@@ -516,7 +606,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
         } else {
           // Auto rotate
           if (autoRotate.current && !isDragging.current) {
-            spherical.current.theta += 0.003;
+            spherical.current.theta += 0.002;
           }
 
           // Apply inertia (0.95 damping)
@@ -532,7 +622,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
         while (spherical.current.phi < 0) spherical.current.phi += Math.PI * 2;
         while (spherical.current.phi > Math.PI * 2) spherical.current.phi -= Math.PI * 2;
 
-        // Apply rotation using quaternion
+        // Apply rotation
         const quaternion = new THREE.Quaternion();
         const euler = new THREE.Euler(
           spherical.current.phi - Math.PI / 2,
@@ -544,22 +634,33 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
         globeGroupRef.current.quaternion.copy(quaternion);
 
         // ============================================
-        // ANIMATE PULSE RINGS
+        // NEBULA FLOAT ANIMATION (Zero-gravity drift)
         // ============================================
         
-        globeGroupRef.current.children.forEach((child) => {
-          if (child instanceof THREE.Mesh && child.userData.isRing) {
-            const phase = child.userData.phase;
-            const s = 1 + 0.5 * ((Math.sin(t * 2.5 + phase) + 1) / 2);
-            child.scale.set(s, s, s);
-            (child.material as THREE.MeshBasicMaterial).opacity = 0.5 * (1 - ((s - 1) / 0.5));
+        territoryNodesRef.current.forEach((node) => {
+          const data = node.userData;
+          if (data.basePosition && data.floatPhase !== undefined) {
+            // Slow sine wave on Y-axis for organic float
+            const floatOffset = Math.sin(t * 0.5 + data.floatPhase) * data.floatAmplitude;
+            
+            // Apply float in the direction away from center (radial)
+            const direction = data.basePosition.clone().normalize();
+            const newPos = data.basePosition.clone().add(direction.multiplyScalar(floatOffset));
+            node.position.copy(newPos);
           }
         });
 
-        // ============================================
-        // ANIMATE SOVEREIGN AURA (Breathing)
-        // ============================================
-        
+        // Animate pulse rings
+        globeGroupRef.current.children.forEach((child) => {
+          if (child instanceof THREE.Mesh && child.userData.isRing) {
+            const phase = child.userData.phase;
+            const s = 1 + 0.4 * ((Math.sin(t * 2 + phase) + 1) / 2);
+            child.scale.set(s, s, s);
+            (child.material as THREE.MeshBasicMaterial).opacity = 0.3 * (1 - ((s - 1) / 0.4));
+          }
+        });
+
+        // Animate sovereign aura (breathing)
         if (sovereignAuraRef.current) {
           const auraMat = sovereignAuraRef.current.material as THREE.ShaderMaterial;
           auraMat.uniforms.time.value = t;
@@ -569,23 +670,16 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
           sovereignAuraRef.current.scale.set(breathScale, breathScale, breathScale);
         }
 
-        // ============================================
-        // ANIMATE CULTURAL RESONANCE ARCS (Moving light)
-        // ============================================
-        
+        // Animate cultural resonance arcs (moving light)
         resonanceArcsRef.current.forEach((arc, index) => {
           const mat = arc.material as THREE.LineDashedMaterial;
-          // Different speeds for each arc
-          const speed = 0.02 + (index * 0.005);
+          const speed = 0.015 + (index * 0.003);
           arc.userData.dashOffset -= speed;
           mat.dashOffset = arc.userData.dashOffset;
         });
       }
 
-      // ============================================
-      // ANIMATE RIPPLES
-      // ============================================
-      
+      // Animate ripples
       const ripplesToRemove: THREE.Mesh[] = [];
       ripplesRef.current.forEach((ripple) => {
         const elapsed = t - ripple.userData.startTime;
@@ -733,7 +827,7 @@ const KoraGlobe = forwardRef<GlobeRef, GlobeProps>(({
 });
 
 KoraGlobe.displayName = 'KoraGlobe';
-// Version: 2.0 - Procedural texture, no document dependency
+// Version: 3.0 - Dark Jewel Upgrade
 
 export default KoraGlobe;
 
