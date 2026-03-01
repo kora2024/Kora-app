@@ -34,6 +34,46 @@ const PALETTE = {
 };
 
 // ============================================
+// AXE 1 — CYCLE CIRCADIEN
+// Calculate sun position based on real UTC time
+// ============================================
+
+function getSunPosition(): { longitude: number; isNight: (lng: number, utcOffset: number) => boolean } {
+  const now = new Date();
+  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+  
+  // Sun longitude: at 12:00 UTC, sun is at longitude 0°
+  // Sun moves 15° per hour westward (360° / 24h = 15°/h)
+  const sunLongitude = (12 - utcHours) * 15;
+  
+  // Normalize to -180 to 180
+  const normalizedSunLng = ((sunLongitude + 180) % 360) - 180;
+  
+  return {
+    longitude: normalizedSunLng,
+    isNight: (lng: number, utcOffset: number) => {
+      // Calculate local hour at this longitude
+      const localHour = (utcHours + utcOffset + 24) % 24;
+      // Night is between 22:00 and 06:00 local time
+      return localHour >= 22 || localHour < 6;
+    },
+  };
+}
+
+// Check if a point is in nighttime (for territory dimming)
+function isPointInNight(lng: number): boolean {
+  const now = new Date();
+  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+  
+  // Calculate local solar time at this longitude
+  // Solar noon occurs when the sun is directly overhead
+  const localSolarHour = (utcHours + lng / 15 + 24) % 24;
+  
+  // Consider night between 20:00 and 06:00 solar time (generous twilight)
+  return localSolarHour >= 20 || localSolarHour < 6;
+}
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 
