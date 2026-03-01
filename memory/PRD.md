@@ -98,7 +98,21 @@ KORA est le premier réseau social où l'identité culturelle est l'infrastructu
 - **Cream**: #F4F1EA (texte principal)
 - **Gray**: #888888 (texte secondaire)
 
-## État des Données
+## Micro-interactions & Polish (Prompt 9)
+- **Haptics** : expo-haptics intégré sur toutes les interactions clés
+  - Sélection fréquence/mémoire : `selectionAsync()`
+  - Entrée territoire (Globe→Feed) : `impactAsync(Heavy)`
+  - Réactions Feed : `impactAsync(Medium)`
+  - Orbite bubble tap : `impactAsync(Light)`
+  - Étoile Nébuleuse tap : `impactAsync(Light)`
+  - FREK badge tap : `notificationAsync(Success)`
+  - Noyau sphère tap : `impactAsync(Light)`
+  - Noyau CTA : `impactAsync(Medium)`
+- **Typographie** : Playfair Display Italic pour les citations/moments poétiques du Feed
+- **Dark Mode** : Forcé dans app.json (`userInterfaceStyle: "dark"`)
+- **Performance** : FlatList optimisé (windowSize:5, maxToRenderPerBatch:3, removeClippedSubviews)
+- **Shimmer** : Composant skeleton réutilisable prêt (SkeletonFeedItem, SkeletonCard)
+- **Utilitaire** : `src/utils/haptics.ts` avec wrapper safe (no-op sur web)
 - Toutes les données sont **MOCKÉES** côté frontend
 - Zustand stocke: fréquences, mémoires, territoire actif, onboarding status
 - Pas de backend API pour l'instant
