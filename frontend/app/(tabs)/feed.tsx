@@ -16,6 +16,16 @@ import { useRouter } from 'expo-router';
 import { COLORS, FONTS, SPACING } from '../../src/theme';
 import { useKoraStore } from '../../src/store/useKoraStore';
 import { haptic } from '../../src/utils/haptics';
+import {
+  ResonneIcon,
+  PropulseIcon,
+  EveillIcon,
+  AncreIcon,
+  TransmetIcon,
+  OrbiteIcon,
+  LinkIcon,
+  GlobeIcon,
+} from '../../src/components/icons/KoraIcons';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const TAB_BAR_HEIGHT = 80; // approximate tab bar height
