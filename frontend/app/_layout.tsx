@@ -144,6 +144,15 @@ export default function RootLayout() {
             animationDuration: TRANSITION_DURATION.slow,
           }} 
         />
+        
+        {/* Settings — UPGRADE 18 */}
+        <Stack.Screen 
+          name="settings" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
       </Stack>
     </>
   );
