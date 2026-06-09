@@ -23,13 +23,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import * as DocumentPicker from 'expo-document-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS, FONTS } from '../src/theme';
-import { BackIcon, PlayIcon } from '../src/components/icons/KoraIcons';
-
-// Conditional imports for native-only features
-const DocumentPicker = Platform.OS !== 'web' ? require('expo-document-picker') : null;
-const ImagePicker = Platform.OS !== 'web' ? require('expo-image-picker') : null;
+import { BackIcon } from '../src/components/icons/KoraIcons';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 

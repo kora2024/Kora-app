@@ -24,7 +24,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -265,15 +264,14 @@ export default function PlayerScreen() {
   // Track state
   const [trackDetails, setTrackDetails] = useState<any>(null);
   const [streamUrl, setStreamUrl] = useState<string>('');
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(245);
 
-  // Audio Player (expo-audio)
-  const player = useAudioPlayer(streamUrl || undefined);
-  const status = useAudioPlayerStatus(player);
+  // Audio Player ref (we'll create it when we have the URL)
+  const playerRef = useRef<any>(null);
 
-  // Derived state from player
-  const isPlaying = status.playing;
-  const duration = status.duration || 245;
-  const currentTime = status.currentTime || 0;
+  // Derived state
   const progress = duration > 0 ? currentTime / duration : 0;
 
   // Content from params or fetched
@@ -287,6 +285,42 @@ export default function PlayerScreen() {
     source: params.source as string || 'archive',
   };
 
+  // Initialize audio when streamUrl changes
+  useEffect(() => {
+    if (!streamUrl) return;
+
+    const initAudio = async () => {
+      try {
+        // Dynamic import to avoid SSR issues
+        const { createAudioPlayer } = await import('expo-audio');
+        
+        // Create player with URL source
+        const newPlayer = createAudioPlayer({ uri: streamUrl });
+        playerRef.current = newPlayer;
+        
+        console.log('🎵 Audio player initialized for:', streamUrl);
+        setIsLoading(false);
+        
+      } catch (err) {
+        console.error('Audio init error:', err);
+        setError('Erreur initialisation audio');
+        setIsLoading(false);
+      }
+    };
+
+    initAudio();
+
+    // Cleanup
+    return () => {
+      if (playerRef.current) {
+        try {
+          playerRef.current.release();
+        } catch (e) {}
+        playerRef.current = null;
+      }
+    };
+  }, [streamUrl]);
+
   // Fetch track details and stream URL
   useEffect(() => {
     const loadTrack = async () => {
@@ -297,7 +331,6 @@ export default function PlayerScreen() {
         // If we have a direct stream_url from params, use it
         if (params.stream_url) {
           setStreamUrl(params.stream_url as string);
-          setIsLoading(false);
           return;
         }
 
@@ -313,9 +346,11 @@ export default function PlayerScreen() {
               setStreamUrl(data.stream_url);
             } else {
               setError('Aucune URL de streaming disponible');
+              setIsLoading(false);
             }
           } else {
             setError('Track non trouvé');
+            setIsLoading(false);
           }
         } else {
           setError('Informations de track manquantes');
@@ -372,8 +407,10 @@ export default function PlayerScreen() {
 
   const handleClose = useCallback(() => {
     // Stop audio before closing
-    if (player) {
-      player.pause();
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+      } catch (e) {}
     }
     
     Animated.parallel([
@@ -390,20 +427,26 @@ export default function PlayerScreen() {
     ]).start(() => {
       router.back();
     });
-  }, [router, player]);
+  }, [router]);
 
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback(async () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
     
-    if (!streamUrl) {
+    if (!streamUrl || !playerRef.current) {
       setError('Aucune piste audio chargée');
       return;
     }
 
-    if (isPlaying) {
-      player.pause();
-    } else {
-      player.play();
+    try {
+      if (isPlaying) {
+        await playerRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        await playerRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (e) {
+      console.error('Play/Pause error:', e);
     }
     
     // Scale animation on tap
@@ -420,19 +463,33 @@ export default function PlayerScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [isPlaying, player, streamUrl]);
+  }, [isPlaying, streamUrl]);
 
-  const handleSkip = useCallback((direction: 'back' | 'forward') => {
+  const handleSkip = useCallback(async (direction: 'back' | 'forward') => {
     try { Haptics.selectionAsync(); } catch {}
+    if (!playerRef.current) return;
+    
     const delta = direction === 'back' ? -15 : 15;
     const newTime = Math.max(0, Math.min(duration, currentTime + delta));
-    player.seekTo(newTime);
-  }, [duration, currentTime, player]);
+    try {
+      await playerRef.current.seekTo(newTime * 1000); // Convert to milliseconds
+      setCurrentTime(newTime);
+    } catch (e) {
+      console.error('Seek error:', e);
+    }
+  }, [duration, currentTime]);
 
-  const handleSeek = useCallback((newProgress: number) => {
+  const handleSeek = useCallback(async (newProgress: number) => {
+    if (!playerRef.current) return;
+    
     const newTime = newProgress * duration;
-    player.seekTo(newTime);
-  }, [duration, player]);
+    try {
+      await playerRef.current.seekTo(newTime * 1000); // Convert to milliseconds
+      setCurrentTime(newTime);
+    } catch (e) {
+      console.error('Seek error:', e);
+    }
+  }, [duration]);
 
   const handleLike = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
