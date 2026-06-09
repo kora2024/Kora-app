@@ -325,6 +325,71 @@ async def get_me(current_user: dict = Depends(get_current_user)):
         created_at=current_user["created_at"],
     )
 
+
+@auth_router.post("/become-creator")
+async def become_creator(current_user: dict = Depends(get_current_user)):
+    """Transforme un compte utilisateur en compte créateur"""
+    if current_user.get('is_creator', False):
+        return {"message": "Vous êtes déjà un créateur", "is_creator": True}
+    
+    await db.users.update_one(
+        {'_id': current_user['_id']},
+        {'$set': {
+            'is_creator': True,
+            'creator_profile': {
+                'bio': '',
+                'genres': [],
+                'territories': [],
+                'social_links': {},
+                'verified': False,
+                'frek_score': 0
+            }
+        }}
+    )
+    
+    logger.info(f"User became creator: {current_user['frek_id']}")
+    
+    return {
+        "message": "Bienvenue en tant que créateur KORA!",
+        "is_creator": True,
+        "frek_id": current_user['frek_id']
+    }
+
+
+@auth_router.get("/profile")
+async def get_profile(current_user: dict = Depends(get_current_user)):
+    """Récupère le profil complet de l'utilisateur"""
+    return {
+        "id": current_user["_id"],
+        "email": current_user["email"],
+        "display_name": current_user["display_name"],
+        "frek_id": current_user["frek_id"],
+        "is_active": current_user["is_active"],
+        "is_creator": current_user.get("is_creator", False),
+        "is_admin": current_user.get("is_admin", False),
+        "creator_profile": current_user.get("creator_profile", None),
+        "subscription_status": current_user.get("subscription_status", "free"),
+        "created_at": current_user["created_at"],
+    }
+
+
+# Admin seed endpoint (one-time use, should be secured in production)
+@auth_router.post("/admin/seed")
+async def seed_admin(email: str, admin_secret: str = "kora_admin_secret_2024"):
+    """Promouvoir un utilisateur en admin (dev only)"""
+    if admin_secret != os.environ.get('ADMIN_SECRET', 'kora_admin_secret_2024'):
+        raise HTTPException(status_code=403, detail="Secret invalide")
+    
+    result = await db.users.update_one(
+        {'email': email.lower()},
+        {'$set': {'is_admin': True}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    
+    return {"message": f"Admin créé: {email}", "is_admin": True}
+
 # ══════════════════════════════════════════════════════════════════════════════
 # STRIPE SUBSCRIPTION ENDPOINTS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -525,11 +590,36 @@ async def get_status_checks():
 # INCLUDE ROUTERS & MIDDLEWARE
 # ══════════════════════════════════════════════════════════════════════════════
 
+# Import catalog and content routes
+from routes.catalog_routes import router as catalog_router
+from routes.content_routes import router as content_router, init_routes as init_content_routes
+from services.content_service import create_content_service
+
+# Initialize content service
+content_service = create_content_service(db)
+
+# Admin user dependency
+async def get_admin_user(token: str = Depends(oauth2_scheme)):
+    """Vérifie que l'utilisateur est admin"""
+    user = await get_current_user(token)
+    if not user.get('is_admin', False):
+        raise HTTPException(status_code=403, detail="Accès administrateur requis")
+    return user
+
+# Initialize content routes with dependencies
+init_content_routes(db, content_service, get_current_user, get_admin_user)
+
 # Include auth router in api router
 api_router.include_router(auth_router)
 
 # Include subscriptions router in api router
 api_router.include_router(subscriptions_router)
+
+# Include catalog router (music catalog)
+api_router.include_router(catalog_router)
+
+# Include content router (creator content)
+api_router.include_router(content_router)
 
 # Include api router in app
 app.include_router(api_router)
@@ -541,6 +631,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve admin dashboard
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+@app.get("/admin")
+async def admin_dashboard():
+    """Serve admin dashboard"""
+    return FileResponse(ROOT_DIR / 'static' / 'admin.html')
+
+app.mount("/static", StaticFiles(directory=ROOT_DIR / 'static'), name="static")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
