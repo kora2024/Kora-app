@@ -140,6 +140,16 @@ export default function RootLayout() {
           }} 
         />
         
+        {/* HOME — Expérience unifiée KORA (sans tabs) */}
+        <Stack.Screen 
+          name="home" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.cinematic,
+          }} 
+        />
+        
         {/* Tabs principaux — fade cinématique */}
         <Stack.Screen 
           name="(tabs)" 

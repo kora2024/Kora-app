@@ -161,9 +161,9 @@ export default function LoginScreen() {
       // Check if onboarding completed
       const eveilCompleted = await AsyncStorage.getItem('kora_eveil_completed');
       
-      // Navigate to Feed (ÉTAPE 4) or Onboarding (ÉTAPE 3)
+      // Navigate to Home (expérience unifiée) or Onboarding
       if (eveilCompleted === 'true') {
-        router.replace('/(tabs)/feed');
+        router.replace('/home');
       } else {
         router.replace('/eveil');
       }

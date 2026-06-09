@@ -342,7 +342,7 @@ export default function EveilScreen() {
       console.log('Storage not available, continuing without persistence');
     }
     
-    router.replace('/(tabs)/feed');
+    router.replace('/home');
   };
 
   // Particles

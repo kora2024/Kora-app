@@ -228,7 +228,7 @@ export default function BiometricScreen() {
   };
   
   const navigateToGlobe = useCallback(() => {
-    router.replace('/(tabs)/feed');
+    router.replace('/home');
   }, [router]);
   
   // Render biometric icon based on type

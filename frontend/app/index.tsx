@@ -64,7 +64,7 @@ export default function Index() {
   // 
   // 1. Non authentifié → Landing Page (la racine affiche la landing)
   // 2. Authentifié + pas onboardé → Onboarding (Éveil)
-  // 3. Authentifié + onboardé → Feed (expérience principale)
+  // 3. Authentifié + onboardé → Home (expérience unifiée)
   
   if (!isAuthenticated) {
     // ÉTAPE 1: Landing Page publique
@@ -76,8 +76,8 @@ export default function Index() {
     return <Redirect href="/eveil" />;
   }
   
-  // ÉTAPE 4: Feed personnalisé (expérience principale)
-  return <Redirect href="/(tabs)/feed" />;
+  // ÉTAPE 4: Home unifiée (tout KORA en un seul écran)
+  return <Redirect href="/home" />;
 }
 
 const styles = StyleSheet.create({
