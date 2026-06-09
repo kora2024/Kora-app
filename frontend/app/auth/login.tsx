@@ -158,8 +158,15 @@ export default function LoginScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
 
-      // Navigate to main app
-      router.replace('/(tabs)/globe');
+      // Check if onboarding completed
+      const eveilCompleted = await AsyncStorage.getItem('kora_eveil_completed');
+      
+      // Navigate to Feed (ÉTAPE 4) or Onboarding (ÉTAPE 3)
+      if (eveilCompleted === 'true') {
+        router.replace('/(tabs)/feed');
+      } else {
+        router.replace('/eveil');
+      }
     } catch (error) {
       console.error('Login error:', error);
       setErrors({ general: 'Erreur de connexion au serveur' });

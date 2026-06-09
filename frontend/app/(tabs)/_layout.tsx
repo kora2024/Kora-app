@@ -46,22 +46,12 @@ export default function TabsLayout() {
           paddingBottom: insets.bottom + 4,
         },
         tabBarShowLabel: false,
-        // UPGRADE 7: Transitions fluides entre tabs
         animation: 'fade',
       }}
+      // Feed est le tab initial après connexion
+      initialRouteName="feed"
     >
-      <Tabs.Screen
-        name="globe"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon 
-              icon={<GlobeIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
-              label="Globe" 
-              focused={focused} 
-            />
-          ),
-        }}
-      />
+      {/* FEED — Expérience principale post-auth */}
       <Tabs.Screen
         name="feed"
         options={{
@@ -74,6 +64,33 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* STREAM — Contenu audio/vidéo */}
+      <Tabs.Screen
+        name="stream"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              icon={<PlayIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Stream" 
+              focused={focused} 
+            />
+          ),
+        }}
+      />
+      {/* GLOBE — Navigation territoriale */}
+      <Tabs.Screen
+        name="globe"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              icon={<GlobeIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Globe" 
+              focused={focused} 
+            />
+          ),
+        }}
+      />
+      {/* CRÉER — Dépôt créateur */}
       <Tabs.Screen
         name="create"
         options={{
@@ -86,18 +103,7 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="nebuleuse"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon 
-              icon={<NebulaIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
-              label="Nébuleuse" 
-              focused={focused} 
-            />
-          ),
-        }}
-      />
+      {/* TERRITOIRE — Profil culturel */}
       <Tabs.Screen
         name="territoire"
         options={{
@@ -110,13 +116,14 @@ export default function TabsLayout() {
           ),
         }}
       />
+      {/* NÉBULEUSE — Recommandations */}
       <Tabs.Screen
-        name="stream"
+        name="nebuleuse"
         options={{
           tabBarIcon: ({ focused }) => (
             <TabIcon 
-              icon={<PlayIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
-              label="Stream" 
+              icon={<NebulaIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Nébuleuse" 
               focused={focused} 
             />
           ),

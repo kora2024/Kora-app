@@ -201,7 +201,7 @@ export default function SignupScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
 
-      // Navigate to onboarding
+      // Navigate to onboarding (Éveil) - ÉTAPE 3
       router.replace('/eveil');
     } catch (error) {
       console.error('Signup error:', error);

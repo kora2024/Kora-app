@@ -1,10 +1,21 @@
 /**
- * KORA Index — Entry Point
+ * KORA Index — Entry Point (Racine `/`)
  * 
- * Nouveau flux d'entrée KORA:
- * 1. Landing Page → Inscription/Connexion
- * 2. Post-auth → Onboarding (Éveil) si premier login
- * 3. Post-onboarding → Globe/App principale
+ * FLUX UTILISATEUR KORA:
+ * 
+ * ÉTAPE 1 — Landing Page (racine `/`)
+ *   → Accessible à tous (public)
+ *   → Bouton "Commencer" → Inscription
+ *   → Bouton "Se connecter" → Connexion
+ * 
+ * ÉTAPE 2 — Inscription/Connexion
+ *   → FREK-ID généré silencieusement
+ * 
+ * ÉTAPE 3 — Onboarding (si premier login)
+ *   → Territoires & genres
+ * 
+ * ÉTAPE 4 — Feed (expérience principale)
+ *   → Globe comme navigation territoriale
  */
 
 import React, { useEffect, useState } from 'react';
@@ -49,20 +60,24 @@ export default function Index() {
     );
   }
 
-  // Flux de navigation:
-  // 1. Pas authentifié → Landing Page
-  // 2. Authentifié mais pas onboardé → Éveil
-  // 3. Authentifié et onboardé → Biométrie → App
+  // FLUX DE NAVIGATION KORA:
+  // 
+  // 1. Non authentifié → Landing Page (la racine affiche la landing)
+  // 2. Authentifié + pas onboardé → Onboarding (Éveil)
+  // 3. Authentifié + onboardé → Feed (expérience principale)
   
   if (!isAuthenticated) {
+    // ÉTAPE 1: Landing Page publique
     return <Redirect href="/landing" />;
   }
   
   if (!hasCompletedEveil) {
+    // ÉTAPE 3: Onboarding pour calibrer l'expérience
     return <Redirect href="/eveil" />;
   }
   
-  return <Redirect href="/biometric" />;
+  // ÉTAPE 4: Feed personnalisé (expérience principale)
+  return <Redirect href="/(tabs)/feed" />;
 }
 
 const styles = StyleSheet.create({
