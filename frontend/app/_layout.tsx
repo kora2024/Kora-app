@@ -100,6 +100,26 @@ export default function RootLayout() {
           }}
         />
         
+        {/* Landing Page — PHASE A */}
+        <Stack.Screen 
+          name="landing" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.cinematic,
+          }} 
+        />
+        
+        {/* Auth screens — PHASE A */}
+        <Stack.Screen 
+          name="auth" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
+        
         {/* Onboarding — fade lent */}
         <Stack.Screen 
           name="eveil" 
