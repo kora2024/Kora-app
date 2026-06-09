@@ -258,14 +258,43 @@ export default function PlayerScreen() {
   const artworkScale = useRef(new Animated.Value(0.9)).current;
   const artworkRotate = useRef(new Animated.Value(0)).current;
 
-  // Mock content
+  // API Base
+  const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
+
+  // Track state
+  const [trackDetails, setTrackDetails] = useState<any>(null);
+
+  // Content from params or fetched
   const content = {
-    title: params.title as string || 'Zouk Forever',
-    artist: params.artist as string || "Kassav'",
-    album: 'Greatest Hits',
-    artwork: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-    duration: 245, // 4:05
+    id: params.id as string || '',
+    title: trackDetails?.title || params.title as string || 'Zouk Forever',
+    artist: trackDetails?.artist || params.artist as string || "Kassav'",
+    album: trackDetails?.album || 'Album',
+    artwork: trackDetails?.artwork || params.artwork as string || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
+    duration: trackDetails?.duration || 245,
     type: params.type as string || 'audio',
+    stream_url: trackDetails?.stream_url || params.stream_url as string || '',
+    source: params.source as string || 'jamendo',
+  };
+
+  // Fetch track details if we have an ID
+  useEffect(() => {
+    if (params.id && params.source) {
+      fetchTrackDetails();
+    }
+  }, [params.id, params.source]);
+
+  const fetchTrackDetails = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/track/${params.source}/${params.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTrackDetails(data);
+        console.log('Track loaded:', data.title, '- Stream URL:', data.stream_url);
+      }
+    } catch (error) {
+      console.error('Error fetching track details:', error);
+    }
   };
 
   useEffect(() => {

@@ -243,10 +243,11 @@ function AnimatedGlobe({ selectedTerritory, onSelectTerritory }: {
   }, []);
 
   const territories = [
-    { id: 'caraibe', name: 'Caraïbe', x: 30, y: 45, color: COLORS.terra, size: 12 },
-    { id: 'afrique', name: 'Afrique', x: 70, y: 50, color: '#C9A84C', size: 14 },
-    { id: 'europe', name: 'Europe', x: 60, y: 30, color: '#4A7FA5', size: 10 },
-    { id: 'ameriques', name: 'Amériques', x: 25, y: 55, color: '#7B4B94', size: 11 },
+    { id: 'caribbean', name: 'Caraïbes', x: 30, y: 45, color: COLORS.terra, size: 12 },
+    { id: 'africa', name: 'Afrique', x: 70, y: 50, color: '#C9A84C', size: 14 },
+    { id: 'diaspora', name: 'Diaspora', x: 55, y: 35, color: '#4A7FA5', size: 10 },
+    { id: 'latin', name: 'Latin', x: 25, y: 55, color: '#7B4B94', size: 11 },
+    { id: 'world', name: 'Monde', x: 50, y: 60, color: '#46D369', size: 10 },
   ];
 
   const handleTerritoryPress = (id: string) => {
@@ -932,13 +933,80 @@ const CINEMA = [
 // MAIN HOME SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 
+// API Configuration
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
+
 export default function KoraHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const scrollY = useRef(new Animated.Value(0)).current;
-  const [selectedTerritory, setSelectedTerritory] = useState<string>('caraibe');
+  const [selectedTerritory, setSelectedTerritory] = useState<string>('caribbean');
   const [refreshing, setRefreshing] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Real catalog data states
+  const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
+  const [territoryTracks, setTerritoryTracks] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load catalog data
+  useEffect(() => {
+    loadCatalogData();
+  }, []);
+
+  // Load territory-specific tracks when territory changes
+  useEffect(() => {
+    loadTerritoryTracks(selectedTerritory);
+  }, [selectedTerritory]);
+
+  const loadCatalogData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Load featured tracks
+      const featuredRes = await fetch(`${API_BASE}/api/catalog/featured?limit=10`);
+      if (featuredRes.ok) {
+        const data = await featuredRes.json();
+        setFeaturedTracks(data.tracks || []);
+      }
+      
+      // Load initial territory tracks
+      await loadTerritoryTracks(selectedTerritory);
+      
+    } catch (error) {
+      console.error('Error loading catalog:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadTerritoryTracks = async (territory: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/territory/${territory}?limit=12`);
+      if (res.ok) {
+        const data = await res.json();
+        setTerritoryTracks(data.tracks || []);
+      }
+    } catch (error) {
+      console.error('Error loading territory tracks:', error);
+    }
+  };
+
+  const handleSearchSubmit = async () => {
+    if (!searchQuery.trim()) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}/api/catalog/search?q=${encodeURIComponent(searchQuery)}&limit=20`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.tracks || []);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    }
+  };
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 200],
@@ -946,26 +1014,35 @@ export default function KoraHome() {
     extrapolate: 'clamp',
   });
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
-    setTimeout(() => setRefreshing(false), 1500);
-  }, []);
+    await loadCatalogData();
+    setRefreshing(false);
+  }, [selectedTerritory]);
 
   const handlePlay = useCallback((item?: any) => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
     router.push({
       pathname: '/player',
       params: item ? { 
+        id: item.id,
         title: item.title, 
         artist: item.artist || item.creator || 'KORA',
-        type: item.type?.toLowerCase().includes('film') || item.duration ? 'video' : 'audio'
+        type: item.type || 'audio',
+        source: item.source || 'jamendo',
+        stream_url: item.stream_url || '',
+        artwork: item.artwork || item.image || '',
       } : {}
     });
   }, [router]);
 
   const handleSearch = useCallback(() => {
     setSearchVisible(!searchVisible);
+    if (searchVisible) {
+      setSearchQuery('');
+      setSearchResults([]);
+    }
     try { Haptics.selectionAsync(); } catch {}
   }, [searchVisible]);
 
@@ -987,12 +1064,34 @@ export default function KoraHome() {
     router.push('/paywall');
   }, [router]);
 
-  const currentTrending = TRENDING[selectedTerritory as keyof typeof TRENDING] || TRENDING.caraibe;
+  const handleUpload = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    router.push('/upload');
+  }, [router]);
+
+  // Transform catalog tracks to display format
+  const transformTrackForDisplay = (track: any) => ({
+    id: track.id,
+    title: track.title,
+    artist: track.artist,
+    type: track.type === 'audio' ? 'Audio' : 'Vidéo',
+    image: track.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
+    source: track.source,
+    stream_url: track.stream_url,
+    territory: track.territory,
+  });
+
+  // Use real data or fallback to mock
+  const displayTracks = territoryTracks.length > 0 
+    ? territoryTracks.map(transformTrackForDisplay)
+    : (TRENDING[selectedTerritory as keyof typeof TRENDING] || TRENDING.caraibe);
+
   const territoryNames: Record<string, string> = {
-    caraibe: 'Caraïbe',
-    afrique: 'Afrique',
-    europe: 'Europe',
-    ameriques: 'Amériques',
+    caribbean: 'Caraïbes',
+    africa: 'Afrique',
+    diaspora: 'Diaspora',
+    latin: 'Latin',
+    world: 'Monde',
   };
 
   return (
@@ -1039,8 +1138,52 @@ export default function KoraHome() {
                 placeholder="Artistes, albums, films..."
                 placeholderTextColor={COLORS.gray}
                 autoFocus
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearchSubmit}
+                returnKeyType="search"
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
+                  <Text style={{ color: COLORS.gray, fontSize: 16 }}>✕</Text>
+                </TouchableOpacity>
+              )}
             </View>
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <View style={styles.searchResults}>
+                <Text style={styles.searchResultsTitle}>
+                  {searchResults.length} résultats pour "{searchQuery}"
+                </Text>
+                <FlatList
+                  data={searchResults.slice(0, 8)}
+                  keyExtractor={(item) => item.id}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity 
+                      style={styles.searchResultItem}
+                      onPress={() => {
+                        handlePlay(item);
+                        setSearchVisible(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                      }}
+                    >
+                      <Image 
+                        source={{ uri: item.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100' }} 
+                        style={styles.searchResultImage} 
+                      />
+                      <View style={styles.searchResultInfo}>
+                        <Text style={styles.searchResultTitle} numberOfLines={1}>{item.title}</Text>
+                        <Text style={styles.searchResultArtist} numberOfLines={1}>{item.artist}</Text>
+                      </View>
+                      <View style={[styles.searchResultType, { backgroundColor: item.type === 'audio' ? COLORS.terra : '#4A7FA5' }]}>
+                        <Text style={styles.searchResultTypeText}>{item.type === 'audio' ? '♪' : '▶'}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            )}
           </BlurView>
         </View>
       )}
@@ -1105,23 +1248,56 @@ export default function KoraHome() {
             />
           </AnimatedSection>
 
-          {/* Trending by Territory */}
+          {/* Trending by Territory - Real Catalog Data */}
           <AnimatedSection 
-            title={`Tendances ${territoryNames[selectedTerritory]}`}
+            title={`Tendances ${territoryNames[selectedTerritory] || selectedTerritory}`}
+            subtitle={territoryTracks.length > 0 ? `${territoryTracks.length} titres` : ''}
             action="Tout voir" 
             delay={400}
           >
-            <FlatList
-              horizontal
-              data={currentTrending}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <ContentCard item={item} onPress={handlePlay} index={index} />
-              )}
-            />
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Chargement du catalogue...</Text>
+              </View>
+            ) : (
+              <FlatList
+                horizontal
+                data={displayTracks}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item, index }) => (
+                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
+                )}
+                ListEmptyComponent={
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>Aucun titre disponible</Text>
+                  </View>
+                }
+              />
+            )}
           </AnimatedSection>
+
+          {/* Featured Tracks from Global Catalog */}
+          {featuredTracks.length > 0 && (
+            <AnimatedSection 
+              title="Populaire maintenant"
+              subtitle="Catalogue mondial"
+              action="Tout voir" 
+              delay={450}
+            >
+              <FlatList
+                horizontal
+                data={featuredTracks.map(transformTrackForDisplay)}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item, index }) => (
+                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
+                )}
+              />
+            </AnimatedSection>
+          )}
 
           {/* Nébuleuse */}
           <AnimatedSection title="Nébuleuse" subtitle="Tes recommandations IA" delay={500}>
@@ -1808,5 +1984,83 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.gray,
     marginTop: 3,
+  },
+  // Loading & Empty states
+  loadingContainer: {
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: COLORS.gray,
+  },
+  emptyState: {
+    width: SW - 40,
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: COLORS.gray,
+  },
+  // Search Results
+  searchResults: {
+    maxHeight: 400,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingTop: 12,
+  },
+  searchResultsTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: COLORS.gray,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  searchResultImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  searchResultInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  searchResultTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 15,
+    color: COLORS.cream,
+  },
+  searchResultArtist: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 13,
+    color: COLORS.gray,
+    marginTop: 2,
+  },
+  searchResultType: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchResultTypeText: {
+    fontSize: 14,
+    color: COLORS.cream,
   },
 });
