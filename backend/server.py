@@ -636,7 +636,7 @@ app.add_middleware(
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-@app.get("/admin")
+@app.get("/api/admin")
 async def admin_dashboard():
     """Serve admin dashboard"""
     return FileResponse(ROOT_DIR / 'static' / 'admin.html')
