@@ -3,6 +3,7 @@
  * 
  * Expérience immersive niveau Apple Music / Netflix
  * Transitions cinématiques, contrôles gestuels
+ * Streaming audio réel depuis Internet Archive / Jamendo
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -15,15 +16,15 @@ import {
   Image,
   Animated,
   StatusBar,
-  PanResponder,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -245,12 +246,12 @@ export default function PlayerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0.35);
   const [isLiked, setIsLiked] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
   const [showControls, setShowControls] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Animations
   const slideAnim = useRef(new Animated.Value(SH)).current;
@@ -263,42 +264,75 @@ export default function PlayerScreen() {
 
   // Track state
   const [trackDetails, setTrackDetails] = useState<any>(null);
+  const [streamUrl, setStreamUrl] = useState<string>('');
+
+  // Audio Player (expo-audio)
+  const player = useAudioPlayer(streamUrl || undefined);
+  const status = useAudioPlayerStatus(player);
+
+  // Derived state from player
+  const isPlaying = status.playing;
+  const duration = status.duration || 245;
+  const currentTime = status.currentTime || 0;
+  const progress = duration > 0 ? currentTime / duration : 0;
 
   // Content from params or fetched
   const content = {
     id: params.id as string || '',
-    title: trackDetails?.title || params.title as string || 'Zouk Forever',
-    artist: trackDetails?.artist || params.artist as string || "Kassav'",
-    album: trackDetails?.album || 'Album',
+    title: trackDetails?.title || params.title as string || 'Titre inconnu',
+    artist: trackDetails?.artist || params.artist as string || 'Artiste',
+    album: trackDetails?.album || params.album as string || 'Album',
     artwork: trackDetails?.artwork || params.artwork as string || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-    duration: trackDetails?.duration || 245,
     type: params.type as string || 'audio',
-    stream_url: trackDetails?.stream_url || params.stream_url as string || '',
-    source: params.source as string || 'jamendo',
+    source: params.source as string || 'archive',
   };
 
-  // Fetch track details if we have an ID
+  // Fetch track details and stream URL
   useEffect(() => {
-    if (params.id && params.source) {
-      fetchTrackDetails();
-    }
-  }, [params.id, params.source]);
+    const loadTrack = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // If we have a direct stream_url from params, use it
+        if (params.stream_url) {
+          setStreamUrl(params.stream_url as string);
+          setIsLoading(false);
+          return;
+        }
 
-  const fetchTrackDetails = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/catalog/track/${params.source}/${params.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setTrackDetails(data);
-        console.log('Track loaded:', data.title, '- Stream URL:', data.stream_url);
+        // Otherwise fetch from API
+        if (params.id && params.source) {
+          const res = await fetch(`${API_BASE}/api/catalog/track/${params.source}/${params.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            setTrackDetails(data);
+            
+            if (data.stream_url) {
+              console.log('🎵 Stream URL loaded:', data.stream_url);
+              setStreamUrl(data.stream_url);
+            } else {
+              setError('Aucune URL de streaming disponible');
+            }
+          } else {
+            setError('Track non trouvé');
+          }
+        } else {
+          setError('Informations de track manquantes');
+        }
+      } catch (err) {
+        console.error('Error loading track:', err);
+        setError('Erreur de chargement');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching track details:', error);
-    }
-  };
+    };
 
+    loadTrack();
+  }, [params.id, params.source, params.stream_url]);
+
+  // Entrance animation
   useEffect(() => {
-    // Entrance animation
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -321,8 +355,8 @@ export default function PlayerScreen() {
     ]).start();
   }, []);
 
+  // Artwork rotation when playing (vinyl effect)
   useEffect(() => {
-    // Artwork rotation when playing (vinyl effect)
     if (isPlaying && content.type === 'audio') {
       Animated.loop(
         Animated.timing(artworkRotate, {
@@ -336,23 +370,12 @@ export default function PlayerScreen() {
     }
   }, [isPlaying, content.type]);
 
-  useEffect(() => {
-    // Simulate progress
-    if (isPlaying) {
-      const interval = setInterval(() => {
-        setProgress((p) => {
-          if (p >= 1) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return p + 0.001;
-        });
-      }, 250);
-      return () => clearInterval(interval);
-    }
-  }, [isPlaying]);
-
   const handleClose = useCallback(() => {
+    // Stop audio before closing
+    if (player) {
+      player.pause();
+    }
+    
     Animated.parallel([
       Animated.timing(slideAnim, {
         toValue: SH,
@@ -367,11 +390,21 @@ export default function PlayerScreen() {
     ]).start(() => {
       router.back();
     });
-  }, [router]);
+  }, [router, player]);
 
   const handlePlayPause = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    setIsPlaying(!isPlaying);
+    
+    if (!streamUrl) {
+      setError('Aucune piste audio chargée');
+      return;
+    }
+
+    if (isPlaying) {
+      player.pause();
+    } else {
+      player.play();
+    }
     
     // Scale animation on tap
     Animated.sequence([
@@ -387,13 +420,19 @@ export default function PlayerScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [isPlaying]);
+  }, [isPlaying, player, streamUrl]);
 
   const handleSkip = useCallback((direction: 'back' | 'forward') => {
     try { Haptics.selectionAsync(); } catch {}
-    const delta = direction === 'back' ? -15 / content.duration : 15 / content.duration;
-    setProgress((p) => Math.max(0, Math.min(1, p + delta)));
-  }, [content.duration]);
+    const delta = direction === 'back' ? -15 : 15;
+    const newTime = Math.max(0, Math.min(duration, currentTime + delta));
+    player.seekTo(newTime);
+  }, [duration, currentTime, player]);
+
+  const handleSeek = useCallback((newProgress: number) => {
+    const newTime = newProgress * duration;
+    player.seekTo(newTime);
+  }, [duration, player]);
 
   const handleLike = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -486,7 +525,27 @@ export default function PlayerScreen() {
         </View>
 
         {/* Progress */}
-        <ProgressBar progress={progress} duration={content.duration} onSeek={setProgress} />
+        <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
+
+        {/* Loading/Error states */}
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <Text style={styles.loadingText}>Chargement...</Text>
+          </View>
+        )}
+        {error && (
+          <View style={styles.errorOverlay}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
+        {/* Stream URL indicator */}
+        {streamUrl && (
+          <View style={styles.streamIndicator}>
+            <View style={styles.streamDot} />
+            <Text style={styles.streamText}>Streaming depuis {content.source}</Text>
+          </View>
+        )}
 
         {/* Controls */}
         <View style={styles.controls}>
@@ -522,7 +581,7 @@ export default function PlayerScreen() {
             <Text style={styles.bottomBtnText}>Paroles</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.bottomBtn}>
-            <Text style={styles.bottomBtnText}>File d'attente</Text>
+            <Text style={styles.bottomBtnText}>File d&apos;attente</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -746,5 +805,52 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.gray,
     letterSpacing: 1,
+  },
+  // Loading & Error
+  loadingOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.gray,
+  },
+  errorOverlay: {
+    position: 'absolute',
+    top: '50%',
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    padding: 12,
+    borderRadius: 8,
+  },
+  errorText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: '#FF6B6B',
+  },
+  // Stream indicator
+  streamIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
+  },
+  streamDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#46D369',
+  },
+  streamText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
+    color: COLORS.gray,
   },
 });

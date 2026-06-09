@@ -28,13 +28,8 @@ import { COLORS, FONTS } from '../src/theme';
 import { BackIcon, PlayIcon } from '../src/components/icons/KoraIcons';
 
 // Conditional imports for native-only features
-let DocumentPicker: any = null;
-let ImagePicker: any = null;
-
-if (Platform.OS !== 'web') {
-  DocumentPicker = require('expo-document-picker');
-  ImagePicker = require('expo-image-picker');
-}
+const DocumentPicker = Platform.OS !== 'web' ? require('expo-document-picker') : null;
+const ImagePicker = Platform.OS !== 'web' ? require('expo-image-picker') : null;
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
