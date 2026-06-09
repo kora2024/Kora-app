@@ -150,13 +150,32 @@ export default function RootLayout() {
           }} 
         />
         
-        {/* Tabs principaux — fade cinématique */}
+        {/* Player — Lecteur média immersif */}
         <Stack.Screen 
-          name="(tabs)" 
+          name="player" 
           options={{ 
-            gestureEnabled: false,
             animation: 'fade',
             animationDuration: TRANSITION_DURATION.cinematic,
+            presentation: 'fullScreenModal',
+          }} 
+        />
+        
+        {/* Creator Profile — Profil artiste */}
+        <Stack.Screen 
+          name="creator/[id]" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
+        
+        {/* Paywall — Abonnement premium */}
+        <Stack.Screen 
+          name="paywall" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            animationDuration: TRANSITION_DURATION.slow,
+            presentation: 'modal',
           }} 
         />
         

@@ -952,9 +952,17 @@ export default function KoraHome() {
     setTimeout(() => setRefreshing(false), 1500);
   }, []);
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = useCallback((item?: any) => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
-  }, []);
+    router.push({
+      pathname: '/player',
+      params: item ? { 
+        title: item.title, 
+        artist: item.artist || item.creator || 'KORA',
+        type: item.type?.toLowerCase().includes('film') || item.duration ? 'video' : 'audio'
+      } : {}
+    });
+  }, [router]);
 
   const handleSearch = useCallback(() => {
     setSearchVisible(!searchVisible);
@@ -966,9 +974,17 @@ export default function KoraHome() {
     router.push('/settings');
   }, [router]);
 
-  const handleCreate = useCallback(() => {
+  const handleCreatorPress = useCallback((item: any) => {
+    try { Haptics.selectionAsync(); } catch {}
+    router.push({
+      pathname: '/creator/[id]',
+      params: { id: item.id }
+    });
+  }, [router]);
+
+  const handlePremium = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    router.push('/(tabs)/create');
+    router.push('/paywall');
   }, [router]);
 
   const currentTrending = TRENDING[selectedTerritory as keyof typeof TRENDING] || TRENDING.caraibe;
@@ -995,7 +1011,7 @@ export default function KoraHome() {
       <View style={[styles.floatingHeader, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.logoText}>KORA</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerBtn} onPress={handleCreate} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePremium} activeOpacity={0.7}>
             <PlusIcon size={22} color={COLORS.cream} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.headerBtn} onPress={handleSearch} activeOpacity={0.7}>
@@ -1070,7 +1086,7 @@ export default function KoraHome() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
               renderItem={({ item, index }) => (
-                <ContinueCard item={item} onPress={handlePlay} index={index} />
+                <ContinueCard item={item} onPress={() => handlePlay(item)} index={index} />
               )}
             />
           </AnimatedSection>
@@ -1144,7 +1160,7 @@ export default function KoraHome() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
               renderItem={({ item, index }) => (
-                <CreatorCard item={item} onPress={() => {}} index={index} />
+                <CreatorCard item={item} onPress={() => handleCreatorPress(item)} index={index} />
               )}
             />
           </AnimatedSection>

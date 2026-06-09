@@ -23,7 +23,6 @@ import {
   Dimensions,
   FlatList,
 } from 'react-native';
-import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -49,7 +48,7 @@ import {
   clearDeviceTransition,
 } from '../src/utils/deviceTransition';
 import { 
-  ChevronLeftIcon, 
+  BackIcon, 
   KeyIcon, 
   LockIcon, 
   CopyIcon, 
@@ -440,7 +439,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
-          <ChevronLeftIcon size={24} color={COLORS.cream} />
+          <BackIcon size={24} color={COLORS.cream} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Paramètres</Text>
         <View style={styles.headerSpacer} />
@@ -456,16 +455,20 @@ export default function SettingsScreen() {
               <Text style={styles.harmonieLabel}>Spectre Large</Text>
               <Text style={styles.harmonieLabel}>Spectre Harmonique</Text>
             </View>
-            <Slider
-              style={styles.harmonieSlider}
-              minimumValue={0}
-              maximumValue={1}
-              value={harmonieLevel}
-              onSlidingComplete={handleHarmonieChange}
-              minimumTrackTintColor={COLORS.terra}
-              maximumTrackTintColor="rgba(255,255,255,0.15)"
-              thumbTintColor={COLORS.cream}
-            />
+            <TouchableOpacity 
+              style={styles.harmonieSliderContainer}
+              onPress={(e: any) => {
+                // Simple tap to change value
+                const newValue = harmonieLevel < 0.5 ? 0.7 : 0.3;
+                handleHarmonieChange(newValue);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.harmonieSliderTrack}>
+                <View style={[styles.harmonieSliderFill, { width: `${harmonieLevel * 100}%` }]} />
+                <View style={[styles.harmonieSliderThumb, { left: `${harmonieLevel * 100}%` }]} />
+              </View>
+            </TouchableOpacity>
             <Text style={styles.harmonieDescription}>
               {harmonieLevel < 0.3 
                 ? 'Tous les territoires sont audibles'
@@ -495,7 +498,9 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
-            <ChevronLeftIcon size={16} color={COLORS.gray} style={{ transform: [{ rotate: '180deg' }] }} />
+            <View style={{ transform: [{ rotate: '180deg' }] }}>
+              <BackIcon size={16} color={COLORS.gray} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -515,7 +520,9 @@ export default function SettingsScreen() {
                 <Text style={styles.settingsItemSubtitle}>Vos 12 mots sacrés</Text>
               </View>
             </View>
-            <ChevronLeftIcon size={16} color={COLORS.gray} style={{ transform: [{ rotate: '180deg' }] }} />
+            <View style={{ transform: [{ rotate: '180deg' }] }}>
+              <BackIcon size={16} color={COLORS.gray} />
+            </View>
           </TouchableOpacity>
 
           {/* Device Transition — UPGRADE 24 */}
@@ -533,7 +540,9 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
-            <ChevronLeftIcon size={16} color={COLORS.gray} style={{ transform: [{ rotate: '180deg' }] }} />
+            <View style={{ transform: [{ rotate: '180deg' }] }}>
+              <BackIcon size={16} color={COLORS.gray} />
+            </View>
           </TouchableOpacity>
         </View>
 
@@ -548,7 +557,7 @@ export default function SettingsScreen() {
             <View style={styles.settingsItemLeft}>
               <AlertIcon size={20} color="#ff6b6b" strokeWidth={1.5} />
               <View style={styles.settingsItemTextContainer}>
-                <Text style={[styles.settingsItemTitle, styles.dangerText]}>Réinitialiser l'Éveil</Text>
+                <Text style={[styles.settingsItemTitle, styles.dangerText]}>Réinitialiser l&apos;Éveil</Text>
                 <Text style={styles.settingsItemSubtitle}>Efface toutes les données</Text>
               </View>
             </View>
@@ -558,7 +567,7 @@ export default function SettingsScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>KORA v1.0</Text>
-          <Text style={styles.footerSubtext}>Ton monde t'attend</Text>
+          <Text style={styles.footerSubtext}>Ton monde t&apos;attend</Text>
         </View>
       </ScrollView>
 
@@ -900,5 +909,32 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.jostLight,
     fontSize: 14,
     color: COLORS.gray,
+  },
+  // Custom Slider
+  harmonieSliderContainer: {
+    width: '100%',
+    paddingVertical: 12,
+  },
+  harmonieSliderTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 3,
+    position: 'relative',
+  },
+  harmonieSliderFill: {
+    position: 'absolute',
+    height: '100%',
+    backgroundColor: COLORS.terra,
+    borderRadius: 3,
+    left: 0,
+  },
+  harmonieSliderThumb: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.cream,
+    top: -7,
+    marginLeft: -10,
   },
 });

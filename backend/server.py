@@ -1,8 +1,9 @@
-from fastapi import FastAPI, APIRouter, HTTPException, status, Depends, Request
+from fastapi import FastAPI, APIRouter, HTTPException, status, Depends, Request, Header
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from fastapi.responses import JSONResponse
 import os
 import logging
 from pathlib import Path
@@ -15,6 +16,7 @@ import string
 import bcrypt
 import jwt
 from contextlib import asynccontextmanager
+import stripe
 
 
 ROOT_DIR = Path(__file__).parent
@@ -29,6 +31,15 @@ db = client[os.environ.get('DB_NAME', 'kora_db')]
 JWT_SECRET = os.environ.get('JWT_SECRET', 'kora_secret_key_change_in_production_2024')
 JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+# Stripe Configuration
+STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+stripe.api_key = STRIPE_API_KEY
+
+# KORA Premium Price (3,98€/month)
+KORA_PREMIUM_PRICE_CENTS = 398  # 3.98 EUR in cents
+KORA_PREMIUM_CURRENCY = 'eur'
 
 # Configure logging
 logging.basicConfig(
@@ -315,6 +326,182 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     )
 
 # ══════════════════════════════════════════════════════════════════════════════
+# STRIPE SUBSCRIPTION ENDPOINTS
+# ══════════════════════════════════════════════════════════════════════════════
+
+subscriptions_router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
+
+class CheckoutSessionResponse(BaseModel):
+    checkoutUrl: str
+    sessionId: str
+
+class SubscriptionStatus(BaseModel):
+    active: bool
+    plan: Optional[str] = None
+    current_period_end: Optional[datetime] = None
+
+
+@subscriptions_router.post("/checkout-session", response_model=CheckoutSessionResponse)
+async def create_checkout_session(
+    request: Request,
+    user_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create Stripe Checkout Session for KORA Premium (3,98€/mois)"""
+    try:
+        # Get base URL for redirects
+        origin = request.headers.get('origin', request.headers.get('referer', 'https://localhost:3000'))
+        base_url = origin.rstrip('/')
+        
+        # Check if user already has a Stripe customer ID
+        stripe_customer_id = current_user.get('stripe_customer_id')
+        
+        if not stripe_customer_id:
+            # Create new Stripe customer
+            customer = stripe.Customer.create(
+                email=current_user.get('email'),
+                metadata={
+                    'frek_id': current_user.get('frek_id'),
+                    'user_id': str(current_user.get('_id'))
+                }
+            )
+            stripe_customer_id = customer.id
+            
+            # Update user with Stripe customer ID
+            await db.users.update_one(
+                {'_id': current_user['_id']},
+                {'$set': {'stripe_customer_id': stripe_customer_id}}
+            )
+        
+        # Create checkout session with recurring subscription
+        checkout_session = stripe.checkout.Session.create(
+            customer=stripe_customer_id,
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': KORA_PREMIUM_CURRENCY,
+                    'product_data': {
+                        'name': 'KORA Premium',
+                        'description': 'Streaming illimité audio & vidéo, qualité Hi-Res, téléchargement hors-ligne',
+                    },
+                    'unit_amount': KORA_PREMIUM_PRICE_CENTS,
+                    'recurring': {
+                        'interval': 'month',
+                    },
+                },
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f'{base_url}/home?subscription=success',
+            cancel_url=f'{base_url}/paywall?subscription=cancelled',
+            metadata={
+                'frek_id': current_user.get('frek_id'),
+                'user_id': str(current_user.get('_id'))
+            }
+        )
+        
+        logger.info(f"Checkout session created for user {current_user.get('frek_id')}")
+        
+        return CheckoutSessionResponse(
+            checkoutUrl=checkout_session.url,
+            sessionId=checkout_session.id
+        )
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error creating checkout session: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la création de la session de paiement")
+
+
+@subscriptions_router.get("/status", response_model=SubscriptionStatus)
+async def get_subscription_status(current_user: dict = Depends(get_current_user)):
+    """Get user's subscription status"""
+    try:
+        stripe_customer_id = current_user.get('stripe_customer_id')
+        
+        if not stripe_customer_id:
+            return SubscriptionStatus(active=False)
+        
+        # Get active subscriptions
+        subscriptions = stripe.Subscription.list(
+            customer=stripe_customer_id,
+            status='active',
+            limit=1
+        )
+        
+        if subscriptions.data:
+            sub = subscriptions.data[0]
+            return SubscriptionStatus(
+                active=True,
+                plan='KORA Premium',
+                current_period_end=datetime.fromtimestamp(sub.current_period_end, tz=timezone.utc)
+            )
+        
+        return SubscriptionStatus(active=False)
+        
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@api_router.post("/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events"""
+    payload = await request.body()
+    sig_header = request.headers.get('stripe-signature')
+    
+    try:
+        if STRIPE_WEBHOOK_SECRET:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
+        else:
+            # For testing without webhook secret
+            import json
+            event = json.loads(payload)
+            
+    except ValueError as e:
+        logger.error(f"Invalid payload: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid payload")
+    except stripe.error.SignatureVerificationError as e:
+        logger.error(f"Invalid signature: {str(e)}")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    
+    # Handle events
+    event_type = event.get('type') if isinstance(event, dict) else event.type
+    
+    if event_type == 'checkout.session.completed':
+        session = event.get('data', {}).get('object', {}) if isinstance(event, dict) else event.data.object
+        user_id = session.get('metadata', {}).get('user_id')
+        
+        if user_id:
+            await db.users.update_one(
+                {'_id': user_id},
+                {'$set': {
+                    'subscription_status': 'active',
+                    'subscription_updated_at': datetime.now(timezone.utc)
+                }}
+            )
+            logger.info(f"Subscription activated for user {user_id}")
+            
+    elif event_type == 'customer.subscription.deleted':
+        customer_id = event.get('data', {}).get('object', {}).get('customer') if isinstance(event, dict) else event.data.object.customer
+        
+        await db.users.update_one(
+            {'stripe_customer_id': customer_id},
+            {'$set': {
+                'subscription_status': 'cancelled',
+                'subscription_updated_at': datetime.now(timezone.utc)
+            }}
+        )
+        logger.info(f"Subscription cancelled for customer {customer_id}")
+    
+    return JSONResponse(content={"received": True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # EXISTING ROUTES
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -340,6 +527,9 @@ async def get_status_checks():
 
 # Include auth router in api router
 api_router.include_router(auth_router)
+
+# Include subscriptions router in api router
+api_router.include_router(subscriptions_router)
 
 # Include api router in app
 app.include_router(api_router)
