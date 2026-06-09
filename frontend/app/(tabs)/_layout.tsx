@@ -9,6 +9,7 @@ import {
   CreateIcon,
   NebulaIcon,
   TerritoireIcon,
+  PlayIcon,
 } from '../../src/components/icons/KoraIcons';
 
 interface TabIconProps {
@@ -104,6 +105,18 @@ export default function TabsLayout() {
             <TabIcon 
               icon={<TerritoireIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
               label="Territoire" 
+              focused={focused} 
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="stream"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon 
+              icon={<PlayIcon size={22} color={focused ? COLORS.terra : 'rgba(255,255,255,0.4)'} />} 
+              label="Stream" 
               focused={focused} 
             />
           ),

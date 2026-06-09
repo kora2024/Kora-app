@@ -1271,3 +1271,143 @@ export function AlertIcon({
     </Svg>
   );
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// STREAMING ICONS — KORA STREAM
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Info Icon — Circle with i
+ */
+export function InfoIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Line
+        x1="12"
+        y1="16"
+        x2="12"
+        y2="12"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Circle
+        cx="12"
+        cy="8"
+        r="0.5"
+        fill={color}
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Plus Icon — Add to list
+ */
+export function PlusIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Line
+        x1="12"
+        y1="5"
+        x2="12"
+        y2="19"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+      <Line
+        x1="5"
+        y1="12"
+        x2="19"
+        y2="12"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Volume Icon — Speaker with waves
+ */
+export function VolumeIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M11 5L6 9H2v6h4l5 4V5z"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Path
+        d="M15.54 8.46a5 5 0 010 7.07"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+      <Path
+        d="M19.07 4.93a10 10 0 010 14.14"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
+/**
+ * Search Icon — Magnifying glass
+ */
+export function SearchIcon({
+  size = DEFAULT_SIZE,
+  color = DEFAULT_COLOR,
+  strokeWidth = DEFAULT_STROKE,
+}: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Circle
+        cx="11"
+        cy="11"
+        r="8"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        fill="none"
+      />
+      <Line
+        x1="21"
+        y1="21"
+        x2="16.65"
+        y2="16.65"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
