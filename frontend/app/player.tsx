@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -49,7 +49,6 @@ function PlayPauseIcon({ isPlaying, size = 64 }: { isPlaying: boolean; size?: nu
 }
 
 function SkipIcon({ direction, size = 32 }: { direction: 'back' | 'forward'; size?: number }) {
-  const flip = direction === 'back' ? 'scale(-1, 1)' : 'scale(1, 1)';
   return (
     <Svg width={size} height={size} viewBox="0 0 32 32" style={{ transform: [{ scaleX: direction === 'back' ? -1 : 1 }] }}>
       <Path
@@ -60,7 +59,16 @@ function SkipIcon({ direction, size = 32 }: { direction: 'back' | 'forward'; siz
         fill="none"
       />
       <Path d="M16 10V16L20 18" stroke={COLORS.cream} strokeWidth="2" strokeLinecap="round" fill="none" />
-      <Text style={{ position: 'absolute', fontSize: 8 }}>15</Text>
+      <SvgText
+        x="16"
+        y="24"
+        textAnchor="middle"
+        fontSize="7"
+        fill={COLORS.cream}
+        fontFamily="Jost"
+      >
+        15
+      </SvgText>
     </Svg>
   );
 }
@@ -114,7 +122,16 @@ function RepeatIcon({ mode, size = 24 }: { mode: 'off' | 'all' | 'one'; size?: n
         fill="none"
       />
       {mode === 'one' && (
-        <Text style={{ position: 'absolute', fontSize: 8, color }}></Text>
+        <SvgText
+          x="12"
+          y="14"
+          textAnchor="middle"
+          fontSize="8"
+          fill={color}
+          fontWeight="bold"
+        >
+          1
+        </SvgText>
       )}
     </Svg>
   );
