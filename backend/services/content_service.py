@@ -39,6 +39,7 @@ class ContentService:
             'media_url': content_data.get('media_url', ''),
             'artwork_url': content_data.get('artwork_url', ''),
             'duration': content_data.get('duration', 0),
+            'cultural_signature': content_data.get('cultural_signature', ''),  # FREK-O
             'metadata': {
                 'isrc': content_data.get('isrc', ''),
                 'upc': content_data.get('upc', ''),
@@ -48,8 +49,9 @@ class ContentService:
                 'producer': content_data.get('producer', ''),
                 'writers': content_data.get('writers', []),
             },
-            'source': 'creator',
+            'source': 'kora_organic',  # Catalogue souverain
             'playable': True,
+            'play_count': 0,
             'created_at': datetime.now(timezone.utc),
             'updated_at': datetime.now(timezone.utc),
         }
@@ -194,7 +196,7 @@ class ContentService:
                 return doc
             
             return None
-        except:
+        except Exception:
             return None
     
     async def increment_play_count(self, content_id: str) -> bool:
@@ -208,7 +210,7 @@ class ContentService:
                 }
             )
             return result.modified_count > 0
-        except:
+        except Exception:
             return False
     
     def generate_upload_signature(self, params: Dict) -> Dict:

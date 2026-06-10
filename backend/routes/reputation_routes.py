@@ -241,7 +241,7 @@ def create_reputation_router(database, get_user_dependency):
         # Find content
         try:
             content = await db["content"].find_one({"_id": ObjectId(content_id)})
-        except:
+        except Exception:
             content = await db["content"].find_one({"_id": content_id})
         
         if not content:
@@ -307,7 +307,7 @@ def create_reputation_router(database, get_user_dependency):
                     {"_id": ObjectId(content_id)},
                     {"$set": {"status": "suspended", "suspended_at": datetime.now(timezone.utc)}}
                 )
-            except:
+            except Exception:
                 await db["content"].update_one(
                     {"_id": content_id},
                     {"$set": {"status": "suspended", "suspended_at": datetime.now(timezone.utc)}}
@@ -366,7 +366,7 @@ def create_reputation_router(database, get_user_dependency):
         # Find content in pending
         try:
             content = await db["pending_content"].find_one({"_id": ObjectId(content_id)})
-        except:
+        except Exception:
             content = await db["pending_content"].find_one({"_id": content_id})
         
         if not content:
@@ -382,7 +382,7 @@ def create_reputation_router(database, get_user_dependency):
             
             try:
                 await db["pending_content"].delete_one({"_id": ObjectId(content_id)})
-            except:
+            except Exception:
                 await db["pending_content"].delete_one({"_id": content_id})
             
             # Award creator
@@ -407,7 +407,7 @@ def create_reputation_router(database, get_user_dependency):
                         }
                     }
                 )
-            except:
+            except Exception:
                 await db["pending_content"].update_one(
                     {"_id": content_id},
                     {

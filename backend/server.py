@@ -594,9 +594,11 @@ async def get_status_checks():
 from routes.catalog_routes import router as catalog_router
 from routes.content_routes import router as content_router, init_routes as init_content_routes
 from services.content_service import create_content_service
+from services.catalog_service import catalog_service
 
-# Initialize content service
+# Initialize services with database
 content_service = create_content_service(db)
+catalog_service.set_database(db)  # Injection DB pour catalogue souverain
 
 # Admin user dependency
 async def get_admin_user(token: str = Depends(oauth2_scheme)):

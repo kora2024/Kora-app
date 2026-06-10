@@ -1,4 +1,8 @@
-"""Routes API pour le catalogue musical"""
+"""Routes API pour le catalogue musical — 100% Souverain KORA
+
+Catalogue alimenté exclusivement par les créateurs KORA.
+Toutes les requêtes tapent dans MongoDB collection "content".
+"""
 from fastapi import APIRouter, HTTPException, Query
 from typing import Optional
 import sys
@@ -13,9 +17,9 @@ router = APIRouter(prefix="/catalog", tags=["catalog"])
 async def search_catalog(
     q: str = Query(..., min_length=1, description="Terme de recherche"),
     limit: int = Query(20, ge=1, le=100),
-    media_type: str = Query('all', regex='^(all|audio|video)$')
+    media_type: str = Query('all', pattern='^(all|audio|video)$')
 ):
-    """Recherche dans tous les catalogues musicaux"""
+    """Recherche dans le catalogue souverain KORA"""
     results = await catalog_service.search_all(q, limit, media_type)
     return results
 
@@ -24,9 +28,14 @@ async def search_catalog(
 async def get_featured(
     limit: int = Query(20, ge=1, le=50)
 ):
-    """Récupère les tracks populaires"""
+    """Récupère les tracks populaires du catalogue souverain"""
     tracks = await catalog_service.get_featured_tracks(limit)
-    return {'tracks': tracks, 'total': len(tracks)}
+    return {
+        'tracks': tracks, 
+        'total': len(tracks),
+        'source': 'kora_organic',
+        'message': 'Catalogue 100% créateurs KORA' if tracks else 'Catalogue en attente de créateurs'
+    }
 
 
 @router.get("/territory/{territory}")
@@ -34,19 +43,14 @@ async def get_by_territory(
     territory: str,
     limit: int = Query(20, ge=1, le=50)
 ):
-    """Récupère les tracks par territoire/genre"""
-    # Mapping territoires vers tags Jamendo
-    territory_tags = {
-        'caribbean': 'reggae,dancehall,soca,calypso',
-        'africa': 'afrobeat,african,highlife,soukous',
-        'diaspora': 'soul,rnb,hiphop,jazz,blues,gospel',
-        'latin': 'latin,salsa,bachata,merengue,cumbia',
-        'world': 'world,ethnic,traditional'
+    """Récupère les tracks par territoire — Catalogue souverain"""
+    tracks = await catalog_service.get_territory_catalog(territory, limit)
+    return {
+        'tracks': tracks, 
+        'territory': territory, 
+        'total': len(tracks),
+        'source': 'kora_organic'
     }
-    
-    tags = territory_tags.get(territory.lower(), territory)
-    tracks = await catalog_service.get_tracks_by_genre(tags, limit)
-    return {'tracks': tracks, 'territory': territory, 'total': len(tracks)}
 
 
 @router.get("/track/{source}/{track_id}")
@@ -55,13 +59,11 @@ async def get_track_details(
     track_id: str
 ):
     """Récupère les détails d'un track avec URL de streaming"""
-    if source not in ['jamendo', 'archive']:
-        raise HTTPException(status_code=400, detail="Source invalide")
-    
+    # Source est toujours 'kora' maintenant (souveraineté)
     track = await catalog_service.get_track_details(track_id, source)
     
     if not track:
-        raise HTTPException(status_code=404, detail="Track non trouvé")
+        raise HTTPException(status_code=404, detail="Track non trouvé dans le catalogue souverain")
     
     return track
 
@@ -83,5 +85,7 @@ async def get_genres():
             {'id': 'film', 'name': 'Films & Séries'},
             {'id': 'documentary', 'name': 'Documentaires'},
             {'id': 'live', 'name': 'Live & Concerts'},
-        ]
+        ],
+        'source': 'kora_organic',
+        'sovereignty': 'Catalogue alimenté par les créateurs KORA uniquement'
     }
