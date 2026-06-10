@@ -6,6 +6,11 @@ from datetime import datetime
 import os
 import aiohttp
 import base64
+import asyncio
+
+# Import FrekCore bridge services
+from services.frekcore_bridge import emit_frek_presence
+from services.frekcore_register_work import register_frek_work
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -47,7 +52,7 @@ async def submit_content(
     submission: ContentSubmission,
     current_user: dict = Depends(lambda: get_current_user)
 ):
-    """Soumet du contenu (créateur)"""
+    """Soumet du contenu (créateur) et enregistre FREK-O dans FrekCore"""
     if not current_user.get('is_creator', False):
         raise HTTPException(
             status_code=403,
@@ -58,6 +63,20 @@ async def submit_content(
         creator_id=str(current_user['_id']),
         content_data=submission.dict()
     )
+    
+    # Bridge FrekCore: enregistrer l'œuvre (FREK-O) de façon non-bloquante
+    if result.get('_id'):
+        asyncio.create_task(
+            register_frek_work(
+                frek_id=current_user.get('frek_id', ''),
+                content_id=str(result['_id']),
+                title=submission.title,
+                media_url=submission.media_url,
+                content_type=submission.type,
+                territory=submission.territory,
+                genres=submission.genres
+            )
+        )
     
     return result
 
@@ -101,12 +120,33 @@ async def get_content(
     return content
 
 
+class PlayRequest(BaseModel):
+    duration_seconds: Optional[int] = None
+
+
 @router.post("/{content_id}/play")
 async def record_play(
-    content_id: str
+    content_id: str,
+    play_data: PlayRequest = Body(default=PlayRequest()),
+    current_user: Optional[dict] = None
 ):
-    """Enregistre une lecture"""
+    """Enregistre une lecture et émet FREK-P si >= 30s (Scénario Marcus)"""
     success = await content_service.increment_play_count(content_id)
+    
+    # Bridge FrekCore: émettre FREK-P si écoute >= 30 secondes
+    if play_data.duration_seconds and play_data.duration_seconds >= 30:
+        content = await content_service.get_content_by_id(content_id)
+        if content and current_user:
+            # Appel asynchrone non-bloquant vers FrekCore
+            asyncio.create_task(
+                emit_frek_presence(
+                    frek_id=current_user.get('frek_id', ''),
+                    track_id=content_id,
+                    source=content.get('source', 'kora'),
+                    duration_seconds=play_data.duration_seconds
+                )
+            )
+    
     return {'success': success}
 
 
