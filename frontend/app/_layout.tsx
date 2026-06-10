@@ -130,6 +130,16 @@ export default function RootLayout() {
           }} 
         />
         
+        {/* Pacte Souverain — Rituel d'Éveil */}
+        <Stack.Screen 
+          name="pacte" 
+          options={{ 
+            gestureEnabled: false,
+            animation: 'fade',
+            animationDuration: TRANSITION_DURATION.slow,
+          }} 
+        />
+        
         {/* Biometric — UPGRADE 17 */}
         <Stack.Screen 
           name="biometric" 

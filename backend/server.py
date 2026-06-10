@@ -621,6 +621,11 @@ api_router.include_router(catalog_router)
 # Include content router (creator content)
 api_router.include_router(content_router)
 
+# Include reputation/community router (Pacte Souverain)
+from routes.reputation_routes import create_reputation_router
+reputation_router = create_reputation_router(db, get_current_user)
+api_router.include_router(reputation_router)
+
 # Include api router in app
 app.include_router(api_router)
 

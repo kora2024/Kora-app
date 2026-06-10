@@ -22,7 +22,7 @@ const { width: SW } = Dimensions.get('window');
 // TYPES
 // ══════════════════════════════════════════════════════════════════════════════
 
-export type ToastType = 'ancrage' | 'emission' | 'info';
+export type ToastType = 'ancrage' | 'emission' | 'info' | 'error' | 'success' | 'pacte';
 
 interface ToastMessage {
   id: string;
@@ -93,6 +93,11 @@ function ToastItem({
         return COLORS.terra;
       case 'emission':
         return COLORS.gold;
+      case 'error':
+      case 'pacte':
+        return '#E50914';
+      case 'success':
+        return '#46D369';
       default:
         return 'rgba(255,255,255,0.2)';
     }
