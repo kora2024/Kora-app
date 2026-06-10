@@ -550,7 +550,54 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+frontend:
+  - task: "Creator Studio Dashboard - KORA for Creators"
+    implemented: true
+    working: false
+    file: "frontend/app/creator/studio.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ROUTING ISSUE: File exists at /app/frontend/app/creator/studio.tsx (64KB, fully implemented with all 8 tabs) but expo-router is NOT recognizing the route. Console error: 'No route named creator/studio exists in nested children'. When navigating to /creator/studio, app redirects to /auth/login. Route is not being picked up even after restarting expo service. Available routes: [biometric, eveil, home, index, landing, noyau, orbite, paywall, player, settings, upload, auth, creator]. The 'creator' directory is recognized but individual files inside (studio.tsx, [id].tsx) are not being registered as routes. This is a BLOCKING ISSUE preventing any testing of the Creator Studio feature."
+
 agent_communication:
+  - agent: "testing"
+    message: |
+      ❌ CREATOR STUDIO TESTING BLOCKED - CRITICAL ROUTING ISSUE
+      
+      Test Date: 2026-06-10
+      Test URL: http://localhost:3000/creator/studio
+      Device: Mobile (390x844)
+      
+      ISSUE FOUND:
+      The Creator Studio page is fully implemented at /app/frontend/app/creator/studio.tsx (64KB file with all 8 tabs: Vue générale, Analytics, Contenus, Promotion, Communauté, Revenus, Planning, Paramètres) but expo-router is NOT recognizing it as a valid route.
+      
+      SYMPTOMS:
+      1. Navigating to /creator/studio redirects to /auth/login
+      2. Console error: "No route named 'creator/studio' exists in nested children"
+      3. Available routes: [biometric, eveil, home, index, landing, noyau, orbite, paywall, player, settings, upload, auth, creator]
+      4. The 'creator' directory is recognized but files inside (studio.tsx, [id].tsx) are NOT
+      
+      ATTEMPTED FIXES:
+      - Restarted expo service (supervisorctl restart expo)
+      - Waited for Metro bundler to reload
+      - Issue persists after restart
+      
+      ROOT CAUSE:
+      Expo-router file-based routing is not picking up the studio.tsx file. The _layout.tsx in /app/creator/ uses <Stack /> which should auto-discover all files, but it's not working.
+      
+      POSSIBLE SOLUTIONS:
+      1. Check if there's a syntax error in studio.tsx preventing it from being parsed
+      2. Verify the default export is correct
+      3. Check if the file needs to be explicitly registered in _layout.tsx
+      4. Clear Metro bundler cache completely
+      5. Check if there are any import errors preventing the file from loading
+      
+      CANNOT PROCEED WITH TESTING until this routing issue is resolved.
+  
   - agent: "testing"
     message: |
       ✅ NETFLIX-STYLE LANDING PAGE TESTING COMPLETE - 2026-06-10

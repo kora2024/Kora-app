@@ -169,6 +169,15 @@ export default function RootLayout() {
           }} 
         />
         
+        {/* Creator Studio — KORA for Creators Dashboard */}
+        <Stack.Screen 
+          name="creator/studio" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
+        
         {/* Paywall — Abonnement premium */}
         <Stack.Screen 
           name="paywall" 
