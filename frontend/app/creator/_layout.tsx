@@ -1,5 +1,6 @@
 /**
  * Creator Layout
+ * Routes: /creator/[id], /creator/studio
  */
 
 import { Stack } from 'expo-router';
@@ -14,6 +15,9 @@ export default function CreatorLayout() {
         animation: 'slide_from_right',
         animationDuration: 320,
       }}
-    />
+    >
+      <Stack.Screen name="[id]" />
+      <Stack.Screen name="studio" />
+    </Stack>
   );
 }

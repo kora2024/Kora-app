@@ -160,18 +160,9 @@ export default function RootLayout() {
           }} 
         />
         
-        {/* Creator Profile — Profil artiste */}
+        {/* Creator screens group — Profile & Studio */}
         <Stack.Screen 
-          name="creator/[id]" 
-          options={{ 
-            animation: 'slide_from_right',
-            animationDuration: TRANSITION_DURATION.normal,
-          }} 
-        />
-        
-        {/* Creator Studio — KORA for Creators Dashboard */}
-        <Stack.Screen 
-          name="creator/studio" 
+          name="creator" 
           options={{ 
             animation: 'slide_from_right',
             animationDuration: TRANSITION_DURATION.normal,

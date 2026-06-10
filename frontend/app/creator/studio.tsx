@@ -838,7 +838,14 @@ export default function CreatorStudioScreen() {
     try {
       const token = await AsyncStorage.getItem('auth_token');
       if (!token) {
-        router.replace('/auth/login');
+        // Show the studio in demo mode instead of redirecting
+        // For real usage, user needs to be logged in
+        setProfile({
+          display_name: 'Demo Creator',
+          frek_id: 'FRK-DEMO123456',
+          is_creator: true,
+        });
+        setLoading(false);
         return;
       }
 
@@ -855,10 +862,21 @@ export default function CreatorStudioScreen() {
         }
         setProfile(data);
       } else {
-        router.replace('/auth/login');
+        // Token invalid, show demo mode
+        setProfile({
+          display_name: 'Demo Creator',
+          frek_id: 'FRK-DEMO123456',
+          is_creator: true,
+        });
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+      // Show demo mode on error
+      setProfile({
+        display_name: 'Demo Creator',
+        frek_id: 'FRK-DEMO123456',
+        is_creator: true,
+      });
     } finally {
       setLoading(false);
     }
