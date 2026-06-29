@@ -714,7 +714,7 @@ function ContinueCard({ item, onPress, index }: any) {
       <View style={styles.continueImageWrapper}>
         <Image source={{ uri: item.image }} style={styles.continueImage} />
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.6)']}
+          colors={['transparent', 'rgba(0,0,0,0.8)']}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.continuePlayOverlay}>
@@ -725,12 +725,14 @@ function ContinueCard({ item, onPress, index }: any) {
         <View style={styles.continueTypeBadge}>
           <Text style={styles.continueTypeText}>{item.type}</Text>
         </View>
+        <View style={styles.continueInfoOverlay}>
+          <Text style={styles.continueTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.continueRemaining}>{item.remaining}</Text>
+        </View>
       </View>
       <View style={styles.continueProgressBar}>
         <Animated.View style={[styles.continueProgressFill, { width: `${item.progress * 100}%` }]} />
       </View>
-      <Text style={styles.continueTitle} numberOfLines={1}>{item.title}</Text>
-      <Text style={styles.continueRemaining}>{item.remaining}</Text>
     </AnimatedCard>
   );
 }
@@ -1652,12 +1654,13 @@ const styles = StyleSheet.create({
   
   // Continue Card
   continueCard: {
-    width: 155,
+    width: 140,
+    marginRight: 12,
   },
   continueImageWrapper: {
     width: '100%',
-    height: 90,
-    borderRadius: 10,
+    height: 200,
+    borderRadius: 8,
     overflow: 'hidden',
     backgroundColor: COLORS.dark2,
   },
@@ -1672,32 +1675,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   playCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: 'rgba(255,255,255,0.95)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   continueTypeBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingVertical: 3,
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 4,
   },
   continueTypeText: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 10,
+    fontSize: 9,
     color: COLORS.cream,
+    textTransform: 'capitalize',
   },
   continueProgressBar: {
     height: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 2,
-    marginTop: 6,
+    marginTop: 8,
     overflow: 'hidden',
   },
   continueProgressFill: {
@@ -1706,16 +1710,24 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   continueTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
+    fontFamily: FONTS.jostSemiBold,
+    fontSize: 13,
     color: COLORS.cream,
-    marginTop: 10,
+    marginTop: 8,
+    lineHeight: 16,
   },
   continueRemaining: {
     fontFamily: FONTS.jostLight,
-    fontSize: 12,
+    fontSize: 11,
     color: COLORS.gray,
-    marginTop: 3,
+    marginTop: 4,
+  },
+  continueInfoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
   },
   
   // Live Card
