@@ -285,7 +285,7 @@ async def login(user_in: UserLogin):
             detail="Email ou mot de passe incorrect",
         )
     
-    if not verify_password(user_in.password, user_doc["password_hash"]):
+    if not verify_password(user_in.password, user_doc.get("password_hash") or user_doc.get("hashed_password", "")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect",
