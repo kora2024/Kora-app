@@ -1186,16 +1186,15 @@ export default function KoraHome() {
                 <Text style={styles.loadingText}>Chargement du catalogue souverain...</Text>
               </View>
             ) : territoryTracks.length > 0 ? (
-              <FlatList
+              <ScrollView
                 horizontal
-                data={territoryTracks.map(transformTrackForDisplay)}
-                keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                renderItem={({ item, index }) => (
-                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
-                )}
-              />
+              >
+                {territoryTracks.map(transformTrackForDisplay).map((item, index) => (
+                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
+                ))}
+              </ScrollView>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={styles.emptyText}>Catalogue en construction — Soyez le premier créateur !</Text>
@@ -1214,16 +1213,15 @@ export default function KoraHome() {
               action="Tout voir" 
               delay={300}
             >
-              <FlatList
+              <ScrollView
                 horizontal
-                data={featuredTracks.map(transformTrackForDisplay)}
-                keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                renderItem={({ item, index }) => (
-                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
-                )}
-              />
+              >
+                {featuredTracks.map(transformTrackForDisplay).map((item, index) => (
+                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
+                ))}
+              </ScrollView>
             </AnimatedSection>
           )}
 
@@ -1235,16 +1233,15 @@ export default function KoraHome() {
               action="Tout voir" 
               delay={400}
             >
-              <FlatList
+              <ScrollView
                 horizontal
-                data={featuredTracks.filter(t => t.type === 'video').map(transformTrackForDisplay)}
-                keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                renderItem={({ item, index }) => (
-                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
-                )}
-              />
+              >
+                {featuredTracks.filter(t => t.type === 'video').map(transformTrackForDisplay).map((item, index) => (
+                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
+                ))}
+              </ScrollView>
             </AnimatedSection>
           )}
 
