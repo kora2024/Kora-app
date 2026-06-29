@@ -109,7 +109,6 @@ async def submit_content(
 async def upload_media(
     file: UploadFile = File(...),
     folder: str = Form(default='creator_content'),
-    current_user: dict = Depends(lambda: get_current_user)
 ):
     """
     Upload média vers Cloudinary — Production Ready
@@ -117,9 +116,6 @@ async def upload_media(
     Reçoit le fichier depuis le téléphone et l'envoie sur Cloudinary.
     Retourne l'URL sécurisée pour stockage en MongoDB.
     """
-    if not current_user.get('is_creator', False):
-        raise HTTPException(status_code=403, detail="Réservé aux créateurs")
-    
     # Vérification configuration Cloudinary
     if not all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
         logger.warning("Cloudinary non configuré - mode simulation")
@@ -157,7 +153,6 @@ async def upload_media(
             file.file,
             folder=folder,
             resource_type=resource_type,
-            public_id=f"{current_user.get('frek_id', 'unknown')}_{file.filename}",
         )
         
         logger.info(f"✅ Upload Cloudinary réussi: {result.get('public_id')}")
