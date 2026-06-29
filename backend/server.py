@@ -593,12 +593,18 @@ async def get_status_checks():
 # Import catalog and content routes
 from routes.catalog_routes import router as catalog_router
 from routes.content_routes import router as content_router, init_routes as init_content_routes
+from routes.subscription_routes import router as subscription_new_router, init_routes as init_subscription_routes
+from routes.developer_routes import router as developer_router, init_routes as init_developer_routes
 from services.content_service import create_content_service
 from services.catalog_service import catalog_service
 
 # Initialize services with database
 content_service = create_content_service(db)
 catalog_service.set_database(db)  # Injection DB pour catalogue souverain
+
+# Initialize subscription and developer routes
+init_subscription_routes(db)
+init_developer_routes(db)
 
 # Admin user dependency
 async def get_admin_user(token: str = Depends(oauth2_scheme)):
@@ -622,6 +628,12 @@ api_router.include_router(catalog_router)
 
 # Include content router (creator content)
 api_router.include_router(content_router)
+
+# Include new subscription routes (Premium + Famille)
+api_router.include_router(subscription_new_router)
+
+# Include developer portal routes
+api_router.include_router(developer_router)
 
 # Include reputation/community router (Pacte Souverain)
 from routes.reputation_routes import create_reputation_router

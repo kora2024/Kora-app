@@ -3,7 +3,7 @@
  * 
  * Expérience immersive niveau Apple Music / Netflix
  * Transitions cinématiques, contrôles gestuels
- * Streaming audio réel depuis Internet Archive / Jamendo
+ * Streaming audio réel depuis Internet Archive / Cloudinary
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { COLORS, FONTS } from '../src/theme';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -266,8 +267,12 @@ export default function PlayerScreen() {
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
   const [showControls, setShowControls] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Get stream URL from params
+  const streamUrl = (params.stream_url as string) || '';
+  
+  // Initialize audio player with expo-audio hook
+  const player = useAudioPlayer(streamUrl ? { uri: streamUrl } : null);
+  const status = useAudioPlayerStatus(player);
 
   // Animations
   const slideAnim = useRef(new Animated.Value(SH)).current;
@@ -280,15 +285,11 @@ export default function PlayerScreen() {
 
   // Track state
   const [trackDetails, setTrackDetails] = useState<any>(null);
-  const [streamUrl, setStreamUrl] = useState<string>('');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(245);
 
-  // Audio Player ref (we'll create it when we have the URL)
-  const playerRef = useRef<any>(null);
-
-  // Derived state
+  // Derive state from player status
+  const isPlaying = status.playing;
+  const currentTime = Math.floor((status.currentTime || 0) / 1000);
+  const duration = Math.floor((status.duration || 245000) / 1000);
   const progress = duration > 0 ? currentTime / duration : 0;
 
   // Content from params or fetched
@@ -299,48 +300,12 @@ export default function PlayerScreen() {
     album: trackDetails?.album || params.album as string || 'Album',
     artwork: trackDetails?.artwork || params.artwork as string || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
     type: params.type as string || 'audio',
-    source: params.source as string || 'archive',
+    source: params.source as string || 'kora',
   };
 
-  // Initialize audio when streamUrl changes
-  useEffect(() => {
-    if (!streamUrl) return;
-
-    const initAudio = async () => {
-      try {
-        // Dynamic import to avoid SSR issues
-        const { createAudioPlayer } = await import('expo-audio');
-        
-        // Create player with URL source
-        const newPlayer = createAudioPlayer({ uri: streamUrl }, {
-          shouldPlayInBackground: false,
-          volume: 1.0,
-        });
-        
-        playerRef.current = newPlayer;
-        
-        console.log('🎵 Audio player initialized for:', streamUrl);
-        setIsLoading(false);
-        
-      } catch (err) {
-        console.error('Audio init error:', err);
-        setError('Erreur initialisation audio');
-        setIsLoading(false);
-      }
-    };
-
-    initAudio();
-
-    // Cleanup
-    return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.release();
-        } catch (e) {}
-        playerRef.current = null;
-      }
-    };
-  }, [streamUrl]);
+  // Loading state from player
+  const isLoading = !streamUrl || status.isBuffering;
+  const error = null;
 
   // Fetch track details and stream URL
   useEffect(() => {
@@ -453,18 +418,16 @@ export default function PlayerScreen() {
   const handlePlayPause = useCallback(async () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
     
-    if (!streamUrl || !playerRef.current) {
-      setError('Aucune piste audio chargée');
+    if (!streamUrl || !player) {
+      console.log('No audio source available');
       return;
     }
 
     try {
       if (isPlaying) {
-        await playerRef.current.pause();
-        setIsPlaying(false);
+        player.pause();
       } else {
-        await playerRef.current.play();
-        setIsPlaying(true);
+        player.play();
       }
     } catch (e) {
       console.error('Play/Pause error:', e);
@@ -484,33 +447,31 @@ export default function PlayerScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [isPlaying, streamUrl]);
+  }, [isPlaying, streamUrl, player]);
 
   const handleSkip = useCallback(async (direction: 'back' | 'forward') => {
     try { Haptics.selectionAsync(); } catch {}
-    if (!playerRef.current) return;
+    if (!player) return;
     
-    const delta = direction === 'back' ? -15 : 15;
-    const newTime = Math.max(0, Math.min(duration, currentTime + delta));
+    const delta = direction === 'back' ? -15000 : 15000; // milliseconds
+    const newTime = Math.max(0, Math.min((status.duration || 0), (status.currentTime || 0) + delta));
     try {
-      await playerRef.current.seekTo(newTime * 1000); // Convert to milliseconds
-      setCurrentTime(newTime);
+      player.seekTo(newTime);
     } catch (e) {
       console.error('Seek error:', e);
     }
-  }, [duration, currentTime]);
+  }, [player, status]);
 
   const handleSeek = useCallback(async (newProgress: number) => {
-    if (!playerRef.current) return;
+    if (!player) return;
     
-    const newTime = newProgress * duration;
+    const newTime = newProgress * (status.duration || 0);
     try {
-      await playerRef.current.seekTo(newTime * 1000); // Convert to milliseconds
-      setCurrentTime(newTime);
+      player.seekTo(newTime);
     } catch (e) {
       console.error('Seek error:', e);
     }
-  }, [duration]);
+  }, [player, status]);
 
   const handleLike = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
