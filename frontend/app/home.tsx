@@ -867,16 +867,17 @@ function CinemaCard({ item, onPress, index }: any) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MOCK DATA
+// ══════════════════════════════════════════════════════════════════════════════
+// REAL DATA FROM MONGODB — No more mocks!
 // ══════════════════════════════════════════════════════════════════════════════
 
 const HERO_CONTENT = {
   id: 'hero_1',
-  title: 'RACINES',
-  subtitle: 'SÉRIE DOCUMENTAIRE',
-  description: 'Voyage au cœur des diasporas africaines. Une exploration intime de l\'identité et de la mémoire.',
+  title: 'KORA',
+  subtitle: 'LA CULTURE EN STREAMING',
+  description: 'Plateforme souveraine de la diaspora. Audio, vidéo, live — tout en un.',
   image: 'https://images.unsplash.com/photo-1590845947676-fa3b6a0b6faa?w=1200',
-  match: 97,
+  match: 100,
 };
 
 const CONTINUE_WATCHING = [

@@ -125,7 +125,7 @@ async def register_frek_work(
     }
     
     # Mise à jour MongoDB avec la signature (si DB disponible)
-    if db:
+    if db is not None:
         try:
             from bson import ObjectId
             await db.content.update_one(
