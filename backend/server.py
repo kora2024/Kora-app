@@ -635,6 +635,26 @@ api_router.include_router(subscription_new_router)
 # Include developer portal routes
 api_router.include_router(developer_router)
 
+# Include playlist routes
+from routes.playlist_routes import router as playlist_router, init_routes as init_playlist_routes
+init_playlist_routes(db)
+api_router.include_router(playlist_router)
+
+# Include recommendation routes
+from routes.recommendation_routes import router as recommendation_router, init_routes as init_recommendation_routes
+init_recommendation_routes(db)
+api_router.include_router(recommendation_router)
+
+# Include live events routes
+from routes.live_routes import router as live_router, init_routes as init_live_routes
+init_live_routes(db)
+api_router.include_router(live_router)
+
+# Include podcast routes
+from routes.podcast_routes import router as podcast_router, init_routes as init_podcast_routes
+init_podcast_routes(db)
+api_router.include_router(podcast_router)
+
 # Include reputation/community router (Pacte Souverain)
 from routes.reputation_routes import create_reputation_router
 reputation_router = create_reputation_router(db, get_current_user)

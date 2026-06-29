@@ -1245,6 +1245,45 @@ export default function KoraHome() {
             </AnimatedSection>
           )}
 
+          {/* P2-P3 Quick Navigation */}
+          <AnimatedSection title="Explorez KORA" subtitle="Toute la culture en un lieu" delay={450}>
+            <View style={styles.quickNavGrid}>
+              <TouchableOpacity 
+                style={styles.quickNavCard}
+                onPress={() => router.push('/playlists')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#2d1f3d', '#1a1a2e']} style={styles.quickNavGradient}>
+                  <Text style={styles.quickNavEmoji}>🎵</Text>
+                  <Text style={styles.quickNavTitle}>Playlists</Text>
+                  <Text style={styles.quickNavSubtitle}>Créez et partagez</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickNavCard}
+                onPress={() => router.push('/podcasts')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#1f3d2d', '#1a2e1a']} style={styles.quickNavGradient}>
+                  <Text style={styles.quickNavEmoji}>🎙️</Text>
+                  <Text style={styles.quickNavTitle}>Podcasts</Text>
+                  <Text style={styles.quickNavSubtitle}>Voix de la diaspora</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickNavCard}
+                onPress={() => router.push('/live')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient colors={['#3d1f1f', '#2e1a1a']} style={styles.quickNavGradient}>
+                  <Text style={styles.quickNavEmoji}>📺</Text>
+                  <Text style={styles.quickNavTitle}>Live Events</Text>
+                  <Text style={styles.quickNavSubtitle}>Concerts et talks</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </AnimatedSection>
+
           {/* Premium CTA */}
           <AnimatedSection title="" delay={500}>
             <TouchableOpacity style={styles.premiumBanner} onPress={handlePremium} activeOpacity={0.85}>
@@ -2098,5 +2137,41 @@ const styles = StyleSheet.create({
   searchResultTypeText: {
     fontSize: 14,
     color: COLORS.cream,
+  },
+  // Quick Navigation Grid (P2-P3)
+  quickNavGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    paddingHorizontal: 20,
+  },
+  quickNavCard: {
+    width: (SW - 52) / 3,
+    height: 120,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  quickNavGradient: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+  },
+  quickNavEmoji: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  quickNavTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.cream,
+    textAlign: 'center',
+  },
+  quickNavSubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginTop: 2,
   },
 });

@@ -216,6 +216,34 @@ export default function RootLayout() {
             animationDuration: TRANSITION_DURATION.normal,
           }} 
         />
+        
+        {/* P2-P3: Playlists */}
+        <Stack.Screen 
+          name="playlists" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
+        
+        {/* P2-P3: Podcasts */}
+        <Stack.Screen 
+          name="podcasts" 
+          options={{ 
+            animation: 'slide_from_right',
+            animationDuration: TRANSITION_DURATION.normal,
+          }} 
+        />
+        
+        {/* P2-P3: Live Events */}
+        <Stack.Screen 
+          name="live" 
+          options={{ 
+            animation: 'slide_from_bottom',
+            animationDuration: TRANSITION_DURATION.slow,
+            presentation: 'card',
+          }} 
+        />
       </Stack>
     </>
   );
