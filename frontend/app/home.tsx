@@ -1279,21 +1279,6 @@ export default function KoraHome() {
               </LinearGradient>
             </TouchableOpacity>
           </AnimatedSection>
-          </AnimatedSection>
-
-          {/* Creators */}
-          <AnimatedSection title="Créateurs" subtitle="À suivre" action="Tout voir" delay={700}>
-            <FlatList
-              horizontal
-              data={CREATORS}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <CreatorCard item={item} onPress={() => handleCreatorPress(item)} index={index} />
-              )}
-            />
-          </AnimatedSection>
 
           {/* Bottom spacing */}
           <View style={{ height: insets.bottom + 60 }} />
