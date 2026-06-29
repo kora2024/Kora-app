@@ -880,57 +880,8 @@ const HERO_CONTENT = {
   match: 100,
 };
 
-const CONTINUE_WATCHING = [
-  { id: 'cw1', title: 'Lagos Session', type: 'Album', progress: 0.65, image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', remaining: '12 titres' },
-  { id: 'cw2', title: 'La Traversée', type: 'Film', progress: 0.45, image: 'https://images.unsplash.com/photo-1516802273409-68526ee1bdd6?w=400', remaining: '32 min' },
-  { id: 'cw3', title: 'Zouk Classics', type: 'Playlist', progress: 0.30, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', remaining: '24 titres' },
-];
-
-const LIVE_NOW = [
-  { id: 'l1', title: 'Studio Live', creator: 'Fela Jr.', viewers: '2.4K', territory: 'Lagos', image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=400' },
-  { id: 'l2', title: 'Culture Talk', creator: 'Marie-Claire', viewers: '890', territory: 'Paris', image: 'https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=400' },
-];
-
-const TRENDING = {
-  caraibe: [
-    { id: 'tc1', title: 'Zouk Forever', artist: "Kassav'", type: 'Album', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' },
-    { id: 'tc2', title: 'Créole Dreams', artist: 'Jocelyne Labylle', type: 'Single', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-    { id: 'tc3', title: 'Antilles 2024', artist: 'Various', type: 'Playlist', image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400' },
-    { id: 'tc4', title: 'Island Vibes', artist: 'DJ Kora', type: 'Mix', image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b855?w=400' },
-  ],
-  afrique: [
-    { id: 'ta1', title: 'Afrobeats Rising', artist: 'Burna Boy', type: 'Album', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-    { id: 'ta2', title: 'Lagos Nights', artist: 'Wizkid', type: 'Single', image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b855?w=400' },
-    { id: 'ta3', title: 'Dakar Sound', artist: "Youssou N'Dour", type: 'Album', image: 'https://images.unsplash.com/photo-1516802273409-68526ee1bdd6?w=400' },
-    { id: 'ta4', title: 'Naija Hits', artist: 'Various', type: 'Playlist', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' },
-  ],
-  europe: [
-    { id: 'te1', title: 'Diaspora Paris', artist: 'Aya Nakamura', type: 'Album', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-    { id: 'te2', title: 'London Afro', artist: 'J Hus', type: 'Single', image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b855?w=400' },
-  ],
-  ameriques: [
-    { id: 'tam1', title: 'Brooklyn Vibes', artist: 'Wyclef Jean', type: 'Album', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-    { id: 'tam2', title: 'Miami Bass', artist: 'Various', type: 'Playlist', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' },
-  ],
-};
-
-const CREATORS = [
-  { id: 'cr1', name: "Kassav'", role: 'Groupe', followers: '2.1M', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', verified: true },
-  { id: 'cr2', name: 'Fela Jr.', role: 'Producteur', followers: '890K', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400', verified: true },
-  { id: 'cr3', name: 'Marie-Claire', role: 'Réalisatrice', followers: '340K', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400', verified: false },
-];
-
-const NEBULEUSE = [
-  { id: 'n1', title: 'Pour toi', description: 'Basé sur tes écoutes', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400', color: COLORS.terra },
-  { id: 'n2', title: 'Découvertes', description: 'Nouveaux artistes', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400', color: '#4A7FA5' },
-  { id: 'n3', title: 'Mix du jour', description: 'Sélection quotidienne', image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400', color: '#C9A84C' },
-];
-
-const CINEMA = [
-  { id: 'cin1', title: 'Retour aux Sources', duration: '1h 45min', image: 'https://images.unsplash.com/photo-1590845947676-fa3b6a0b6faa?w=400' },
-  { id: 'cin2', title: "L'Or Noir", duration: '52 min', image: 'https://images.unsplash.com/photo-1516802273409-68526ee1bdd6?w=400' },
-  { id: 'cin3', title: 'Génération Afro', duration: '1h 20min', image: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400' },
-];
+// Ces données seront chargées depuis l'API - fallbacks vides
+const EMPTY_ARRAY: any[] = [];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN HOME SCREEN
@@ -1084,10 +1035,8 @@ export default function KoraHome() {
     territory: track.territory,
   });
 
-  // Use real data or fallback to mock
-  const displayTracks = territoryTracks.length > 0 
-    ? territoryTracks.map(transformTrackForDisplay)
-    : (TRENDING[selectedTerritory as keyof typeof TRENDING] || TRENDING.caraibe);
+  // Use ONLY real data from MongoDB - no mocks!
+  const displayTracks = territoryTracks.map(transformTrackForDisplay);
 
   const territoryNames: Record<string, string> = {
     caribbean: 'Caraïbes',
@@ -1223,71 +1172,45 @@ export default function KoraHome() {
             />
           </AnimatedSection>
 
-          {/* Continue */}
-          <AnimatedSection title="Reprendre" action="Tout voir" delay={200}>
-            <FlatList
-              horizontal
-              data={CONTINUE_WATCHING}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <ContinueCard item={item} onPress={() => handlePlay(item)} index={index} />
-              )}
-            />
-          </AnimatedSection>
-
-          {/* Live */}
-          <AnimatedSection title="En direct" subtitle={`${LIVE_NOW.length} lives`} action="Tout voir" delay={300}>
-            <FlatList
-              horizontal
-              data={LIVE_NOW}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <LiveCard item={item} onPress={handlePlay} index={index} />
-              )}
-            />
-          </AnimatedSection>
-
-          {/* Trending by Territory - Real Catalog Data */}
+          {/* Catalogue Souverain - REAL DATA */}
           <AnimatedSection 
-            title={`Tendances ${territoryNames[selectedTerritory] || selectedTerritory}`}
-            subtitle={territoryTracks.length > 0 ? `${territoryTracks.length} titres` : ''}
+            title={`${territoryNames[selectedTerritory] || 'Monde'}`}
+            subtitle={territoryTracks.length > 0 ? `${territoryTracks.length} titres streamables` : 'Chargement...'}
             action="Tout voir" 
-            delay={400}
+            delay={200}
           >
             {isLoading ? (
               <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Chargement du catalogue...</Text>
+                <Text style={styles.loadingText}>Chargement du catalogue souverain...</Text>
               </View>
-            ) : (
+            ) : territoryTracks.length > 0 ? (
               <FlatList
                 horizontal
-                data={displayTracks}
+                data={territoryTracks.map(transformTrackForDisplay)}
                 keyExtractor={(item) => item.id}
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
                 renderItem={({ item, index }) => (
                   <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
                 )}
-                ListEmptyComponent={
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>Aucun titre disponible</Text>
-                  </View>
-                }
               />
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>Catalogue en construction — Soyez le premier créateur !</Text>
+                <TouchableOpacity style={styles.uploadCTA} onPress={handleUpload}>
+                  <Text style={styles.uploadCTAText}>+ Uploader du contenu</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </AnimatedSection>
 
-          {/* Featured Tracks from Global Catalog */}
+          {/* Featured Tracks - REAL DATA */}
           {featuredTracks.length > 0 && (
             <AnimatedSection 
               title="Populaire maintenant"
-              subtitle="Catalogue mondial"
+              subtitle={`${featuredTracks.length} titres — Catalogue mondial`}
               action="Tout voir" 
-              delay={450}
+              delay={300}
             >
               <FlatList
                 horizontal
@@ -1302,32 +1225,60 @@ export default function KoraHome() {
             </AnimatedSection>
           )}
 
-          {/* Nébuleuse */}
-          <AnimatedSection title="Nébuleuse" subtitle="Tes recommandations IA" delay={500}>
-            <FlatList
-              horizontal
-              data={NEBULEUSE}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <NebuleuseCard item={item} onPress={handlePlay} index={index} />
-              )}
-            />
+          {/* Video Content - REAL DATA */}
+          {featuredTracks.filter(t => t.type === 'video').length > 0 && (
+            <AnimatedSection 
+              title="Cinéma & Vidéos"
+              subtitle="Contenu audiovisuel"
+              action="Tout voir" 
+              delay={400}
+            >
+              <FlatList
+                horizontal
+                data={featuredTracks.filter(t => t.type === 'video').map(transformTrackForDisplay)}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                renderItem={({ item, index }) => (
+                  <ContentCard item={item} onPress={() => handlePlay(item)} index={index} />
+                )}
+              />
+            </AnimatedSection>
+          )}
+
+          {/* Premium CTA */}
+          <AnimatedSection title="" delay={500}>
+            <TouchableOpacity style={styles.premiumBanner} onPress={handlePremium} activeOpacity={0.85}>
+              <LinearGradient
+                colors={[COLORS.terra, '#8B4D3B']}
+                style={styles.premiumGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Text style={styles.premiumTitle}>KORA PREMIUM</Text>
+                <Text style={styles.premiumSubtitle}>Streaming illimité • 3,98€/mois</Text>
+                <View style={styles.premiumButton}>
+                  <Text style={styles.premiumButtonText}>S'abonner</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
           </AnimatedSection>
 
-          {/* Cinéma */}
-          <AnimatedSection title="Cinéma" subtitle="Films & Documentaires" action="Tout voir" delay={600}>
-            <FlatList
-              horizontal
-              data={CINEMA}
-              keyExtractor={(item) => item.id}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item, index }) => (
-                <CinemaCard item={item} onPress={handlePlay} index={index} />
-              )}
-            />
+          {/* Creator CTA */}
+          <AnimatedSection title="Créateurs" subtitle="Partagez votre art" delay={600}>
+            <TouchableOpacity style={styles.creatorBanner} onPress={() => router.push('/creator/studio')} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#1a1a2e', '#16213e']}
+                style={styles.creatorGradient}
+              >
+                <Text style={styles.creatorTitle}>KORA for Creators</Text>
+                <Text style={styles.creatorSubtitle}>Uploadez • Monétisez • Connectez</Text>
+                <View style={styles.creatorButton}>
+                  <Text style={styles.creatorButtonText}>Accéder au Studio</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </AnimatedSection>
           </AnimatedSection>
 
           {/* Creators */}
@@ -2020,6 +1971,94 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.jostLight,
     fontSize: 14,
     color: COLORS.gray,
+    textAlign: 'center',
+  },
+  uploadCTA: {
+    marginTop: 16,
+    backgroundColor: COLORS.terra,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  uploadCTAText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.cream,
+  },
+  // Premium Banner
+  premiumBanner: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  premiumGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  premiumTitle: {
+    fontFamily: FONTS.jostBold,
+    fontSize: 22,
+    color: COLORS.cream,
+    letterSpacing: 2,
+  },
+  premiumSubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 8,
+  },
+  premiumButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.cream,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  premiumButtonText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.dark,
+  },
+  // Creator Banner
+  creatorBanner: {
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  creatorGradient: {
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+  },
+  creatorTitle: {
+    fontFamily: FONTS.jostBold,
+    fontSize: 20,
+    color: COLORS.cream,
+    letterSpacing: 1,
+  },
+  creatorSubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 8,
+  },
+  creatorButton: {
+    marginTop: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: COLORS.terra,
+    paddingHorizontal: 28,
+    paddingVertical: 10,
+    borderRadius: 24,
+  },
+  creatorButtonText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.terra,
   },
   // Search Results
   searchResults: {
