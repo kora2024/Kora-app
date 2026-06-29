@@ -312,7 +312,11 @@ export default function PlayerScreen() {
         const { createAudioPlayer } = await import('expo-audio');
         
         // Create player with URL source
-        const newPlayer = createAudioPlayer({ uri: streamUrl });
+        const newPlayer = createAudioPlayer({ uri: streamUrl }, {
+          shouldPlayInBackground: false,
+          volume: 1.0,
+        });
+        
         playerRef.current = newPlayer;
         
         console.log('🎵 Audio player initialized for:', streamUrl);

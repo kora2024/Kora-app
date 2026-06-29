@@ -1028,9 +1028,11 @@ export default function KoraHome() {
     id: track.id,
     title: track.title,
     artist: track.artist,
-    type: track.type === 'audio' ? 'Audio' : 'Vidéo',
+    type: track.type || 'audio',
+    displayType: track.type === 'audio' ? 'Audio' : 'Vidéo',
     image: track.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    source: track.source,
+    artwork: track.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
+    source: track.source || 'kora',
     stream_url: track.stream_url,
     territory: track.territory,
   });

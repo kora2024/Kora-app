@@ -171,22 +171,27 @@ export default function PaywallScreen() {
     setError(null);
 
     try {
-      // Get user ID from storage
-      const userJson = await AsyncStorage.getItem('kora_user');
-      if (!userJson) {
+      // Get token from storage
+      const token = await AsyncStorage.getItem('kora_token');
+      if (!token) {
         setError('Veuillez vous connecter');
+        router.push('/auth/login');
         setIsLoading(false);
         return;
       }
-      const user = JSON.parse(userJson);
 
-      // Create checkout session
-      const response = await fetch(`${API_URL}/api/subscriptions/checkout-session?user_id=${user.id}`, {
+      // Create checkout session with auth token
+      const response = await fetch(`${API_URL}/api/subscriptions/checkout-session`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la création de la session');
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Erreur lors de la création de la session');
       }
 
       const { checkoutUrl } = await response.json();
@@ -197,7 +202,9 @@ export default function PaywallScreen() {
       } else {
         await WebBrowser.openBrowserAsync(checkoutUrl);
         // Check subscription status after returning
-        const statusResponse = await fetch(`${API_URL}/api/me/subscription?user_id=${user.id}`);
+        const statusResponse = await fetch(`${API_URL}/api/subscriptions/status`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
         const status = await statusResponse.json();
         if (status.active) {
           try {
