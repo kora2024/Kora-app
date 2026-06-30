@@ -2,8 +2,8 @@
  * KORA Player — Lecteur Audio/Vidéo Ultra Premium
  * 
  * Expérience immersive niveau Apple Music / Netflix
+ * Support audio (expo-audio) et vidéo (expo-video)
  * Transitions cinématiques, contrôles gestuels
- * Streaming audio réel depuis Internet Archive / Cloudinary
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -17,6 +17,7 @@ import {
   Animated,
   StatusBar,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +25,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path, Text as SvgText } from 'react-native-svg';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useVideoPlayer, VideoView } from 'expo-video';
+import { useEvent } from 'expo';
 import { COLORS, FONTS } from '../src/theme';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -36,13 +39,11 @@ function PlayPauseIcon({ isPlaying, size = 64 }: { isPlaying: boolean; size?: nu
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64">
       {isPlaying ? (
-        // Pause icon
         <>
           <Path d="M22 16H26V48H22V16Z" fill={COLORS.cream} />
           <Path d="M38 16H42V48H38V16Z" fill={COLORS.cream} />
         </>
       ) : (
-        // Play icon
         <Path d="M20 12L52 32L20 52V12Z" fill={COLORS.cream} />
       )}
     </Svg>
@@ -60,16 +61,7 @@ function SkipIcon({ direction, size = 32 }: { direction: 'back' | 'forward'; siz
         fill="none"
       />
       <Path d="M16 10V16L20 18" stroke={COLORS.cream} strokeWidth="2" strokeLinecap="round" fill="none" />
-      <SvgText
-        x="16"
-        y="24"
-        textAnchor="middle"
-        fontSize="7"
-        fill={COLORS.cream}
-        fontFamily="Jost"
-      >
-        15
-      </SvgText>
+      <SvgText x="16" y="24" textAnchor="middle" fontSize="7" fill={COLORS.cream} fontFamily="Jost">15</SvgText>
     </Svg>
   );
 }
@@ -100,7 +92,7 @@ function ShuffleIcon({ active, size = 24 }: { active: boolean; size?: number }) 
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path
         d="M16 3H21V8M4 20L21 3M21 16V21H16M15 15L21 21M4 4L9 9"
-        stroke={active ? COLORS.terra : COLORS.cream}
+        stroke={active ? COLORS.terra : COLORS.gray}
         strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -111,11 +103,11 @@ function ShuffleIcon({ active, size = 24 }: { active: boolean; size?: number }) 
 }
 
 function RepeatIcon({ mode, size = 24 }: { mode: 'off' | 'all' | 'one'; size?: number }) {
-  const color = mode === 'off' ? COLORS.cream : COLORS.terra;
+  const color = mode === 'off' ? COLORS.gray : COLORS.terra;
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
       <Path
-        d="M17 2L21 6L17 10M3 11V9C3 7.34 4.34 6 6 6H21M7 22L3 18L7 14M21 13V15C21 16.66 19.66 18 18 18H3"
+        d="M17 1L21 5L17 9M3 11V9C3 7.89543 3.89543 7 5 7H21M7 23L3 19L7 15M21 13V15C21 16.1046 20.1046 17 19 17H3"
         stroke={color}
         strokeWidth="2"
         strokeLinecap="round"
@@ -123,46 +115,48 @@ function RepeatIcon({ mode, size = 24 }: { mode: 'off' | 'all' | 'one'; size?: n
         fill="none"
       />
       {mode === 'one' && (
-        <SvgText
-          x="12"
-          y="14"
-          textAnchor="middle"
-          fontSize="8"
-          fill={color}
-          fontWeight="bold"
-        >
-          1
-        </SvgText>
+        <SvgText x="12" y="14" textAnchor="middle" fontSize="8" fill={color} fontWeight="bold">1</SvgText>
       )}
     </Svg>
   );
 }
 
+function FullscreenIcon({ size = 24 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path
+        d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 8V5C21 3.89543 20.1046 3 19 3H16M16 21H19C20.1046 21 21 20.1046 21 19V16M3 16V19C3 20.1046 3.89543 21 5 21H8"
+        stroke={COLORS.cream}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
+  );
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
-// WAVEFORM VISUALIZER
+// WAVEFORM VISUALIZER (Audio only)
 // ══════════════════════════════════════════════════════════════════════════════
 
 function WaveformVisualizer({ isPlaying }: { isPlaying: boolean }) {
-  const bars = 40;
-  const barAnims = useRef(
-    Array.from({ length: bars }, () => new Animated.Value(0.3))
-  ).current;
+  const bars = Array.from({ length: 50 }, (_, i) => i);
+  const animations = useRef(bars.map(() => new Animated.Value(0.3))).current;
 
   useEffect(() => {
     if (isPlaying) {
-      barAnims.forEach((anim, i) => {
+      bars.forEach((_, i) => {
         const randomDuration = 300 + Math.random() * 400;
-        const randomDelay = i * 20;
         Animated.loop(
           Animated.sequence([
-            Animated.timing(anim, {
+            Animated.timing(animations[i], {
               toValue: 0.3 + Math.random() * 0.7,
               duration: randomDuration,
-              delay: randomDelay,
               useNativeDriver: true,
             }),
-            Animated.timing(anim, {
-              toValue: 0.2 + Math.random() * 0.3,
+            Animated.timing(animations[i], {
+              toValue: 0.3,
               duration: randomDuration,
               useNativeDriver: true,
             }),
@@ -170,9 +164,9 @@ function WaveformVisualizer({ isPlaying }: { isPlaying: boolean }) {
         ).start();
       });
     } else {
-      barAnims.forEach((anim) => {
-        anim.stopAnimation();
-        Animated.timing(anim, {
+      bars.forEach((_, i) => {
+        animations[i].stopAnimation();
+        Animated.timing(animations[i], {
           toValue: 0.3,
           duration: 300,
           useNativeDriver: true,
@@ -183,14 +177,14 @@ function WaveformVisualizer({ isPlaying }: { isPlaying: boolean }) {
 
   return (
     <View style={styles.waveformContainer}>
-      {barAnims.map((anim, i) => (
+      {bars.map((_, i) => (
         <Animated.View
           key={i}
           style={[
             styles.waveformBar,
             {
-              transform: [{ scaleY: anim }],
-              backgroundColor: i % 3 === 0 ? COLORS.terra : 'rgba(255,255,255,0.3)',
+              backgroundColor: i % 3 === 0 ? COLORS.terra : 'rgba(255,255,255,0.2)',
+              transform: [{ scaleY: animations[i] }],
             },
           ]}
         />
@@ -255,6 +249,352 @@ function ProgressBar({ progress, duration, onSeek }: { progress: number; duratio
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// AUDIO PLAYER COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+
+function AudioPlayerView({
+  streamUrl,
+  content,
+  isLiked,
+  onLike,
+  shuffle,
+  onShuffle,
+  repeat,
+  onRepeat,
+  insets,
+  onClose,
+}: any) {
+  const audioPlayer = useAudioPlayer(streamUrl ? { uri: streamUrl } : null);
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
+
+  const isPlaying = audioStatus.playing;
+  const currentTime = Math.floor((audioStatus.currentTime || 0) / 1000);
+  const duration = Math.floor((audioStatus.duration || 245000) / 1000);
+  const progress = duration > 0 ? currentTime / duration : 0;
+  const isBuffering = audioStatus.isBuffering;
+
+  const artworkScale = useRef(new Animated.Value(1)).current;
+  const artworkRotate = useRef(new Animated.Value(0)).current;
+
+  // Vinyl rotation effect
+  useEffect(() => {
+    if (isPlaying) {
+      Animated.loop(
+        Animated.timing(artworkRotate, {
+          toValue: 1,
+          duration: 20000,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      artworkRotate.stopAnimation();
+    }
+  }, [isPlaying]);
+
+  const handlePlayPause = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    if (!streamUrl || !audioPlayer) return;
+
+    try {
+      if (isPlaying) {
+        audioPlayer.pause();
+      } else {
+        audioPlayer.play();
+      }
+    } catch (e) {
+      console.error('Play/Pause error:', e);
+    }
+
+    Animated.sequence([
+      Animated.timing(artworkScale, { toValue: isPlaying ? 0.95 : 1.02, duration: 150, useNativeDriver: true }),
+      Animated.spring(artworkScale, { toValue: 1, tension: 100, friction: 10, useNativeDriver: true }),
+    ]).start();
+  }, [isPlaying, streamUrl, audioPlayer]);
+
+  const handleSkip = useCallback((direction: 'back' | 'forward') => {
+    try { Haptics.selectionAsync(); } catch {}
+    if (!audioPlayer) return;
+    const delta = direction === 'back' ? -15000 : 15000;
+    const newTime = Math.max(0, Math.min((audioStatus.duration || 0), (audioStatus.currentTime || 0) + delta));
+    try { audioPlayer.seekTo(newTime); } catch (e) { console.error('Seek error:', e); }
+  }, [audioPlayer, audioStatus]);
+
+  const handleSeek = useCallback((newProgress: number) => {
+    if (!audioPlayer) return;
+    const newTime = newProgress * (audioStatus.duration || 0);
+    try { audioPlayer.seekTo(newTime); } catch (e) { console.error('Seek error:', e); }
+  }, [audioPlayer, audioStatus]);
+
+  const rotation = artworkRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+          <ChevronDownIcon size={28} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerSubtitle}>EN LECTURE</Text>
+          <Text style={styles.headerTitle}>{content.album}</Text>
+        </View>
+        <TouchableOpacity style={styles.moreBtn}>
+          <Text style={styles.moreText}>•••</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Artwork with vinyl rotation */}
+      <View style={styles.artworkContainer}>
+        <Animated.View
+          style={[
+            styles.artworkWrapper,
+            { transform: [{ scale: artworkScale }, { rotate: rotation }] },
+          ]}
+        >
+          <Image source={{ uri: content.artwork }} style={styles.artwork} />
+          <View style={styles.vinylHole} />
+        </Animated.View>
+        <WaveformVisualizer isPlaying={isPlaying} />
+      </View>
+
+      {/* Track info */}
+      <View style={styles.trackInfo}>
+        <View style={styles.trackTitleRow}>
+          <View style={styles.trackTitleContainer}>
+            <Text style={styles.trackTitle}>{content.title}</Text>
+            <Text style={styles.trackArtist}>{content.artist}</Text>
+          </View>
+          <TouchableOpacity onPress={onLike} style={styles.likeBtn}>
+            <HeartIcon filled={isLiked} size={28} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Progress */}
+      <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
+
+      {/* Buffering indicator */}
+      {isBuffering && (
+        <View style={styles.bufferingIndicator}>
+          <ActivityIndicator color={COLORS.terra} size="small" />
+          <Text style={styles.bufferingText}>Chargement...</Text>
+        </View>
+      )}
+
+      {/* Stream indicator */}
+      {streamUrl && (
+        <View style={styles.streamIndicator}>
+          <View style={styles.streamDot} />
+          <Text style={styles.streamText}>Audio • {content.source}</Text>
+        </View>
+      )}
+
+      {/* Controls */}
+      <View style={styles.controls}>
+        <TouchableOpacity onPress={onShuffle} style={styles.controlBtn}>
+          <ShuffleIcon active={shuffle} size={24} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSkip('back')} style={styles.skipBtn}>
+          <SkipIcon direction="back" size={32} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn}>
+          <LinearGradient colors={[COLORS.terra, '#8B4D3B']} style={styles.playBtnGradient}>
+            <PlayPauseIcon isPlaying={isPlaying} size={40} />
+          </LinearGradient>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleSkip('forward')} style={styles.skipBtn}>
+          <SkipIcon direction="forward" size={32} />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onRepeat} style={styles.controlBtn}>
+          <RepeatIcon mode={repeat} size={24} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Bottom actions */}
+      <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 20 }]}>
+        <TouchableOpacity style={styles.bottomBtn}>
+          <Text style={styles.bottomBtnText}>Paroles</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.bottomBtn}>
+          <Text style={styles.bottomBtnText}>File d&apos;attente</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VIDEO PLAYER COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+
+function VideoPlayerView({
+  streamUrl,
+  content,
+  isLiked,
+  onLike,
+  insets,
+  onClose,
+}: any) {
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Initialize video player with useVideoPlayer hook
+  const videoPlayer = useVideoPlayer(streamUrl || null, (player) => {
+    player.loop = false;
+    player.showNowPlayingNotification = true;
+  });
+
+  // Get playing state using useEvent
+  const { isPlaying } = useEvent(videoPlayer, 'playingChange', { isPlaying: videoPlayer?.playing || false });
+
+  // Get status for duration/time
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  useEffect(() => {
+    if (videoPlayer) {
+      const interval = setInterval(() => {
+        try {
+          setCurrentTime(videoPlayer.currentTime || 0);
+          setDuration(videoPlayer.duration || 0);
+        } catch {}
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [videoPlayer]);
+
+  const progress = duration > 0 ? currentTime / duration : 0;
+
+  const hideControlsAfterDelay = useCallback(() => {
+    if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+    controlsTimeout.current = setTimeout(() => {
+      if (isPlaying) setShowControls(false);
+    }, 3000);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (isPlaying) hideControlsAfterDelay();
+    return () => {
+      if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
+    };
+  }, [isPlaying, hideControlsAfterDelay]);
+
+  const handleTap = useCallback(() => {
+    setShowControls(true);
+    hideControlsAfterDelay();
+  }, [hideControlsAfterDelay]);
+
+  const handlePlayPause = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    if (!videoPlayer) return;
+
+    try {
+      if (isPlaying) {
+        videoPlayer.pause();
+      } else {
+        videoPlayer.play();
+      }
+    } catch (e) {
+      console.error('Video Play/Pause error:', e);
+    }
+    setShowControls(true);
+    hideControlsAfterDelay();
+  }, [isPlaying, videoPlayer, hideControlsAfterDelay]);
+
+  const handleSkip = useCallback((direction: 'back' | 'forward') => {
+    try { Haptics.selectionAsync(); } catch {}
+    if (!videoPlayer) return;
+    const delta = direction === 'back' ? -10 : 10;
+    const newTime = Math.max(0, Math.min(duration, currentTime + delta));
+    try { videoPlayer.currentTime = newTime; } catch (e) { console.error('Video seek error:', e); }
+    setShowControls(true);
+    hideControlsAfterDelay();
+  }, [videoPlayer, currentTime, duration, hideControlsAfterDelay]);
+
+  const handleSeek = useCallback((newProgress: number) => {
+    if (!videoPlayer) return;
+    const newTime = newProgress * duration;
+    try { videoPlayer.currentTime = newTime; } catch (e) { console.error('Video seek error:', e); }
+  }, [videoPlayer, duration]);
+
+  return (
+    <TouchableOpacity
+      style={styles.videoContainer}
+      activeOpacity={1}
+      onPress={handleTap}
+    >
+      {/* Video View */}
+      {streamUrl && videoPlayer && (
+        <VideoView
+          player={videoPlayer}
+          style={styles.videoView}
+          contentFit="contain"
+          allowsFullscreen={true}
+          allowsPictureInPicture={true}
+        />
+      )}
+
+      {/* Overlay controls */}
+      {showControls && (
+        <LinearGradient
+          colors={['rgba(0,0,0,0.8)', 'transparent', 'transparent', 'rgba(0,0,0,0.9)']}
+          style={styles.videoOverlay}
+        >
+          {/* Top bar */}
+          <View style={[styles.videoTopBar, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+              <ChevronDownIcon size={28} />
+            </TouchableOpacity>
+            <Text style={styles.videoTitle} numberOfLines={1}>{content.title}</Text>
+            <TouchableOpacity onPress={onLike} style={styles.closeBtn}>
+              <HeartIcon filled={isLiked} size={24} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Center play button */}
+          <View style={styles.videoCenterControls}>
+            <TouchableOpacity onPress={() => handleSkip('back')} style={styles.videoSkipBtn}>
+              <SkipIcon direction="back" size={36} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handlePlayPause} style={styles.videoPlayBtn}>
+              <PlayPauseIcon isPlaying={isPlaying} size={50} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleSkip('forward')} style={styles.videoSkipBtn}>
+              <SkipIcon direction="forward" size={36} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Bottom bar with progress */}
+          <View style={[styles.videoBottomBar, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={styles.videoProgressContainer}>
+              <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
+            </View>
+            <View style={styles.videoInfo}>
+              <Text style={styles.videoArtist}>{content.artist}</Text>
+              <View style={styles.streamIndicator}>
+                <View style={[styles.streamDot, { backgroundColor: '#FF3B30' }]} />
+                <Text style={styles.streamText}>Vidéo • {content.type === 'live' ? 'LIVE' : 'Streaming'}</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* Loading state when no URL */}
+      {!streamUrl && (
+        <View style={styles.videoLoadingOverlay}>
+          <ActivityIndicator size="large" color={COLORS.terra} />
+          <Text style={styles.videoLoadingText}>Chargement de la vidéo...</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // MAIN PLAYER SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -266,31 +606,21 @@ export default function PlayerScreen() {
   const [isLiked, setIsLiked] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
-  const [showControls, setShowControls] = useState(true);
-  // Get stream URL from params
-  const streamUrl = (params.stream_url as string) || '';
-  
-  // Initialize audio player with expo-audio hook
-  const player = useAudioPlayer(streamUrl ? { uri: streamUrl } : null);
-  const status = useAudioPlayerStatus(player);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
+  const [trackDetails, setTrackDetails] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Animations
   const slideAnim = useRef(new Animated.Value(SH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const artworkScale = useRef(new Animated.Value(0.9)).current;
-  const artworkRotate = useRef(new Animated.Value(0)).current;
 
   // API Base
   const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
-  // Track state
-  const [trackDetails, setTrackDetails] = useState<any>(null);
-
-  // Derive state from player status
-  const isPlaying = status.playing;
-  const currentTime = Math.floor((status.currentTime || 0) / 1000);
-  const duration = Math.floor((status.duration || 245000) / 1000);
-  const progress = duration > 0 ? currentTime / duration : 0;
+  // Determine content type
+  const contentType = (params.type as string) || 'audio';
+  const isVideo = contentType === 'video' || contentType === 'live' || contentType === 'replay';
 
   // Content from params or fetched
   const content = {
@@ -299,58 +629,54 @@ export default function PlayerScreen() {
     artist: trackDetails?.artist || params.artist as string || 'Artiste',
     album: trackDetails?.album || params.album as string || 'Album',
     artwork: trackDetails?.artwork || params.artwork as string || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
-    type: params.type as string || 'audio',
+    type: contentType,
     source: params.source as string || 'kora',
   };
 
-  // Loading state from player
-  const isLoading = !streamUrl || status.isBuffering;
-  const error = null;
-
-  // Fetch track details and stream URL
+  // Load track/stream URL
   useEffect(() => {
-    const loadTrack = async () => {
+    const loadContent = async () => {
       setIsLoading(true);
       setError(null);
       
       try {
-        // If we have a direct stream_url from params, use it
-        if (params.stream_url) {
-          setStreamUrl(params.stream_url as string);
+        // If direct stream URL from params
+        if (params.streamUrl || params.stream_url) {
+          const url = (params.streamUrl || params.stream_url) as string;
+          console.log('🎬 Direct stream URL:', url);
+          setStreamUrl(url);
+          setIsLoading(false);
           return;
         }
 
-        // Otherwise fetch from API
+        // Fetch from API
         if (params.id && params.source) {
           const res = await fetch(`${API_BASE}/api/catalog/track/${params.source}/${params.id}`);
           if (res.ok) {
             const data = await res.json();
             setTrackDetails(data);
-            
             if (data.stream_url) {
-              console.log('🎵 Stream URL loaded:', data.stream_url);
+              console.log('🎵 Stream URL loaded from API:', data.stream_url);
               setStreamUrl(data.stream_url);
             } else {
               setError('Aucune URL de streaming disponible');
-              setIsLoading(false);
             }
           } else {
-            setError('Track non trouvé');
-            setIsLoading(false);
+            setError('Contenu non trouvé');
           }
-        } else {
-          setError('Informations de track manquantes');
+        } else if (!params.streamUrl && !params.stream_url) {
+          setError('Informations manquantes');
         }
       } catch (err) {
-        console.error('Error loading track:', err);
+        console.error('Error loading content:', err);
         setError('Erreur de chargement');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadTrack();
-  }, [params.id, params.source, params.stream_url]);
+    loadContent();
+  }, [params.id, params.source, params.streamUrl, params.stream_url]);
 
   // Entrance animation
   useEffect(() => {
@@ -366,112 +692,17 @@ export default function PlayerScreen() {
         duration: 400,
         useNativeDriver: true,
       }),
-      Animated.spring(artworkScale, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        delay: 150,
-        useNativeDriver: true,
-      }),
     ]).start();
   }, []);
 
-  // Artwork rotation when playing (vinyl effect)
-  useEffect(() => {
-    if (isPlaying && content.type === 'audio') {
-      Animated.loop(
-        Animated.timing(artworkRotate, {
-          toValue: 1,
-          duration: 20000,
-          useNativeDriver: true,
-        })
-      ).start();
-    } else {
-      artworkRotate.stopAnimation();
-    }
-  }, [isPlaying, content.type]);
-
   const handleClose = useCallback(() => {
-    // Stop audio before closing
-    if (playerRef.current) {
-      try {
-        playerRef.current.pause();
-      } catch (e) {}
-    }
-    
     Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: SH,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(slideAnim, { toValue: SH, duration: 300, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => {
       router.back();
     });
   }, [router]);
-
-  const handlePlayPause = useCallback(async () => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    
-    if (!streamUrl || !player) {
-      console.log('No audio source available');
-      return;
-    }
-
-    try {
-      if (isPlaying) {
-        player.pause();
-      } else {
-        player.play();
-      }
-    } catch (e) {
-      console.error('Play/Pause error:', e);
-    }
-    
-    // Scale animation on tap
-    Animated.sequence([
-      Animated.timing(artworkScale, {
-        toValue: isPlaying ? 0.95 : 1.02,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.spring(artworkScale, {
-        toValue: 1,
-        tension: 100,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [isPlaying, streamUrl, player]);
-
-  const handleSkip = useCallback(async (direction: 'back' | 'forward') => {
-    try { Haptics.selectionAsync(); } catch {}
-    if (!player) return;
-    
-    const delta = direction === 'back' ? -15000 : 15000; // milliseconds
-    const newTime = Math.max(0, Math.min((status.duration || 0), (status.currentTime || 0) + delta));
-    try {
-      player.seekTo(newTime);
-    } catch (e) {
-      console.error('Seek error:', e);
-    }
-  }, [player, status]);
-
-  const handleSeek = useCallback(async (newProgress: number) => {
-    if (!player) return;
-    
-    const newTime = newProgress * (status.duration || 0);
-    try {
-      player.seekTo(newTime);
-    } catch (e) {
-      console.error('Seek error:', e);
-    }
-  }, [player, status]);
 
   const handleLike = useCallback(() => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
@@ -488,145 +719,84 @@ export default function PlayerScreen() {
     setRepeat((r) => r === 'off' ? 'all' : r === 'all' ? 'one' : 'off');
   }, []);
 
-  const rotation = artworkRotate.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  // Loading state
+  if (isLoading) {
+    return (
+      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient colors={[COLORS.dark, COLORS.dark2]} style={StyleSheet.absoluteFill} />
+        <View style={styles.loadingScreen}>
+          <ActivityIndicator size="large" color={COLORS.terra} />
+          <Text style={styles.loadingScreenText}>Préparation...</Text>
+        </View>
+      </Animated.View>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <StatusBar barStyle="light-content" />
+        <LinearGradient colors={[COLORS.dark, COLORS.dark2]} style={StyleSheet.absoluteFill} />
+        <View style={styles.loadingScreen}>
+          <Text style={styles.errorScreenText}>{error}</Text>
+          <TouchableOpacity style={styles.errorBackBtn} onPress={handleClose}>
+            <Text style={styles.errorBackBtnText}>Retour</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View
       style={[
         styles.container,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
+        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
       ]}
     >
       <StatusBar barStyle="light-content" />
       
-      {/* Background blur */}
-      <Image source={{ uri: content.artwork }} style={styles.bgImage} blurRadius={50} />
-      <View style={styles.bgOverlay} />
+      {/* Background (audio only) */}
+      {!isVideo && (
+        <>
+          <Image source={{ uri: content.artwork }} style={styles.bgImage} blurRadius={50} />
+          <View style={styles.bgOverlay} />
+        </>
+      )}
 
-      {/* Content */}
-      <View style={[styles.content, { paddingTop: insets.top + 16 }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-            <ChevronDownIcon size={28} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerSubtitle}>EN LECTURE</Text>
-            <Text style={styles.headerTitle}>{content.album}</Text>
-          </View>
-          <TouchableOpacity style={styles.moreBtn}>
-            <Text style={styles.moreText}>•••</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Artwork */}
-        <View style={styles.artworkContainer}>
-          <Animated.View
-            style={[
-              styles.artworkWrapper,
-              {
-                transform: [
-                  { scale: artworkScale },
-                  { rotate: content.type === 'audio' ? rotation : '0deg' },
-                ],
-              },
-            ]}
-          >
-            <Image source={{ uri: content.artwork }} style={styles.artwork} />
-            {content.type === 'audio' && (
-              <View style={styles.vinylHole} />
-            )}
-          </Animated.View>
-          
-          {/* Waveform for audio */}
-          {content.type === 'audio' && (
-            <WaveformVisualizer isPlaying={isPlaying} />
-          )}
-        </View>
-
-        {/* Track info */}
-        <View style={styles.trackInfo}>
-          <View style={styles.trackTitleRow}>
-            <View style={styles.trackTitleContainer}>
-              <Text style={styles.trackTitle}>{content.title}</Text>
-              <Text style={styles.trackArtist}>{content.artist}</Text>
-            </View>
-            <TouchableOpacity onPress={handleLike} style={styles.likeBtn}>
-              <HeartIcon filled={isLiked} size={28} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Progress */}
-        <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
-
-        {/* Loading/Error states */}
-        {isLoading && (
-          <View style={styles.loadingOverlay}>
-            <Text style={styles.loadingText}>Chargement...</Text>
-          </View>
-        )}
-        {error && (
-          <View style={styles.errorOverlay}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* Stream URL indicator */}
-        {streamUrl && (
-          <View style={styles.streamIndicator}>
-            <View style={styles.streamDot} />
-            <Text style={styles.streamText}>Streaming depuis {content.source}</Text>
-          </View>
-        )}
-
-        {/* Controls */}
-        <View style={styles.controls}>
-          <TouchableOpacity onPress={handleShuffle} style={styles.controlBtn}>
-            <ShuffleIcon active={shuffle} size={24} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => handleSkip('back')} style={styles.skipBtn}>
-            <SkipIcon direction="back" size={32} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn}>
-            <LinearGradient
-              colors={[COLORS.terra, '#8B4D3B']}
-              style={styles.playBtnGradient}
-            >
-              <PlayPauseIcon isPlaying={isPlaying} size={40} />
-            </LinearGradient>
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={() => handleSkip('forward')} style={styles.skipBtn}>
-            <SkipIcon direction="forward" size={32} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity onPress={handleRepeat} style={styles.controlBtn}>
-            <RepeatIcon mode={repeat} size={24} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Bottom actions */}
-        <View style={[styles.bottomActions, { paddingBottom: insets.bottom + 20 }]}>
-          <TouchableOpacity style={styles.bottomBtn}>
-            <Text style={styles.bottomBtnText}>Paroles</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.bottomBtn}>
-            <Text style={styles.bottomBtnText}>File d&apos;attente</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Render appropriate player */}
+      {isVideo ? (
+        <VideoPlayerView
+          streamUrl={streamUrl}
+          content={content}
+          isLiked={isLiked}
+          onLike={handleLike}
+          insets={insets}
+          onClose={handleClose}
+        />
+      ) : (
+        <AudioPlayerView
+          streamUrl={streamUrl}
+          content={content}
+          isLiked={isLiked}
+          onLike={handleLike}
+          shuffle={shuffle}
+          onShuffle={handleShuffle}
+          repeat={repeat}
+          onRepeat={handleRepeat}
+          insets={insets}
+          onClose={handleClose}
+        />
+      )}
     </Animated.View>
   );
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STYLES
+// ══════════════════════════════════════════════════════════════════════════════
 
 const styles = StyleSheet.create({
   container: {
@@ -845,33 +1015,18 @@ const styles = StyleSheet.create({
     color: COLORS.gray,
     letterSpacing: 1,
   },
-  // Loading & Error
-  loadingOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
+  // Buffering
+  bufferingIndicator: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    gap: 8,
   },
-  loadingText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
+  bufferingText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
     color: COLORS.gray,
-  },
-  errorOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: 20,
-    right: 20,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    padding: 12,
-    borderRadius: 8,
-  },
-  errorText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: '#FF6B6B',
   },
   // Stream indicator
   streamIndicator: {
@@ -891,5 +1046,111 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.jostLight,
     fontSize: 12,
     color: COLORS.gray,
+  },
+  // Loading/Error screens
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingScreenText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 16,
+    color: COLORS.gray,
+    marginTop: 16,
+  },
+  errorScreenText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 16,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorBackBtn: {
+    backgroundColor: COLORS.terra,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  errorBackBtnText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.cream,
+  },
+  // VIDEO PLAYER STYLES
+  videoContainer: {
+    flex: 1,
+    backgroundColor: '#000',
+  },
+  videoView: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+  },
+  videoTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  videoTitle: {
+    flex: 1,
+    fontFamily: FONTS.jostMedium,
+    fontSize: 16,
+    color: COLORS.cream,
+    textAlign: 'center',
+    marginHorizontal: 16,
+  },
+  videoCenterControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 40,
+  },
+  videoSkipBtn: {
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPlayBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(166,93,71,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoBottomBar: {
+    paddingHorizontal: 20,
+  },
+  videoProgressContainer: {
+    marginBottom: 12,
+  },
+  videoInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  videoArtist: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: COLORS.gray,
+  },
+  videoLoadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoLoadingText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: COLORS.gray,
+    marginTop: 16,
   },
 });
