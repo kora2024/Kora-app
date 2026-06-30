@@ -64,30 +64,41 @@ const SPRING = {
 
 function AnimatedCard({ children, onPress, style, delay = 0 }: any) {
   const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(30)).current;
+  const opacity = useRef(new Animated.Value(1)).current; // Start visible!
+  const translateY = useRef(new Animated.Value(0)).current; // Start at position!
+  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: TIMING.slow,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.spring(translateY, {
-        toValue: 0,
-        ...SPRING.gentle,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay]);
+    // Only animate if not already animated and delay is reasonable
+    if (!hasAnimated && delay < 500) {
+      opacity.setValue(0);
+      translateY.setValue(20);
+      
+      const timer = setTimeout(() => {
+        Animated.parallel([
+          Animated.timing(opacity, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.spring(translateY, {
+            toValue: 0,
+            tension: 100,
+            friction: 12,
+            useNativeDriver: true,
+          }),
+        ]).start(() => setHasAnimated(true));
+      }, delay);
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   const handlePressIn = () => {
     Animated.spring(scale, {
       toValue: 0.96,
-      ...SPRING.snappy,
+      tension: 200,
+      friction: 10,
       useNativeDriver: true,
     }).start();
   };
@@ -95,7 +106,8 @@ function AnimatedCard({ children, onPress, style, delay = 0 }: any) {
   const handlePressOut = () => {
     Animated.spring(scale, {
       toValue: 1,
-      ...SPRING.bouncy,
+      tension: 200,
+      friction: 8,
       useNativeDriver: true,
     }).start();
   };
@@ -1607,7 +1619,8 @@ const styles = StyleSheet.create({
   },
   horizontalList: {
     paddingHorizontal: 20,
-    gap: 14,
+    paddingRight: 6,
+    flexDirection: 'row',
   },
   
   // Globe
@@ -1837,6 +1850,7 @@ const styles = StyleSheet.create({
   // Content Card
   contentCard: {
     width: 140,
+    marginRight: 14,
   },
   contentImageWrapper: {
     width: '100%',
