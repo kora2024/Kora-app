@@ -603,105 +603,271 @@ function CreatorsToFollow({ creators, onCreatorPress }: { creators: any[]; onCre
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PLATFORMS BANNER
+// PREMIUM PRICING SECTION — Netflix/Spotify Level
 // ══════════════════════════════════════════════════════════════════════════════
 
-function PlatformsBanner() {
-  const PLATFORMS = [
-    { id: 'smarttv', label: 'Smart TV', sublabel: 'Samsung, LG, Android TV' },
-    { id: 'appletv', label: 'Apple TV', sublabel: '' },
-    { id: 'firetv', label: 'Fire TV', sublabel: '' },
-    { id: 'roku', label: 'Roku', sublabel: '' },
-    { id: 'ios', label: 'iOS', sublabel: '' },
-    { id: 'android', label: 'Android', sublabel: '' },
-    { id: 'web', label: 'Web', sublabel: 'kora.tv' },
+function PremiumPricingSection({ onJoin }: { onJoin: () => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const [activeUsers, setActiveUsers] = useState(47832);
+  const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Animate on mount
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+    ]).start();
+
+    // Subtle live counter animation
+    counterRef.current = setInterval(() => {
+      setActiveUsers(prev => prev + Math.floor(Math.random() * 3));
+    }, 5000);
+
+    return () => {
+      if (counterRef.current) clearInterval(counterRef.current);
+    };
+  }, []);
+
+  const PREMIUM_FEATURES = [
+    { id: 'noads', label: 'Sans publicité', sublabel: 'Écoute ininterrompue' },
+    { id: 'hd', label: 'Qualité Lossless', sublabel: 'Audio Hi-Res 24-bit' },
+    { id: 'download', label: 'Téléchargement', sublabel: 'Écoute hors-ligne' },
+    { id: 'exclusive', label: 'Contenus exclusifs', sublabel: 'Lives, documentaires' },
   ];
 
   return (
-    <View style={styles.platformsContainer}>
-      <Text style={styles.platformsTitle}>DISPONIBLE SUR TOUS VOS ÉCRANS</Text>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.platformsScrollContent}
-      >
-        {PLATFORMS.map((p) => (
-          <View key={p.id} style={styles.platformItem}>
-            <View style={styles.platformIcon}>
-              <Text style={styles.platformIconText}>{p.label.charAt(0)}</Text>
+    <Animated.View style={[styles.pricingSectionContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      {/* Subtle gradient background */}
+      <LinearGradient
+        colors={['rgba(201,168,76,0.03)', 'rgba(10,10,10,0)', 'rgba(166,93,71,0.02)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.pricingGradientBg}
+      />
+
+      {/* Social Proof - Animated */}
+      <View style={styles.socialProofContainer}>
+        <View style={styles.socialProofDot} />
+        <Text style={styles.socialProofText}>
+          <Text style={styles.socialProofNumber}>{activeUsers.toLocaleString('fr-FR')}</Text>
+          {' '}auditeurs en ce moment
+        </Text>
+      </View>
+
+      {/* Comparison Cards */}
+      <View style={styles.comparisonContainer}>
+        {/* Free Tier */}
+        <View style={styles.tierCard}>
+          <Text style={styles.tierLabel}>GRATUIT</Text>
+          <Text style={styles.tierPrice}>0€</Text>
+          <View style={styles.tierFeatures}>
+            <View style={styles.tierFeatureRow}>
+              <View style={styles.tierFeatureIconFree}>
+                <Text style={styles.tierFeatureIconText}>✓</Text>
+              </View>
+              <Text style={styles.tierFeatureText}>Catalogue limité</Text>
             </View>
-            <Text style={styles.platformLabel}>{p.label}</Text>
-            {p.sublabel ? <Text style={styles.platformSublabel}>{p.sublabel}</Text> : null}
+            <View style={styles.tierFeatureRow}>
+              <View style={styles.tierFeatureIconFree}>
+                <Text style={styles.tierFeatureIconText}>✓</Text>
+              </View>
+              <Text style={styles.tierFeatureText}>Avec publicités</Text>
+            </View>
+            <View style={styles.tierFeatureRow}>
+              <View style={[styles.tierFeatureIconFree, styles.tierFeatureIconDisabled]}>
+                <Text style={styles.tierFeatureIconTextDisabled}>—</Text>
+              </View>
+              <Text style={styles.tierFeatureTextDisabled}>Téléchargement</Text>
+            </View>
+            <View style={styles.tierFeatureRow}>
+              <View style={[styles.tierFeatureIconFree, styles.tierFeatureIconDisabled]}>
+                <Text style={styles.tierFeatureIconTextDisabled}>—</Text>
+              </View>
+              <Text style={styles.tierFeatureTextDisabled}>Qualité HD</Text>
+            </View>
           </View>
-        ))}
-      </ScrollView>
-    </View>
+        </View>
+
+        {/* Premium Tier */}
+        <View style={[styles.tierCard, styles.tierCardPremium]}>
+          <LinearGradient
+            colors={['rgba(201,168,76,0.15)', 'rgba(201,168,76,0.05)']}
+            style={styles.tierCardPremiumGlow}
+          />
+          <View style={styles.tierBadge}>
+            <Text style={styles.tierBadgeText}>RECOMMANDÉ</Text>
+          </View>
+          <Text style={styles.tierLabelPremium}>PREMIUM</Text>
+          <View style={styles.tierPriceRow}>
+            <Text style={styles.tierPricePremium}>3,98€</Text>
+            <Text style={styles.tierPricePeriod}>/mois</Text>
+          </View>
+          <View style={styles.tierFeatures}>
+            {PREMIUM_FEATURES.map((feature) => (
+              <View key={feature.id} style={styles.tierFeatureRow}>
+                <View style={styles.tierFeatureIconPremium}>
+                  <CheckIcon size={12} color={CINEMA.gold} />
+                </View>
+                <View style={styles.tierFeatureTextContainer}>
+                  <Text style={styles.tierFeatureTextPremium}>{feature.label}</Text>
+                  <Text style={styles.tierFeatureSublabel}>{feature.sublabel}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.tierCTA} onPress={onJoin} activeOpacity={0.9}>
+            <LinearGradient
+              colors={[CINEMA.gold, '#B8963F']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.tierCTAGradient}
+            >
+              <Text style={styles.tierCTAText}>COMMENCER L'ESSAI GRATUIT</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.tierCTASubtext}>7 jours gratuits, annulez quand vous voulez</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+// Check Icon for premium features
+function CheckIcon({ size = 16, color = CINEMA.gold }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
+      <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FOOTER
+// FOOTER — Major DSP Level (Spotify/Netflix/Apple Music)
 // ══════════════════════════════════════════════════════════════════════════════
 
 function Footer({ onJoin }: { onJoin: () => void }) {
   return (
     <View style={styles.footerContainer}>
+      {/* Top Section - Branding + Links */}
       <View style={styles.footerTop}>
-        {/* Logo + Socials */}
-        <View style={styles.footerLogoSection}>
+        {/* Brand Column */}
+        <View style={styles.footerBrand}>
           <Text style={styles.footerLogo}>KORA</Text>
-          <Text style={styles.footerTagline}>BEYOND SOUND.{'\n'}BEYOND TIME.</Text>
+          <Text style={styles.footerTagline}>La culture en mouvement</Text>
+          
+          {/* Social Icons */}
           <View style={styles.footerSocials}>
-            {['IG', 'YT', 'TK', 'X'].map((s) => (
-              <View key={s} style={styles.footerSocialIcon}>
-                <Text style={styles.footerSocialText}>{s}</Text>
-              </View>
-            ))}
+            <TouchableOpacity style={styles.footerSocialBtn}>
+              <InstagramIcon size={18} color={CINEMA.cream} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.footerSocialBtn}>
+              <YoutubeIcon size={18} color={CINEMA.cream} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.footerSocialBtn}>
+              <TiktokIcon size={18} color={CINEMA.cream} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.footerSocialBtn}>
+              <XIcon size={18} color={CINEMA.cream} />
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Links Columns */}
-        <View style={styles.footerColumns}>
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>KORA</Text>
-            {['À propos', 'Carrières', 'Presse', 'Partenaires'].map((link) => (
-              <Text key={link} style={styles.footerLink}>{link}</Text>
-            ))}
+        {/* Links Grid */}
+        <View style={styles.footerLinksGrid}>
+          <View style={styles.footerLinkColumn}>
+            <Text style={styles.footerLinkTitle}>Entreprise</Text>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>À propos</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Carrières</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Presse</Text></TouchableOpacity>
           </View>
-
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>LÉGAL</Text>
-            {['Conditions', 'Confidentialité', 'Cookies', 'Mentions'].map((link) => (
-              <Text key={link} style={styles.footerLink}>{link}</Text>
-            ))}
+          <View style={styles.footerLinkColumn}>
+            <Text style={styles.footerLinkTitle}>Communautés</Text>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
           </View>
-
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>AIDE</Text>
-            {['Centre d\'aide', 'Contact', 'Abonnement', 'FAQ'].map((link) => (
-              <Text key={link} style={styles.footerLink}>{link}</Text>
-            ))}
+          <View style={styles.footerLinkColumn}>
+            <Text style={styles.footerLinkTitle}>Liens utiles</Text>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Assistance</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>App mobile</Text></TouchableOpacity>
+            <TouchableOpacity><Text style={styles.footerLinkItem}>Compte</Text></TouchableOpacity>
           </View>
         </View>
+      </View>
 
-        {/* Pricing CTA */}
-        <View style={styles.footerPricing}>
-          <Text style={styles.footerPrice}>3,98€</Text>
-          <Text style={styles.footerPriceLabel}>/ MOIS</Text>
-          <Text style={styles.footerPriceSubtext}>ACCÉDEZ À TOUT KORA</Text>
-          <TouchableOpacity style={styles.footerCTA} onPress={onJoin} activeOpacity={0.9}>
-            <Text style={styles.footerCTAText}>ESSAYER MAINTENANT</Text>
+      {/* Divider */}
+      <View style={styles.footerDivider} />
+
+      {/* Bottom Section - Legal + Platform badges */}
+      <View style={styles.footerBottom}>
+        <View style={styles.footerLegal}>
+          <TouchableOpacity><Text style={styles.footerLegalLink}>Légal</Text></TouchableOpacity>
+          <Text style={styles.footerLegalDot}>•</Text>
+          <TouchableOpacity><Text style={styles.footerLegalLink}>Confidentialité</Text></TouchableOpacity>
+          <Text style={styles.footerLegalDot}>•</Text>
+          <TouchableOpacity><Text style={styles.footerLegalLink}>Cookies</Text></TouchableOpacity>
+        </View>
+
+        <View style={styles.footerMeta}>
+          <TouchableOpacity style={styles.footerLangBtn}>
+            <GlobeIcon size={14} color="rgba(255,255,255,0.5)" />
+            <Text style={styles.footerLangText}>France (FR)</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.footerBottom}>
-        <Text style={styles.footerCopyright}>© 2024 KORA. TOUS DROITS RÉSERVÉS.</Text>
-        <View style={styles.footerLang}>
-          <Text style={styles.footerLangText}>FR</Text>
-        </View>
-      </View>
+      {/* Copyright */}
+      <Text style={styles.footerCopyright}>© 2024 KORA Technologies. Tous droits réservés.</Text>
     </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOCIAL ICONS (SVG)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function InstagramIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Rect x="2" y="2" width="20" height="20" rx="5" />
+      <Circle cx="12" cy="12" r="4" />
+      <Circle cx="18" cy="6" r="1" fill={color} />
+    </Svg>
+  );
+}
+
+function YoutubeIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Path d="M22.54 6.42a2.78 2.78 0 00-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 00-1.94 2A29 29 0 001 11.75a29 29 0 00.46 5.33A2.78 2.78 0 003.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 001.94-2 29 29 0 00.46-5.25 29 29 0 00-.46-5.33z" />
+      <Path d="M9.75 15.02l5.75-3.27-5.75-3.27v6.54z" fill={color} />
+    </Svg>
+  );
+}
+
+function TiktokIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Path d="M9 12a4 4 0 104 4V4a5 5 0 005 5" />
+    </Svg>
+  );
+}
+
+function XIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Path d="M4 4l11.733 16h4.267l-11.733-16zM4 20l6.4-8M20 4l-6.4 8" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+function GlobeIcon({ size = 16, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Circle cx="12" cy="12" r="10" />
+      <Path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+    </Svg>
   );
 }
 
@@ -903,8 +1069,8 @@ export default function KoraHome() {
         {/* Creators to Follow */}
         <CreatorsToFollow creators={creators} onCreatorPress={handleCreatorPress} />
         
-        {/* Platforms Banner */}
-        <PlatformsBanner />
+        {/* Premium Pricing Section */}
+        <PremiumPricingSection onJoin={handleJoin} />
         
         {/* Footer */}
         <Footer onJoin={handleJoin} />
@@ -1689,98 +1855,318 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  footerSocialIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.06)',
+
+  // ─── Premium Pricing Section ──────────────────────────────────────────────────
+  pricingSectionContainer: {
+    marginTop: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 40,
+    position: 'relative',
+  },
+  pricingGradientBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 0,
+  },
+  socialProofContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+    gap: 8,
+  },
+  socialProofDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
+  },
+  socialProofText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  socialProofNumber: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 13,
+    color: CINEMA.cream,
+  },
+  comparisonContainer: {
+    flexDirection: SW > 500 ? 'row' : 'column',
+    gap: 16,
+    justifyContent: 'center',
+    alignItems: SW > 500 ? 'stretch' : 'center',
+  },
+  tierCard: {
+    flex: SW > 500 ? 1 : undefined,
+    maxWidth: SW > 500 ? 280 : 320,
+    width: SW > 500 ? undefined : '100%',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  tierCardPremium: {
+    borderColor: 'rgba(201,168,76,0.3)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  tierCardPremiumGlow: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  tierBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: CINEMA.gold,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  tierBadgeText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 8,
+    color: CINEMA.black,
+    letterSpacing: 1,
+  },
+  tierLabel: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  tierLabelPremium: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: CINEMA.gold,
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  tierPrice: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 32,
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 16,
+  },
+  tierPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 20,
+  },
+  tierPricePremium: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 36,
+    color: CINEMA.gold,
+  },
+  tierPricePeriod: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.5)',
+    marginLeft: 4,
+  },
+  tierFeatures: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  tierFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  tierFeatureIconFree: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  footerSocialText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 9,
-    color: CINEMA.cream,
+  tierFeatureIconDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
-  footerColumns: {
-    flexDirection: 'row',
-    flex: SW > 600 ? 2 : undefined,
-    gap: SW > 600 ? 28 : 20,
-  },
-  footerColumn: {
-    flex: 1,
-  },
-  footerColumnTitle: {
+  tierFeatureIconText: {
     fontFamily: FONTS.jostMedium,
     fontSize: 10,
-    color: CINEMA.cream,
-    letterSpacing: 1,
-    marginBottom: 14,
+    color: 'rgba(255,255,255,0.4)',
   },
-  footerLink: {
+  tierFeatureIconTextDisabled: {
+    color: 'rgba(255,255,255,0.15)',
+  },
+  tierFeatureIconPremium: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  tierFeatureText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  tierFeatureTextDisabled: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.2)',
+    textDecorationLine: 'line-through',
+  },
+  tierFeatureTextContainer: {
+    flex: 1,
+  },
+  tierFeatureTextPremium: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 13,
+    color: CINEMA.cream,
+  },
+  tierFeatureSublabel: {
     fontFamily: FONTS.jostLight,
     fontSize: 11,
-    color: 'rgba(255,255,255,0.45)',
+    color: 'rgba(255,255,255,0.4)',
+    marginTop: 1,
+  },
+  tierCTA: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  tierCTAGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  tierCTAText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.black,
+    letterSpacing: 1,
+  },
+  tierCTASubtext: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.35)',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+
+  // ─── Footer (DSP Level) ───────────────────────────────────────────────────────
+  footerContainer: {
+    marginTop: 40,
+    paddingTop: 40,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    backgroundColor: 'rgba(255,255,255,0.015)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.04)',
+  },
+  footerTop: {
+    flexDirection: SW > 600 ? 'row' : 'column',
+    gap: 32,
+    marginBottom: 32,
+  },
+  footerBrand: {
+    flex: SW > 600 ? 1 : undefined,
+    marginBottom: SW > 600 ? 0 : 20,
+  },
+  footerLogo: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 28,
+    color: CINEMA.gold,
+    letterSpacing: 3,
     marginBottom: 8,
   },
-  footerPricing: {
-    flex: SW > 600 ? 1 : undefined,
-    alignItems: SW > 600 ? 'flex-end' : 'center',
-    marginTop: SW > 600 ? 0 : 20,
-  },
-  footerPrice: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 32,
-    color: CINEMA.gold,
-  },
-  footerPriceLabel: {
+  footerTagline: {
     fontFamily: FONTS.jostLight,
-    fontSize: 11,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.45)',
-    marginBottom: 4,
+    marginBottom: 20,
   },
-  footerPriceSubtext: {
+  footerSocialBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerLinksGrid: {
+    flex: SW > 600 ? 2 : undefined,
+    flexDirection: 'row',
+    gap: SW > 600 ? 40 : 24,
+    flexWrap: 'wrap',
+  },
+  footerLinkColumn: {
+    minWidth: 90,
+  },
+  footerLinkTitle: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 9,
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 1,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 0.5,
     marginBottom: 14,
   },
-  footerCTA: {
-    backgroundColor: CINEMA.terra,
-    paddingVertical: 12,
-    paddingHorizontal: 22,
-    borderRadius: 4,
+  footerLinkItem: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.4)',
+    marginBottom: 10,
   },
-  footerCTAText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 11,
-    color: CINEMA.cream,
-    letterSpacing: 1,
+  footerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    marginBottom: 20,
   },
   footerBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  footerLegal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  footerLegalLink: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.35)',
+  },
+  footerLegalDot: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.2)',
+    marginHorizontal: 4,
+  },
+  footerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  footerLangBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  footerLangText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
   },
   footerCopyright: {
     fontFamily: FONTS.jostLight,
-    fontSize: 9,
+    fontSize: 11,
     color: 'rgba(255,255,255,0.25)',
-    letterSpacing: 1,
-  },
-  footerLang: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  footerLangText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
   },
 });

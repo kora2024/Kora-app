@@ -112,6 +112,18 @@ user_problem_statement: |
   5. Home Page with Real Catalog (loading from API)
 
 frontend:
+  - task: "Premium Pricing Section & Footer - Home Page"
+    implemented: true
+    working: false
+    file: "frontend/app/home.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL RENDERING ISSUE - 2026-06-30. TESTED on Desktop (1280x800) and Mobile (390x844). CODE IMPLEMENTATION: ✅ COMPLETE - PremiumPricingSection component (lines 606-733) and Footer component (lines 749-823) are fully implemented with all requested features. DOM CONTENT: ✅ PRESENT - All text content found in document.body.innerText including 'auditeurs en ce moment', 'GRATUIT', 'PREMIUM', 'COMMENCER L'ESSAI GRATUIT', '7 jours gratuits', 'La culture en mouvement', 'Entreprise', 'Communautés', 'Liens utiles', 'Légal', 'Confidentialité', 'Cookies', 'France (FR)', '© 2024 KORA Technologies'. VISUAL RENDERING: ❌ FAILED - Sections are NOT visible on screen. Page height reports only 800px (viewport height) instead of full content height. ScrollView is not expanding to show content below the fold. All screenshots (desktop_01-04, mobile_01-02) show only the top portion of the page (hero section and featured content). Scrolling to bottom does not reveal pricing section or footer. ROOT CAUSE: React Native Web ScrollView rendering issue - content below viewport is not being displayed even though it exists in DOM. IMPACT: Cannot test any of the new Premium Pricing or Footer features visually. FIX NEEDED: Investigate ScrollView contentContainerStyle, check parent View height constraints, ensure ScrollView can expand beyond viewport height on web. Possible solutions: (1) Add explicit minHeight to contentContainerStyle, (2) Check if parent View has fixed height, (3) Use FlatList instead of ScrollView for better web compatibility, (4) Add flexGrow: 1 to contentContainerStyle."
+
   - task: "Landing Page - Netflix-Style Cinematic Interface"
     implemented: true
     working: true
@@ -642,6 +654,71 @@ frontend:
         comment: "❌ CRITICAL ROUTING ISSUE: File exists at /app/frontend/app/creator/studio.tsx (64KB, fully implemented with all 8 tabs) but expo-router is NOT recognizing the route. Console error: 'No route named creator/studio exists in nested children'. When navigating to /creator/studio, app redirects to /auth/login. Route is not being picked up even after restarting expo service. Available routes: [biometric, eveil, home, index, landing, noyau, orbite, paywall, player, settings, upload, auth, creator]. The 'creator' directory is recognized but individual files inside (studio.tsx, [id].tsx) are not being registered as routes. This is a BLOCKING ISSUE preventing any testing of the Creator Studio feature."
 
 agent_communication:
+  - agent: "testing"
+    message: |
+      ❌ CRITICAL RENDERING ISSUE - Premium Pricing Section & Footer NOT VISIBLE - 2026-06-30
+      
+      Test URL: http://localhost:3000/home
+      Devices Tested: Desktop (1280x800), Mobile (390x844)
+      Test Method: Playwright automation + DOM inspection
+      
+      ISSUE SUMMARY:
+      The newly implemented Premium Pricing Section and Footer components are NOT rendering visually on the home page, even though they exist in the code and their content is present in the DOM.
+      
+      DETAILED FINDINGS:
+      
+      1. ✅ CODE IMPLEMENTATION - COMPLETE:
+         - PremiumPricingSection component: lines 606-733 in home.tsx
+         - Footer component: lines 749-823 in home.tsx
+         - Both components are correctly imported and rendered in ScrollView (lines 1073, 1076)
+         - All requested features are implemented:
+           * Social proof counter with animation
+           * Free vs Premium comparison cards
+           * Premium features list with gold checkmarks
+           * CTA button "COMMENCER L'ESSAI GRATUIT"
+           * Footer with logo, social icons, links grid, legal links, language selector, copyright
+      
+      2. ✅ DOM CONTENT - PRESENT:
+         - All text content found in document.body.innerText:
+           * "auditeurs en ce moment" ✓
+           * "GRATUIT" ✓
+           * "PREMIUM" ✓
+           * "Sans publicité", "Qualité Lossless", "Téléchargement", "Contenus exclusifs" ✓
+           * "COMMENCER L'ESSAI GRATUIT" ✓
+           * "7 jours gratuits, annulez quand vous voulez" ✓
+           * "La culture en mouvement" ✓
+           * "Entreprise", "Communautés", "Liens utiles" ✓
+           * "Légal", "Confidentialité", "Cookies" ✓
+           * "France (FR)" ✓
+           * "© 2024 KORA Technologies. Tous droits réservés." ✓
+      
+      3. ❌ VISUAL RENDERING - FAILED:
+         - Page height: 800px (viewport height only)
+         - Expected: >3000px (with all content sections)
+         - ScrollView is NOT expanding to show content below the fold
+         - All screenshots show only the top portion of the page
+         - Scrolling to bottom does not reveal pricing section or footer
+      
+      ROOT CAUSE:
+      React Native Web ScrollView rendering issue. The ScrollView component is not properly calculating or rendering its full content height on web. Content below the initial viewport is not being displayed even though it exists in the DOM.
+      
+      RECOMMENDED FIXES:
+      1. Add explicit height calculation to ScrollView contentContainerStyle
+      2. Check if parent View has height constraints (should use flex: 1)
+      3. Try adding flexGrow: 1 to contentContainerStyle
+      4. Consider using FlatList instead of ScrollView for better web compatibility
+      5. Add minHeight to contentContainerStyle based on content
+      6. Check if there's a CSS overflow issue on the parent container
+      
+      IMPACT:
+      - Cannot test Premium Pricing Section features
+      - Cannot test Footer features
+      - User experience is broken - users cannot see pricing or footer information
+      - This is a BLOCKING ISSUE for the new feature release
+      
+      NEXT STEPS:
+      Main agent should investigate and fix the ScrollView rendering issue before retesting.
+  
   - agent: "testing"
     message: |
       ✅ KORA PREMIUM UI REDESIGN - COMPLETE TESTING PASSED - 2026-06-30
