@@ -6,6 +6,7 @@
  * Palette: Dark #0A0A0A / Gold #C9A84C / Terra #A65D47
  * 
  * UPDATED: Integrates global playerStore for DSP mini-player
+ * UPGRADED: P2 Cinematic animations with parallax & scroll reveals
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -25,6 +26,8 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -34,6 +37,13 @@ import * as Haptics from 'expo-haptics';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
 import { usePlayerStore } from '../src/stores/playerStore';
+import { 
+  ScalePressable, 
+  AmbientGlow, 
+  FloatingParticles,
+  StaggerReveal,
+  PulseButton,
+} from '../src/components/CinematicAnimations';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -1002,6 +1012,69 @@ export default function KoraHome() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CINEMATIC SCROLL ANIMATIONS (P2)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const heroScale = useRef(new Animated.Value(1)).current;
+  const heroOpacity = useRef(new Animated.Value(1)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Section reveal animations
+  const sectionAnims = useRef({
+    featured: { opacity: new Animated.Value(0), translateY: new Animated.Value(40) },
+    trending: { opacity: new Animated.Value(0), translateY: new Animated.Value(40) },
+    continue: { opacity: new Animated.Value(0), translateY: new Animated.Value(40) },
+    pricing: { opacity: new Animated.Value(0), translateY: new Animated.Value(40) },
+    footer: { opacity: new Animated.Value(0), translateY: new Animated.Value(40) },
+  }).current;
+
+  // Animate sections on mount
+  useEffect(() => {
+    Animated.stagger(150, [
+      Animated.parallel([
+        Animated.timing(sectionAnims.featured.opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(sectionAnims.featured.translateY, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(sectionAnims.trending.opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(sectionAnims.trending.translateY, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(sectionAnims.continue.opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(sectionAnims.continue.translateY, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(sectionAnims.pricing.opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(sectionAnims.pricing.translateY, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(sectionAnims.footer.opacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.spring(sectionAnims.footer.translateY, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+      ]),
+    ]).start();
+
+    // Initial content fade-in
+    Animated.timing(contentOpacity, { toValue: 1, duration: 800, useNativeDriver: true }).start();
+  }, []);
+
+  // Scroll event handler with parallax
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { 
+      useNativeDriver: false,
+      listener: (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        const y = event.nativeEvent.contentOffset.y;
+        
+        // Hero parallax effect
+        const newScale = Math.max(0.9, 1 - y / 1500);
+        const newOpacity = Math.max(0, 1 - y / 400);
+        heroScale.setValue(newScale);
+        heroOpacity.setValue(newOpacity);
+      }
+    }
+  );
+
   // Global Player Store - DSP architecture
   const { setCurrentTrack: setGlobalTrack, setMiniPlayerVisible } = usePlayerStore();
 
@@ -1152,6 +1225,13 @@ export default function KoraHome() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
+      {/* Ambient Glow Effects (P2) */}
+      <AmbientGlow color={CINEMA.gold} size={300} intensity={0.08} position={{ top: 50, left: -100 }} />
+      <AmbientGlow color={CINEMA.terra} size={250} intensity={0.06} position={{ top: SH * 0.4, left: SW - 80 }} />
+      
+      {/* Floating Particles (P2) */}
+      <FloatingParticles count={6} color={CINEMA.gold} />
+
       {/* Fixed Header */}
       <Header onSettings={handleSettings} onSearch={handleSearch} onNavigate={handleNavigate} />
 
@@ -1178,12 +1258,14 @@ export default function KoraHome() {
         </View>
       )}
 
-      <ScrollView
+      <Animated.ScrollView
         ref={scrollRef}
-        style={styles.scrollView}
+        style={[styles.scrollView, { opacity: contentOpacity }]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40, flexGrow: 1 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 100, flexGrow: 1 }}
         nestedScrollEnabled={true}
+        scrollEventThrottle={16}
+        onScroll={handleScroll}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1193,33 +1275,60 @@ export default function KoraHome() {
           />
         }
       >
-        {/* Hero */}
-        <HeroSection onPlay={handlePlay} featuredContent={featuredTracks[0]} />
+        {/* Hero with Parallax (P2) */}
+        <Animated.View style={{ transform: [{ scale: heroScale }], opacity: heroOpacity }}>
+          <HeroSection onPlay={handlePlay} featuredContent={featuredTracks[0]} />
+        </Animated.View>
         
-        {/* Featured Content Grid */}
-        <FeaturedContentGrid items={transformedFeatured} onItemPress={handlePlay} />
+        {/* Featured Content Grid with Reveal Animation */}
+        <Animated.View style={{
+          opacity: sectionAnims.featured.opacity,
+          transform: [{ translateY: sectionAnims.featured.translateY }],
+        }}>
+          <FeaturedContentGrid items={transformedFeatured} onItemPress={handlePlay} />
+        </Animated.View>
         
         {/* Category Row */}
         <CategoryRow onCategoryPress={handleCategoryPress} />
         
-        {/* Trending Hub */}
-        <TrendingHub items={trendingTracks} onItemPress={handlePlay} />
+        {/* Trending Hub with Reveal Animation */}
+        <Animated.View style={{
+          opacity: sectionAnims.trending.opacity,
+          transform: [{ translateY: sectionAnims.trending.translateY }],
+        }}>
+          <TrendingHub items={trendingTracks} onItemPress={handlePlay} />
+        </Animated.View>
         
-        {/* Continue Watching (Mini-player is now global in _layout.tsx) */}
-        <ContinueWatchingSection 
-          items={featuredTracks.slice(0, 4)} 
-          onItemPress={handlePlay} 
-        />
+        {/* Continue Watching with Reveal Animation */}
+        <Animated.View style={{
+          opacity: sectionAnims.continue.opacity,
+          transform: [{ translateY: sectionAnims.continue.translateY }],
+        }}>
+          <ContinueWatchingSection 
+            items={featuredTracks.slice(0, 4)} 
+            onItemPress={handlePlay} 
+          />
+        </Animated.View>
         
         {/* Creators to Follow */}
         <CreatorsToFollow creators={creators} onCreatorPress={handleCreatorPress} />
         
-        {/* Premium Pricing Section */}
-        <PremiumPricingSection onSelectPlan={handleSelectPlan} />
+        {/* Premium Pricing Section with Reveal Animation */}
+        <Animated.View style={{
+          opacity: sectionAnims.pricing.opacity,
+          transform: [{ translateY: sectionAnims.pricing.translateY }],
+        }}>
+          <PremiumPricingSection onSelectPlan={handleSelectPlan} />
+        </Animated.View>
         
-        {/* Footer */}
-        <Footer onNavigate={handleNavigate} />
-      </ScrollView>
+        {/* Footer with Reveal Animation */}
+        <Animated.View style={{
+          opacity: sectionAnims.footer.opacity,
+          transform: [{ translateY: sectionAnims.footer.translateY }],
+        }}>
+          <Footer onNavigate={handleNavigate} />
+        </Animated.View>
+      </Animated.ScrollView>
     </View>
   );
 }
