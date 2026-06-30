@@ -39,6 +39,7 @@ stripe.api_key = STRIPE_API_KEY
 
 # KORA Premium Price (3,98€/month)
 KORA_PREMIUM_PRICE_CENTS = 398  # 3.98 EUR in cents
+KORA_FAMILY_PRICE_CENTS = 798   # 7.98 EUR in cents (Pack Famille)
 KORA_PREMIUM_CURRENCY = 'eur'
 
 # Configure logging
@@ -406,14 +407,38 @@ class SubscriptionStatus(BaseModel):
     current_period_end: Optional[datetime] = None
 
 
+class CheckoutSessionRequest(BaseModel):
+    plan_type: str = 'premium'  # 'premium' or 'family'
+
 @subscriptions_router.post("/checkout-session", response_model=CheckoutSessionResponse)
 async def create_checkout_session(
     request: Request,
-    user_id: Optional[str] = None,
+    body: CheckoutSessionRequest = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Create Stripe Checkout Session for KORA Premium (3,98€/mois)"""
+    """Create Stripe Checkout Session for KORA Premium (3,98€/mois) or Family (7,98€/mois)"""
     try:
+        # Parse body manually if needed
+        plan_type = 'premium'
+        if body:
+            plan_type = body.plan_type
+        else:
+            try:
+                json_body = await request.json()
+                plan_type = json_body.get('plan_type', 'premium')
+            except:
+                pass
+        
+        # Determine price and product based on plan
+        if plan_type == 'family':
+            price_cents = KORA_FAMILY_PRICE_CENTS
+            product_name = 'KORA Pack Famille'
+            product_description = 'Jusqu\'à 6 comptes, streaming illimité, qualité Hi-Res, contrôle parental'
+        else:
+            price_cents = KORA_PREMIUM_PRICE_CENTS
+            product_name = 'KORA Premium'
+            product_description = 'Streaming illimité audio & vidéo, qualité Hi-Res, téléchargement hors-ligne'
+        
         # Get base URL for redirects
         origin = request.headers.get('origin', request.headers.get('referer', 'https://localhost:3000'))
         base_url = origin.rstrip('/')
@@ -446,10 +471,10 @@ async def create_checkout_session(
                 'price_data': {
                     'currency': KORA_PREMIUM_CURRENCY,
                     'product_data': {
-                        'name': 'KORA Premium',
-                        'description': 'Streaming illimité audio & vidéo, qualité Hi-Res, téléchargement hors-ligne',
+                        'name': product_name,
+                        'description': product_description,
                     },
-                    'unit_amount': KORA_PREMIUM_PRICE_CENTS,
+                    'unit_amount': price_cents,
                     'recurring': {
                         'interval': 'month',
                     },

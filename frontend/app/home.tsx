@@ -604,10 +604,10 @@ function CreatorsToFollow({ creators, onCreatorPress }: { creators: any[]; onCre
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PREMIUM PRICING SECTION — Netflix/Spotify Level
+// PREMIUM PRICING SECTION — Netflix/Spotify Level + Pack Famille
 // ══════════════════════════════════════════════════════════════════════════════
 
-function PremiumPricingSection({ onJoin }: { onJoin: () => void }) {
+function PremiumPricingSection({ onSelectPlan }: { onSelectPlan: (plan: 'premium' | 'family') => void }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const [activeUsers, setActiveUsers] = useState(47832);
@@ -635,6 +635,13 @@ function PremiumPricingSection({ onJoin }: { onJoin: () => void }) {
     { id: 'hd', label: 'Qualité Lossless', sublabel: 'Audio Hi-Res 24-bit' },
     { id: 'download', label: 'Téléchargement', sublabel: 'Écoute hors-ligne' },
     { id: 'exclusive', label: 'Contenus exclusifs', sublabel: 'Lives, documentaires' },
+  ];
+
+  const FAMILY_FEATURES = [
+    { id: 'accounts', label: 'Jusqu\'à 6 comptes', sublabel: 'Chacun son profil' },
+    { id: 'noads', label: 'Sans publicité', sublabel: 'Pour toute la famille' },
+    { id: 'hd', label: 'Qualité Lossless', sublabel: 'Sur tous les comptes' },
+    { id: 'parental', label: 'Contrôle parental', sublabel: 'Contenus adaptés' },
   ];
 
   return (
@@ -697,7 +704,7 @@ function PremiumPricingSection({ onJoin }: { onJoin: () => void }) {
             style={styles.tierCardPremiumGlow}
           />
           <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>RECOMMANDÉ</Text>
+            <Text style={styles.tierBadgeText}>POPULAIRE</Text>
           </View>
           <Text style={styles.tierLabelPremium}>PREMIUM</Text>
           <View style={styles.tierPriceRow}>
@@ -717,17 +724,57 @@ function PremiumPricingSection({ onJoin }: { onJoin: () => void }) {
               </View>
             ))}
           </View>
-          <TouchableOpacity style={styles.tierCTA} onPress={onJoin} activeOpacity={0.9}>
+          <TouchableOpacity style={styles.tierCTA} onPress={() => onSelectPlan('premium')} activeOpacity={0.9}>
             <LinearGradient
               colors={[CINEMA.gold, '#B8963F']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.tierCTAGradient}
             >
-              <Text style={styles.tierCTAText}>COMMENCER L'ESSAI GRATUIT</Text>
+              <Text style={styles.tierCTAText}>S'ABONNER</Text>
             </LinearGradient>
           </TouchableOpacity>
-          <Text style={styles.tierCTASubtext}>7 jours gratuits, annulez quand vous voulez</Text>
+          <Text style={styles.tierCTASubtext}>7 jours gratuits puis 3,98€/mois</Text>
+        </View>
+
+        {/* Family Tier */}
+        <View style={[styles.tierCard, styles.tierCardFamily]}>
+          <LinearGradient
+            colors={['rgba(166,93,71,0.15)', 'rgba(166,93,71,0.05)']}
+            style={styles.tierCardPremiumGlow}
+          />
+          <View style={[styles.tierBadge, styles.tierBadgeFamily]}>
+            <Text style={styles.tierBadgeText}>FAMILLE</Text>
+          </View>
+          <Text style={styles.tierLabelFamily}>PACK FAMILLE</Text>
+          <View style={styles.tierPriceRow}>
+            <Text style={styles.tierPriceFamily}>7,98€</Text>
+            <Text style={styles.tierPricePeriod}>/mois</Text>
+          </View>
+          <View style={styles.tierFeatures}>
+            {FAMILY_FEATURES.map((feature) => (
+              <View key={feature.id} style={styles.tierFeatureRow}>
+                <View style={styles.tierFeatureIconFamily}>
+                  <CheckIcon size={12} color={CINEMA.terra} />
+                </View>
+                <View style={styles.tierFeatureTextContainer}>
+                  <Text style={styles.tierFeatureTextPremium}>{feature.label}</Text>
+                  <Text style={styles.tierFeatureSublabel}>{feature.sublabel}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity style={[styles.tierCTA, styles.tierCTAFamily]} onPress={() => onSelectPlan('family')} activeOpacity={0.9}>
+            <LinearGradient
+              colors={[CINEMA.terra, '#8B4D3B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.tierCTAGradient}
+            >
+              <Text style={styles.tierCTAText}>CHOISIR FAMILLE</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+          <Text style={styles.tierCTASubtext}>7 jours gratuits puis 7,98€/mois</Text>
         </View>
       </View>
     </Animated.View>
@@ -744,10 +791,10 @@ function CheckIcon({ size = 16, color = CINEMA.gold }: { size?: number; color?: 
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// FOOTER — Major DSP Level (Spotify/Netflix/Apple Music)
+// FOOTER — Major DSP Level avec Vraies Routes
 // ══════════════════════════════════════════════════════════════════════════════
 
-function Footer({ onJoin }: { onJoin: () => void }) {
+function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
   return (
     <View style={styles.footerContainer}>
       {/* Top Section - Branding + Links */}
@@ -778,21 +825,21 @@ function Footer({ onJoin }: { onJoin: () => void }) {
         <View style={styles.footerLinksGrid}>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Entreprise</Text>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>À propos</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Carrières</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Presse</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>À propos</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/contact')}><Text style={styles.footerLinkItem}>Contact</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>Presse</Text></TouchableOpacity>
           </View>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Communautés</Text>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/creator/studio')}><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/contact')}><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
           </View>
           <View style={styles.footerLinkColumn}>
-            <Text style={styles.footerLinkTitle}>Liens utiles</Text>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Assistance</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>App mobile</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLinkItem}>Compte</Text></TouchableOpacity>
+            <Text style={styles.footerLinkTitle}>Aide</Text>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/help')}><Text style={styles.footerLinkItem}>Centre d'aide</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/paywall')}><Text style={styles.footerLinkItem}>Abonnement</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/settings')}><Text style={styles.footerLinkItem}>Compte</Text></TouchableOpacity>
           </View>
         </View>
       </View>
@@ -803,11 +850,11 @@ function Footer({ onJoin }: { onJoin: () => void }) {
       {/* Bottom Section - Legal + Platform badges */}
       <View style={styles.footerBottom}>
         <View style={styles.footerLegal}>
-          <TouchableOpacity><Text style={styles.footerLegalLink}>Légal</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('/(static)/legal')}><Text style={styles.footerLegalLink}>Mentions légales</Text></TouchableOpacity>
           <Text style={styles.footerLegalDot}>•</Text>
-          <TouchableOpacity><Text style={styles.footerLegalLink}>Confidentialité</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('/(static)/privacy')}><Text style={styles.footerLegalLink}>Confidentialité</Text></TouchableOpacity>
           <Text style={styles.footerLegalDot}>•</Text>
-          <TouchableOpacity><Text style={styles.footerLegalLink}>Cookies</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('/(static)/privacy')}><Text style={styles.footerLegalLink}>Cookies</Text></TouchableOpacity>
         </View>
 
         <View style={styles.footerMeta}>
@@ -993,9 +1040,17 @@ export default function KoraHome() {
     });
   }, [router, hapticFeedback]);
 
-  const handleJoin = useCallback(() => {
+  const handleSelectPlan = useCallback((plan: 'premium' | 'family') => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Heavy);
-    router.push('/paywall');
+    router.push({
+      pathname: '/paywall',
+      params: { plan }
+    });
+  }, [router, hapticFeedback]);
+
+  const handleNavigate = useCallback((route: string) => {
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
+    router.push(route as any);
   }, [router, hapticFeedback]);
 
   // Transform tracks for display
@@ -1072,10 +1127,10 @@ export default function KoraHome() {
         <CreatorsToFollow creators={creators} onCreatorPress={handleCreatorPress} />
         
         {/* Premium Pricing Section */}
-        <PremiumPricingSection onJoin={handleJoin} />
+        <PremiumPricingSection onSelectPlan={handleSelectPlan} />
         
         {/* Footer */}
-        <Footer onJoin={handleJoin} />
+        <Footer onNavigate={handleNavigate} />
       </ScrollView>
     </View>
   );
@@ -2059,6 +2114,40 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
     textAlign: 'center',
     marginTop: 10,
+  },
+
+  // Pack Famille specific styles
+  tierCardFamily: {
+    borderColor: 'rgba(166,93,71,0.3)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  tierBadgeFamily: {
+    backgroundColor: CINEMA.terra,
+  },
+  tierLabelFamily: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: CINEMA.terra,
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  tierPriceFamily: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 36,
+    color: CINEMA.terra,
+  },
+  tierFeatureIconFamily: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(166,93,71,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  tierCTAFamily: {
+    // Inherits from tierCTA, gradient is set in component
   },
 
   // ─── Footer (DSP Level) ───────────────────────────────────────────────────────

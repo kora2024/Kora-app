@@ -162,7 +162,7 @@ export default function PaywallScreen() {
     ).start();
   }, []);
 
-  const handleSubscribe = useCallback(async () => {
+  const handleSubscribe = useCallback(async (planType: 'premium' | 'family' = 'premium') => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch {}
@@ -180,13 +180,14 @@ export default function PaywallScreen() {
         return;
       }
 
-      // Create checkout session with auth token
+      // Create checkout session with auth token and plan type
       const response = await fetch(`${API_URL}/api/subscriptions/checkout-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        body: JSON.stringify({ plan_type: planType }),
       });
 
       if (!response.ok) {
