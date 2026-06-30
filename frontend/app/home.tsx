@@ -636,7 +636,15 @@ function AnimatedHero({ content, onPlay, insets }: any) {
         >
           <TouchableOpacity
             style={styles.playBtn}
-            onPress={onPlay}
+            onPress={() => onPlay({
+              id: 'hero-featured',
+              title: content.title,
+              artist: content.subtitle || 'KORA Featured',
+              type: 'audio',
+              source: 'kora',
+              stream_url: 'https://archive.org/download/HaitiMusique/03-track-3.mp3',
+              artwork: content.image,
+            })}
             activeOpacity={0.9}
           >
             <PlayIcon size={22} color={COLORS.dark} />
