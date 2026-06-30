@@ -3,6 +3,8 @@
  * 
  * Architecture DSP : l'audio persiste pendant la navigation
  * Comme Spotify, Apple Music, etc.
+ * 
+ * Note: State persists via React component tree (provider in _layout.tsx)
  */
 
 import { create } from 'zustand';
@@ -66,8 +68,8 @@ interface PlayerState {
 }
 
 const initialState = {
-  currentTrack: null,
-  queue: [],
+  currentTrack: null as Track | null,
+  queue: [] as Track[],
   isPlaying: false,
   isBuffering: false,
   progress: 0,
