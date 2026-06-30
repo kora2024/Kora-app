@@ -7,6 +7,19 @@
 - **Display Name**: Test User
 - **Role**: Admin + Creator
 
+## Creator Account (Artist - Jocelyne Béroard)
+- **Email**: jocelyne.beroard@kora.fm
+- **Password**: KoraMusic2024!
+- **FREK-ID**: FRK-ETT1IJNGJB
+- **Display Name**: Jocelyne Béroard
+- **Is Creator**: true
+
+### Published Content by Jocelyne
+- **Track**: "Mwen Kriye"
+- **Territory**: caribbean
+- **FREK-O Signature**: FRK-O-15009E64B5B6C8FADB668DB8
+- **Stream URL**: https://res.cloudinary.com/dnabomyak/raw/upload/v1782778346/creator_content/FRK-ETT1IJNGJB_test_track.mp3
+
 ## API Endpoints
 
 ### Auth

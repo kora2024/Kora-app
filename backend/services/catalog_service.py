@@ -49,7 +49,7 @@ class CatalogService:
         tracks = await cursor.to_list(length=limit)
         
         return {
-            'tracks': self._transform_kora_tracks(tracks),
+            'tracks': await self._transform_kora_tracks_async(tracks),
             'total': len(tracks),
             'sources': ['kora_organic']
         }
@@ -68,7 +68,7 @@ class CatalogService:
         ]).limit(limit)
         
         tracks = await cursor.to_list(length=limit)
-        return self._transform_kora_tracks(tracks)
+        return await self._transform_kora_tracks_async(tracks)
     
     async def get_tracks_by_genre(self, genre: str, limit: int = 20) -> List[Dict]:
         """Récupère les tracks par genre/tags"""
@@ -88,7 +88,7 @@ class CatalogService:
         }).sort('created_at', -1).limit(limit)
         
         tracks = await cursor.to_list(length=limit)
-        return self._transform_kora_tracks(tracks)
+        return await self._transform_kora_tracks_async(tracks)
     
     async def get_territory_catalog(self, territory: str, limit: int = 20) -> List[Dict]:
         """Récupère le catalogue par territoire — 100% MongoDB souverain"""
@@ -101,7 +101,7 @@ class CatalogService:
         }).sort('created_at', -1).limit(limit)
         
         tracks = await cursor.to_list(length=limit)
-        return self._transform_kora_tracks(tracks)
+        return await self._transform_kora_tracks_async(tracks)
     
     async def get_track_details(self, track_id: str, source: str = 'kora') -> Optional[Dict]:
         """Obtient les détails d'un track avec URL de streaming"""
@@ -145,14 +145,67 @@ class CatalogService:
             logger.error(f"Erreur récupération track: {e}")
             return None
     
-    def _transform_kora_tracks(self, tracks: List[Dict]) -> List[Dict]:
-        """Transforme les tracks MongoDB au format API KORA"""
+    async def _resolve_artist_name(self, creator_id: str) -> str:
+        """Résout le nom d'artiste depuis creator_id ou frek_id"""
+        if not creator_id or self.db is None:
+            return 'Artiste KORA'
+        
+        # Si c'est déjà un FREK-ID style (FRK-xxx), le garder tel quel pour les demo
+        if creator_id.startswith('FRK-'):
+            return creator_id
+        
+        try:
+            # Chercher par _id (UUID)
+            user = await self.db.users.find_one({'_id': creator_id})
+            if user:
+                return user.get('display_name', user.get('frek_id', 'Artiste KORA'))
+            
+            # Chercher par frek_id
+            user = await self.db.users.find_one({'frek_id': creator_id})
+            if user:
+                return user.get('display_name', creator_id)
+            
+            return creator_id
+        except Exception as e:
+            logger.warning(f"Erreur résolution artiste: {e}")
+            return creator_id
+    
+    async def _transform_kora_tracks_async(self, tracks: List[Dict]) -> List[Dict]:
+        """Transforme les tracks MongoDB au format API KORA avec résolution des noms"""
         result = []
         for track in tracks:
+            creator_id = track.get('creator_id', '')
+            artist_name = await self._resolve_artist_name(creator_id)
+            
             result.append({
                 'id': str(track['_id']),
                 'title': track.get('title', 'Sans titre'),
-                'artist': track.get('creator_id', 'Artiste KORA'),
+                'artist': artist_name,
+                'album': track.get('category', ''),
+                'duration': track.get('duration', 0),
+                'stream_url': track.get('media_url', ''),
+                'artwork': track.get('artwork_url', ''),
+                'source': 'kora_organic',
+                'type': track.get('type', 'audio'),
+                'playable': bool(track.get('media_url')),
+                'territory': track.get('territory', 'world'),
+                'cultural_signature': track.get('cultural_signature', ''),
+                'play_count': track.get('play_count', 0),
+            })
+        return result
+    
+    def _transform_kora_tracks(self, tracks: List[Dict]) -> List[Dict]:
+        """Transforme les tracks MongoDB au format API KORA (sync fallback)"""
+        result = []
+        for track in tracks:
+            creator_id = track.get('creator_id', '')
+            # Fallback sync: garder le creator_id si pas FREK-ID
+            artist_name = creator_id if creator_id.startswith('FRK-') else creator_id
+            
+            result.append({
+                'id': str(track['_id']),
+                'title': track.get('title', 'Sans titre'),
+                'artist': artist_name,
                 'album': track.get('category', ''),
                 'duration': track.get('duration', 0),
                 'stream_url': track.get('media_url', ''),
