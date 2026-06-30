@@ -226,9 +226,20 @@ const CATEGORY_ITEMS = [
 // HEADER COMPONENT
 // ══════════════════════════════════════════════════════════════════════════════
 
-function Header({ onSettings, onSearch }: { onSettings: () => void; onSearch: () => void }) {
+function Header({ onSettings, onSearch, onNavigate }: { 
+  onSettings: () => void; 
+  onSearch: () => void;
+  onNavigate: (route: string) => void;
+}) {
   const insets = useSafeAreaInsets();
-  const navItems = ['ACCUEIL', 'MUSIQUE', 'VIDÉO', 'LIVE', 'CRÉATEURS', 'PLAYLISTS'];
+  const navItems = [
+    { label: 'ACCUEIL', route: '/home' },
+    { label: 'MUSIQUE', route: '/music' },
+    { label: 'VIDÉO', route: '/video' },
+    { label: 'LIVE', route: '/live' },
+    { label: 'CRÉATEURS', route: '/creator/studio' },
+    { label: 'PLAYLISTS', route: '/playlists' },
+  ];
   
   return (
     <Animated.View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -242,9 +253,13 @@ function Header({ onSettings, onSearch }: { onSettings: () => void; onSearch: ()
       
       <View style={styles.headerNav}>
         {navItems.slice(0, SW > 600 ? 6 : 3).map((item, index) => (
-          <TouchableOpacity key={item} style={styles.headerNavItem}>
+          <TouchableOpacity 
+            key={item.label} 
+            style={styles.headerNavItem}
+            onPress={() => onNavigate(item.route)}
+          >
             <Text style={[styles.headerNavText, index === 0 && styles.headerNavTextActive]}>
-              {item}
+              {item.label}
             </Text>
           </TouchableOpacity>
         ))}
@@ -1036,6 +1051,7 @@ export default function KoraHome() {
     });
   }, [router, hapticFeedback]);
 
+  // Navigation handler for header and footer
   const handleNavigate = useCallback((route: string) => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
     router.push(route as any);
@@ -1052,7 +1068,7 @@ export default function KoraHome() {
       <StatusBar barStyle="light-content" />
       
       {/* Fixed Header */}
-      <Header onSettings={handleSettings} onSearch={handleSearch} />
+      <Header onSettings={handleSettings} onSearch={handleSearch} onNavigate={handleNavigate} />
 
       {/* Search Overlay */}
       {searchVisible && (
