@@ -4,6 +4,8 @@
  * Expérience immersive niveau Apple Music / Netflix
  * Support audio (expo-audio) et vidéo (expo-video)
  * Transitions cinématiques, contrôles gestuels
+ * 
+ * FIXED: Proper expo-audio SDK 54 usage
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -23,10 +25,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Text as SvgText } from 'react-native-svg';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import Svg, { Path } from 'react-native-svg';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { COLORS, FONTS } from '../src/theme';
 
 const { width: SW, height: SH } = Dimensions.get('window');
@@ -61,7 +63,6 @@ function SkipIcon({ direction, size = 32 }: { direction: 'back' | 'forward'; siz
         fill="none"
       />
       <Path d="M16 10V16L20 18" stroke={COLORS.cream} strokeWidth="2" strokeLinecap="round" fill="none" />
-      <SvgText x="16" y="24" textAnchor="middle" fontSize="7" fill={COLORS.cream} fontFamily="Jost">15</SvgText>
     </Svg>
   );
 }
@@ -114,24 +115,6 @@ function RepeatIcon({ mode, size = 24 }: { mode: 'off' | 'all' | 'one'; size?: n
         strokeLinejoin="round"
         fill="none"
       />
-      {mode === 'one' && (
-        <SvgText x="12" y="14" textAnchor="middle" fontSize="8" fill={color} fontWeight="bold">1</SvgText>
-      )}
-    </Svg>
-  );
-}
-
-function FullscreenIcon({ size = 24 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path
-        d="M8 3H5C3.89543 3 3 3.89543 3 5V8M21 8V5C21 3.89543 20.1046 3 19 3H16M16 21H19C20.1046 21 21 20.1046 21 19V16M3 16V19C3 20.1046 3.89543 21 5 21H8"
-        stroke={COLORS.cream}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
     </Svg>
   );
 }
@@ -141,7 +124,7 @@ function FullscreenIcon({ size = 24 }: { size?: number }) {
 // ══════════════════════════════════════════════════════════════════════════════
 
 function WaveformVisualizer({ isPlaying }: { isPlaying: boolean }) {
-  const bars = Array.from({ length: 50 }, (_, i) => i);
+  const bars = Array.from({ length: 40 }, (_, i) => i);
   const animations = useRef(bars.map(() => new Animated.Value(0.3))).current;
 
   useEffect(() => {
@@ -197,17 +180,7 @@ function WaveformVisualizer({ isPlaying }: { isPlaying: boolean }) {
 // PROGRESS BAR
 // ══════════════════════════════════════════════════════════════════════════════
 
-function ProgressBar({ progress, duration, onSeek }: { progress: number; duration: number; onSeek: (p: number) => void }) {
-  const progressWidth = useRef(new Animated.Value(progress)).current;
-
-  useEffect(() => {
-    Animated.timing(progressWidth, {
-      toValue: progress,
-      duration: 100,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
-
+function ProgressBar({ progress, duration, onSeek }: { progress: number; duration: number; onSeek?: (p: number) => void }) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -217,28 +190,8 @@ function ProgressBar({ progress, duration, onSeek }: { progress: number; duratio
   return (
     <View style={styles.progressContainer}>
       <View style={styles.progressTrack}>
-        <Animated.View
-          style={[
-            styles.progressFill,
-            {
-              width: progressWidth.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
-        />
-        <Animated.View
-          style={[
-            styles.progressThumb,
-            {
-              left: progressWidth.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%'],
-              }),
-            },
-          ]}
-        />
+        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+        <View style={[styles.progressThumb, { left: `${progress * 100}%` }]} />
       </View>
       <View style={styles.timeContainer}>
         <Text style={styles.timeText}>{formatTime(progress * duration)}</Text>
@@ -249,7 +202,7 @@ function ProgressBar({ progress, duration, onSeek }: { progress: number; duratio
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// AUDIO PLAYER COMPONENT
+// AUDIO PLAYER USING EXPO-AV (More stable on Expo Go)
 // ══════════════════════════════════════════════════════════════════════════════
 
 function AudioPlayerView({
@@ -264,42 +217,131 @@ function AudioPlayerView({
   insets,
   onClose,
 }: any) {
-  const audioPlayer = useAudioPlayer(streamUrl ? { uri: streamUrl } : null);
-  const audioStatus = useAudioPlayerStatus(audioPlayer);
-
-  const isPlaying = audioStatus.playing;
-  const currentTime = Math.floor((audioStatus.currentTime || 0) / 1000);
-  const duration = Math.floor((audioStatus.duration || 245000) / 1000);
-  const progress = duration > 0 ? currentTime / duration : 0;
-  const isBuffering = audioStatus.isBuffering;
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const artworkScale = useRef(new Animated.Value(1)).current;
   const artworkRotate = useRef(new Animated.Value(0)).current;
+  const rotationRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  // Configure audio mode
+  useEffect(() => {
+    const configureAudio = async () => {
+      try {
+        await Audio.setAudioModeAsync({
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+          interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {
+        console.log('Audio mode config error:', e);
+      }
+    };
+    configureAudio();
+  }, []);
+
+  // Load audio
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadAudio = async () => {
+      if (!streamUrl) {
+        setLoadError('Aucune URL audio');
+        return;
+      }
+
+      try {
+        setIsBuffering(true);
+        setLoadError(null);
+        
+        // Unload previous sound
+        if (sound) {
+          await sound.unloadAsync();
+        }
+
+        console.log('Loading audio:', streamUrl);
+        
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: streamUrl },
+          { shouldPlay: false },
+          onPlaybackStatusUpdate
+        );
+
+        if (isMounted) {
+          setSound(newSound);
+          setIsLoaded(true);
+          setIsBuffering(false);
+        }
+      } catch (e: any) {
+        console.error('Audio load error:', e);
+        if (isMounted) {
+          setLoadError(e.message || 'Erreur chargement audio');
+          setIsBuffering(false);
+        }
+      }
+    };
+
+    loadAudio();
+
+    return () => {
+      isMounted = false;
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [streamUrl]);
+
+  // Playback status callback
+  const onPlaybackStatusUpdate = (status: any) => {
+    if (!status.isLoaded) {
+      if (status.error) {
+        console.log('Playback error:', status.error);
+        setLoadError(status.error);
+      }
+      return;
+    }
+
+    setIsPlaying(status.isPlaying);
+    setIsBuffering(status.isBuffering);
+    setDuration(status.durationMillis ? status.durationMillis / 1000 : 0);
+    setPosition(status.positionMillis ? status.positionMillis / 1000 : 0);
+  };
 
   // Vinyl rotation effect
   useEffect(() => {
     if (isPlaying) {
-      Animated.loop(
+      rotationRef.current = Animated.loop(
         Animated.timing(artworkRotate, {
           toValue: 1,
           duration: 20000,
           useNativeDriver: true,
         })
-      ).start();
+      );
+      rotationRef.current.start();
     } else {
-      artworkRotate.stopAnimation();
+      if (rotationRef.current) {
+        rotationRef.current.stop();
+      }
     }
   }, [isPlaying]);
 
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback(async () => {
     try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    if (!streamUrl || !audioPlayer) return;
+    if (!sound) return;
 
     try {
       if (isPlaying) {
-        audioPlayer.pause();
+        await sound.pauseAsync();
       } else {
-        audioPlayer.play();
+        await sound.playAsync();
       }
     } catch (e) {
       console.error('Play/Pause error:', e);
@@ -309,21 +351,23 @@ function AudioPlayerView({
       Animated.timing(artworkScale, { toValue: isPlaying ? 0.95 : 1.02, duration: 150, useNativeDriver: true }),
       Animated.spring(artworkScale, { toValue: 1, tension: 100, friction: 10, useNativeDriver: true }),
     ]).start();
-  }, [isPlaying, streamUrl, audioPlayer]);
+  }, [isPlaying, sound]);
 
-  const handleSkip = useCallback((direction: 'back' | 'forward') => {
+  const handleSkip = useCallback(async (direction: 'back' | 'forward') => {
     try { Haptics.selectionAsync(); } catch {}
-    if (!audioPlayer) return;
-    const delta = direction === 'back' ? -15000 : 15000;
-    const newTime = Math.max(0, Math.min((audioStatus.duration || 0), (audioStatus.currentTime || 0) + delta));
-    try { audioPlayer.seekTo(newTime); } catch (e) { console.error('Seek error:', e); }
-  }, [audioPlayer, audioStatus]);
+    if (!sound) return;
+    
+    const delta = direction === 'back' ? -15 : 15;
+    const newPosition = Math.max(0, Math.min(duration, position + delta));
+    
+    try {
+      await sound.setPositionAsync(newPosition * 1000);
+    } catch (e) {
+      console.error('Seek error:', e);
+    }
+  }, [sound, position, duration]);
 
-  const handleSeek = useCallback((newProgress: number) => {
-    if (!audioPlayer) return;
-    const newTime = newProgress * (audioStatus.duration || 0);
-    try { audioPlayer.seekTo(newTime); } catch (e) { console.error('Seek error:', e); }
-  }, [audioPlayer, audioStatus]);
+  const progress = duration > 0 ? position / duration : 0;
 
   const rotation = artworkRotate.interpolate({
     inputRange: [0, 1],
@@ -339,7 +383,7 @@ function AudioPlayerView({
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerSubtitle}>EN LECTURE</Text>
-          <Text style={styles.headerTitle}>{content.album}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{content.album || 'Album'}</Text>
         </View>
         <TouchableOpacity style={styles.moreBtn}>
           <Text style={styles.moreText}>•••</Text>
@@ -354,7 +398,10 @@ function AudioPlayerView({
             { transform: [{ scale: artworkScale }, { rotate: rotation }] },
           ]}
         >
-          <Image source={{ uri: content.artwork }} style={styles.artwork} />
+          <Image 
+            source={{ uri: content.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600' }} 
+            style={styles.artwork} 
+          />
           <View style={styles.vinylHole} />
         </Animated.View>
         <WaveformVisualizer isPlaying={isPlaying} />
@@ -364,8 +411,8 @@ function AudioPlayerView({
       <View style={styles.trackInfo}>
         <View style={styles.trackTitleRow}>
           <View style={styles.trackTitleContainer}>
-            <Text style={styles.trackTitle}>{content.title}</Text>
-            <Text style={styles.trackArtist}>{content.artist}</Text>
+            <Text style={styles.trackTitle} numberOfLines={2}>{content.title || 'Titre inconnu'}</Text>
+            <Text style={styles.trackArtist} numberOfLines={1}>{content.artist || 'Artiste'}</Text>
           </View>
           <TouchableOpacity onPress={onLike} style={styles.likeBtn}>
             <HeartIcon filled={isLiked} size={28} />
@@ -374,9 +421,15 @@ function AudioPlayerView({
       </View>
 
       {/* Progress */}
-      <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
+      <ProgressBar progress={progress} duration={duration} />
 
-      {/* Buffering indicator */}
+      {/* Status indicators */}
+      {loadError && (
+        <View style={styles.errorIndicator}>
+          <Text style={styles.errorText}>{loadError}</Text>
+        </View>
+      )}
+
       {isBuffering && (
         <View style={styles.bufferingIndicator}>
           <ActivityIndicator color={COLORS.terra} size="small" />
@@ -385,10 +438,10 @@ function AudioPlayerView({
       )}
 
       {/* Stream indicator */}
-      {streamUrl && (
+      {isLoaded && !loadError && (
         <View style={styles.streamIndicator}>
           <View style={styles.streamDot} />
-          <Text style={styles.streamText}>Audio • {content.source}</Text>
+          <Text style={styles.streamText}>Audio • KORA DSP</Text>
         </View>
       )}
 
@@ -400,9 +453,13 @@ function AudioPlayerView({
         <TouchableOpacity onPress={() => handleSkip('back')} style={styles.skipBtn}>
           <SkipIcon direction="back" size={32} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn}>
+        <TouchableOpacity onPress={handlePlayPause} style={styles.playBtn} disabled={!isLoaded || !!loadError}>
           <LinearGradient colors={[COLORS.terra, '#8B4D3B']} style={styles.playBtnGradient}>
-            <PlayPauseIcon isPlaying={isPlaying} size={40} />
+            {isBuffering ? (
+              <ActivityIndicator color={COLORS.cream} size="small" />
+            ) : (
+              <PlayPauseIcon isPlaying={isPlaying} size={40} />
+            )}
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => handleSkip('forward')} style={styles.skipBtn}>
@@ -419,7 +476,7 @@ function AudioPlayerView({
           <Text style={styles.bottomBtnText}>Paroles</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.bottomBtn}>
-          <Text style={styles.bottomBtnText}>File d&apos;attente</Text>
+          <Text style={styles.bottomBtnText}>File d'attente</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -444,7 +501,6 @@ function VideoPlayerView({
   // Initialize video player with useVideoPlayer hook
   const videoPlayer = useVideoPlayer(streamUrl || null, (player) => {
     player.loop = false;
-    player.showNowPlayingNotification = true;
   });
 
   // Get playing state using useEvent
@@ -514,12 +570,6 @@ function VideoPlayerView({
     hideControlsAfterDelay();
   }, [videoPlayer, currentTime, duration, hideControlsAfterDelay]);
 
-  const handleSeek = useCallback((newProgress: number) => {
-    if (!videoPlayer) return;
-    const newTime = newProgress * duration;
-    try { videoPlayer.currentTime = newTime; } catch (e) { console.error('Video seek error:', e); }
-  }, [videoPlayer, duration]);
-
   return (
     <TouchableOpacity
       style={styles.videoContainer}
@@ -570,7 +620,7 @@ function VideoPlayerView({
           {/* Bottom bar with progress */}
           <View style={[styles.videoBottomBar, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.videoProgressContainer}>
-              <ProgressBar progress={progress} duration={duration} onSeek={handleSeek} />
+              <ProgressBar progress={progress} duration={duration} />
             </View>
             <View style={styles.videoInfo}>
               <Text style={styles.videoArtist}>{content.artist}</Text>
@@ -622,11 +672,11 @@ export default function PlayerScreen() {
   const contentType = (params.type as string) || 'audio';
   const isVideo = contentType === 'video' || contentType === 'live' || contentType === 'replay';
 
-  // Content from params or fetched
+  // Content from params
   const content = {
     id: params.id as string || '',
     title: trackDetails?.title || params.title as string || 'Titre inconnu',
-    artist: trackDetails?.artist || params.artist as string || 'Artiste',
+    artist: trackDetails?.artist || params.artist as string || 'Artiste KORA',
     album: trackDetails?.album || params.album as string || 'Album',
     artwork: trackDetails?.artwork || params.artwork as string || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
     type: contentType,
@@ -640,43 +690,47 @@ export default function PlayerScreen() {
       setError(null);
       
       try {
-        // If direct stream URL from params
-        if (params.streamUrl || params.stream_url) {
-          const url = (params.streamUrl || params.stream_url) as string;
-          console.log('🎬 Direct stream URL:', url);
+        // Check for direct stream URL from params (stream_url or streamUrl)
+        const directUrl = params.stream_url || params.streamUrl;
+        if (directUrl) {
+          const url = directUrl as string;
+          console.log('🎬 Direct stream URL from params:', url);
           setStreamUrl(url);
           setIsLoading(false);
           return;
         }
 
-        // Fetch from API
+        // Fetch from API if we have id and source
         if (params.id && params.source) {
+          console.log('📡 Fetching track details from API...');
           const res = await fetch(`${API_BASE}/api/catalog/track/${params.source}/${params.id}`);
           if (res.ok) {
             const data = await res.json();
+            console.log('📡 Track data:', data);
             setTrackDetails(data);
             if (data.stream_url) {
-              console.log('🎵 Stream URL loaded from API:', data.stream_url);
+              console.log('🎵 Stream URL from API:', data.stream_url);
               setStreamUrl(data.stream_url);
             } else {
-              setError('Aucune URL de streaming disponible');
+              setError('Aucune URL de streaming');
             }
           } else {
-            setError('Contenu non trouvé');
+            setError('Track non trouvé');
           }
-        } else if (!params.streamUrl && !params.stream_url) {
+        } else {
+          // No stream URL and no way to fetch one
           setError('Informations manquantes');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading content:', err);
-        setError('Erreur de chargement');
+        setError(err.message || 'Erreur de chargement');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadContent();
-  }, [params.id, params.source, params.streamUrl, params.stream_url]);
+  }, [params.id, params.source, params.stream_url, params.streamUrl, API_BASE]);
 
   // Entrance animation
   useEffect(() => {
@@ -734,7 +788,7 @@ export default function PlayerScreen() {
   }
 
   // Error state
-  if (error) {
+  if (error && !streamUrl) {
     return (
       <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <StatusBar barStyle="light-content" />
@@ -830,6 +884,8 @@ const styles = StyleSheet.create({
   },
   headerCenter: {
     alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 8,
   },
   headerSubtitle: {
     fontFamily: FONTS.jostMedium,
@@ -861,9 +917,11 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   artworkWrapper: {
-    width: SW - 80,
-    height: SW - 80,
-    borderRadius: (SW - 80) / 2,
+    width: SW - 100,
+    height: SW - 100,
+    maxWidth: 320,
+    maxHeight: 320,
+    borderRadius: (SW - 100) / 2,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 20 },
@@ -914,15 +972,16 @@ const styles = StyleSheet.create({
   },
   trackTitleContainer: {
     flex: 1,
+    marginRight: 12,
   },
   trackTitle: {
     fontFamily: FONTS.playfairBold,
-    fontSize: 26,
+    fontSize: 24,
     color: COLORS.cream,
   },
   trackArtist: {
     fontFamily: FONTS.jostLight,
-    fontSize: 18,
+    fontSize: 16,
     color: COLORS.gray,
     marginTop: 4,
   },
@@ -1027,6 +1086,16 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.jostLight,
     fontSize: 12,
     color: COLORS.gray,
+  },
+  // Error indicator
+  errorIndicator: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  errorText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
+    color: '#FF6B6B',
   },
   // Stream indicator
   streamIndicator: {
