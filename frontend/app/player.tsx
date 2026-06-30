@@ -6,6 +6,7 @@
  * Transitions cinématiques, contrôles gestuels
  * 
  * FIXED: Proper expo-audio SDK 54 usage
+ * UPDATED: Integrates with global playerStore for mini-player
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
@@ -30,6 +31,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { useEvent } from 'expo';
 import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from 'expo-av';
 import { COLORS, FONTS } from '../src/theme';
+import { usePlayerStore } from '../src/stores/playerStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -656,6 +658,15 @@ export default function PlayerScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
+  // Global Player Store — for mini-player sync
+  const { 
+    setCurrentTrack, 
+    setIsPlaying: setGlobalPlaying, 
+    setProgress: setGlobalProgress,
+    setMiniPlayerVisible,
+    isPlaying: globalIsPlaying,
+  } = usePlayerStore();
+
   const [isLiked, setIsLiked] = useState(false);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<'off' | 'all' | 'one'>('off');
@@ -707,6 +718,24 @@ export default function PlayerScreen() {
     type: contentType,
     source: params.source as string || 'kora',
   };
+
+  // SYNC with global store when content loads
+  useEffect(() => {
+    if (content.id && content.title) {
+      // Update global store with current track for mini-player
+      setCurrentTrack({
+        id: content.id,
+        title: content.title,
+        artist: content.artist,
+        album: content.album,
+        artwork: content.artwork,
+        stream_url: streamUrl || '',
+        type: content.type as 'audio' | 'video' | 'live',
+        source: content.source,
+      });
+      setMiniPlayerVisible(true);
+    }
+  }, [content.id, content.title, streamUrl]);
 
   // Load track/stream URL
   useEffect(() => {

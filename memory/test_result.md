@@ -377,8 +377,138 @@ Verified in `/app/frontend/app/home.tsx` lines 1150-1383:
 
 **Result**: 7/10 sections visible, 3/10 sections have rendering issues (all catalog sections using horizontal ScrollView)
 
+## NEW TEST CYCLE - MINI-PLAYER & NAVIGATION TEST
+**Test Date**: 2024-01-29 (Round 4 - Post Home Page Refactor)
+**Test Focus**: Mini-Player DSP Global, Footer Navigation, Header Navigation, Scroll
+
+### ✅ WORKING FEATURES (P0-P1)
+
+#### 1. Mini-Player Global (P0 - CRITICAL) ✅
+- **Status**: WORKING
+- **Evidence**: 
+  - Clicked "REGARDER MAINTENANT" button on home page
+  - Successfully navigated to player page with AdGate (pub screen)
+  - Mini-player visible at bottom of player page with:
+    - Rotating artwork (circular, 48x48)
+    - Track title "Zouk Love..." (truncated)
+    - Artist "FRK-KORA..." (truncated)
+    - Play button (terra/orange gradient)
+    - Skip forward button
+    - Expand button (chevron up)
+    - Waveform animation (4 bars)
+  - Mini-player found with position:absolute, bottom>0, z-index>=100
+  - **Persistence Verified**: Track title "Zouk Love Classics" found on Artists page after navigation
+  - Screenshot evidence: 03_player_page.png, 04_back_to_home.png, 05_mini_player_check.png
+
+#### 2. Footer Navigation (P1) ✅
+- **Status**: WORKING
+- **Tested Links**:
+  - "Presse" → /press ✅ (navigated successfully)
+  - "Artistes" → /artists ✅ (navigated successfully)
+- **Not Tested**: Développeurs, Publicité, Cookies (routes exist, likely working)
+- **Mini-player Persistence**: ✅ Confirmed - mini-player persists on Artists page
+- Screenshot evidence: 06_artists_page.png
+
+#### 3. Home Page Catalog Rendering ✅
+- **Status**: FIXED (was broken in previous tests)
+- **Evidence**:
+  - 21 track images found on page
+  - Visible track cards: "Zouk Love Classics", "Diaspora Tales", "Highlife Nights", "Roots & Culture"
+  - "REGARDER MAINTENANT" button clickable
+  - FeaturedContentGrid component rendering correctly
+- Screenshot evidence: 01_home_loaded.png, 02_home_scrolled.png
+
+#### 4. Player Page with AdGate ✅
+- **Status**: WORKING
+- **Evidence**:
+  - AdGate displays with 3 options:
+    - "REGARDER APRÈS LA PUB" (5 secondes de publicité)
+    - "REGARDER UNE PUB LONGUE" (30 min sans pub ensuite)
+    - "PASSER PREMIUM - 3,98€/MOIS"
+  - Track information passed correctly via URL params
+  - Mini-player visible at bottom during AdGate
+- Screenshot evidence: 03_player_page.png
+
+#### 5. Scroll Smoothness (P2) ✅
+- **Status**: WORKING
+- **Evidence**: Smooth scroll tested with no visual glitches, no "fond visible" effect
+- Screenshot evidence: 08_scroll_test.png
+
+### ❌ CRITICAL ISSUE FOUND
+
+#### Header Navigation (P1) - NOT WORKING ❌
+- **Status**: BROKEN
+- **Issue**: Header navigation items (MUSIQUE, VIDÉO, LIVE) are NOT clickable
+- **Root Cause**: TouchableOpacity elements in Header component (line 245) do NOT have `onPress` handlers
+- **Evidence**: 
+  - Clicked "VIDÉO" in header
+  - URL remained at /home (did not navigate to /video)
+  - Test output: "❌ Header navigation to Video page does NOT work"
+- **Impact**: Users cannot navigate to Music, Video, or Live sections from header
+- **Location**: `/app/frontend/app/home.tsx` lines 244-250
+- **Fix Required**: Add onPress handlers to header nav items or pass onNavigate callback to Header component
+
+### Code Analysis - Header Navigation Bug
+
+```jsx
+// CURRENT CODE (BROKEN) - Line 244-250
+{navItems.slice(0, SW > 600 ? 6 : 3).map((item, index) => (
+  <TouchableOpacity key={item} style={styles.headerNavItem}>
+    <Text style={[styles.headerNavText, index === 0 && styles.headerNavTextActive]}>
+      {item}
+    </Text>
+  </TouchableOpacity>
+))}
+```
+
+**Problem**: No `onPress` handler on TouchableOpacity
+
+**Suggested Fix**:
+```jsx
+// Option 1: Add onNavigate prop to Header component
+function Header({ onSettings, onSearch, onNavigate }: { 
+  onSettings: () => void; 
+  onSearch: () => void;
+  onNavigate: (route: string) => void;
+}) {
+  const navItems = [
+    { label: 'ACCUEIL', route: '/home' },
+    { label: 'MUSIQUE', route: '/music' },
+    { label: 'VIDÉO', route: '/video' },
+    { label: 'LIVE', route: '/live' },
+    { label: 'CRÉATEURS', route: '/creator/studio' },
+    { label: 'PLAYLISTS', route: '/playlists' },
+  ];
+  
+  return (
+    // ...
+    {navItems.slice(0, SW > 600 ? 6 : 3).map((item, index) => (
+      <TouchableOpacity 
+        key={item.label} 
+        style={styles.headerNavItem}
+        onPress={() => onNavigate(item.route)}
+      >
+        <Text style={[styles.headerNavText, index === 0 && styles.headerNavTextActive]}>
+          {item.label}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  );
+}
+
+// Then in KoraHome component (line 1055):
+<Header onSettings={handleSettings} onSearch={handleSearch} onNavigate={handleNavigate} />
+```
+
+### Test Statistics - Round 4
+- **Browser Automation Calls**: 2 (this round)
+- **Total Calls**: 5 (3 previous + 2 current)
+- **Tests Passed**: 5 (Mini-player, Footer Nav, Catalog Rendering, Player Page, Scroll)
+- **Tests Failed**: 1 (Header Navigation)
+- **Critical Issues**: 1 (Header nav not clickable)
+
 ## Metadata
 - **Created By**: testing_agent
-- **Version**: 3.0 (Code Review Analysis)
-- **Test Sequence**: 3
-- **Browser Automation Calls Used**: 3/3 (LIMIT REACHED - CODE REVIEW ONLY)
+- **Version**: 4.0 (Mini-Player & Navigation Test - Post Refactor)
+- **Test Sequence**: 4
+- **Browser Automation Calls Used**: 5 total (3 previous + 2 current round)

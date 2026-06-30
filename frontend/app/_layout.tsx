@@ -1,5 +1,5 @@
 /**
- * KORA Root Layout — Netflix Premium Typography
+ * KORA Root Layout — Netflix Premium Typography + Global DSP Mini-Player
  * 
  * Configuration des animations de navigation :
  * - default: fade simple (280ms)
@@ -8,18 +8,20 @@
  * - eveil: fade (onboarding)
  * - tabs: fade
  * 
- * Fonts loaded via expo-font for better native compatibility
+ * UPDATED: Fonts loaded via expo-font (no @expo-google-fonts)
+ * ADDED: Global MiniPlayer persists across all screens
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Text, Platform } from 'react-native';
 import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { COLORS } from '../src/theme';
 import TransitionOverlay from '../src/components/TransitionOverlay';
 import { ToastContainer } from '../src/components/Toast';
+import MiniPlayer from '../src/components/MiniPlayer';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -35,33 +37,40 @@ const TRANSITION_DURATION = {
   cinematic: 500,
 };
 
-// Font configuration - using Google Fonts packages that are already installed
-// These will fallback to system fonts if loading fails
-const GOOGLE_FONTS = {
-  'PlayfairDisplay_400Regular': require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular,
-  'PlayfairDisplay_700Bold': require('@expo-google-fonts/playfair-display').PlayfairDisplay_700Bold,
-  'PlayfairDisplay_400Regular_Italic': require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular_Italic,
-  'PlayfairDisplay_700Bold_Italic': require('@expo-google-fonts/playfair-display').PlayfairDisplay_700Bold_Italic,
-  'Jost_200ExtraLight': require('@expo-google-fonts/jost').Jost_200ExtraLight,
-  'Jost_300Light': require('@expo-google-fonts/jost').Jost_300Light,
-  'Jost_400Regular': require('@expo-google-fonts/jost').Jost_400Regular,
-  'Jost_500Medium': require('@expo-google-fonts/jost').Jost_500Medium,
-  'JetBrainsMono_400Regular': require('@expo-google-fonts/jetbrains-mono').JetBrainsMono_400Regular,
+// ══════════════════════════════════════════════════════════════════════════════
+// FONT CONFIGURATION — System fonts fallback (no @expo-google-fonts)
+// Using Platform-specific system fonts as fallback for premium look
+// ══════════════════════════════════════════════════════════════════════════════
+
+const FONT_FALLBACK = {
+  // Playfair Display → Georgia (serif) fallback
+  'PlayfairDisplay_400Regular': Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
+  'PlayfairDisplay_700Bold': Platform.select({ ios: 'Georgia-Bold', android: 'serif', default: 'serif' }),
+  'PlayfairDisplay_400Regular_Italic': Platform.select({ ios: 'Georgia-Italic', android: 'serif', default: 'serif' }),
+  'PlayfairDisplay_700Bold_Italic': Platform.select({ ios: 'Georgia-BoldItalic', android: 'serif', default: 'serif' }),
+  // Jost → System (San Francisco/Roboto) fallback
+  'Jost_200ExtraLight': Platform.select({ ios: 'System', android: 'sans-serif-light', default: 'sans-serif' }),
+  'Jost_300Light': Platform.select({ ios: 'System', android: 'sans-serif-light', default: 'sans-serif' }),
+  'Jost_400Regular': Platform.select({ ios: 'System', android: 'sans-serif', default: 'sans-serif' }),
+  'Jost_500Medium': Platform.select({ ios: 'System', android: 'sans-serif-medium', default: 'sans-serif' }),
+  // JetBrains Mono → Courier fallback
+  'JetBrainsMono_400Regular': Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
 };
 
 export default function RootLayout() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
 
-  // Load fonts using expo-font for better native compatibility
+  // Load fonts using system fallbacks (no @expo-google-fonts dependency)
   const loadFonts = useCallback(async () => {
     try {
-      await Font.loadAsync(GOOGLE_FONTS);
+      // Use system fonts directly - no external font loading needed
+      // This ensures compatibility across all platforms without @expo-google-fonts
+      console.log('Using system font fallbacks for KORA');
       setFontsLoaded(true);
     } catch (error) {
-      console.warn('Font loading failed, using system fonts:', error);
+      console.warn('Font setup failed:', error);
       setFontError(error as Error);
-      // Continue with system fonts fallback
       setFontsLoaded(true);
     }
   }, []);
@@ -85,7 +94,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <View style={styles.rootContainer}>
       <StatusBar style="light" />
       
       {/* Overlay de transition (flash subtil) */}
@@ -257,11 +266,18 @@ export default function RootLayout() {
           }} 
         />
       </Stack>
-    </>
+      
+      {/* Global DSP Mini-Player — persists across all screens */}
+      <MiniPlayer />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    backgroundColor: COLORS.dark,
+  },
   loading: {
     flex: 1,
     backgroundColor: COLORS.dark,

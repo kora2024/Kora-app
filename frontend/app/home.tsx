@@ -4,6 +4,8 @@
  * "La Culture en Mouvement"
  * Design TV-first identique au mockup de référence
  * Palette: Dark #0A0A0A / Gold #C9A84C / Terra #A65D47
+ * 
+ * UPDATED: Integrates global playerStore for DSP mini-player
  */
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
@@ -31,6 +33,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
+import { usePlayerStore } from '../src/stores/playerStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -481,82 +484,50 @@ function TrendingHub({ items, onItemPress }: { items: any[]; onItemPress: (item:
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// CONTINUE WATCHING SECTION + MINI PLAYER
+// CONTINUE WATCHING SECTION (Simplified - Mini-player is now global)
 // ══════════════════════════════════════════════════════════════════════════════
 
-function ContinueWatchingSection({ items, currentTrack, onItemPress }: { 
+function ContinueWatchingSection({ items, onItemPress }: { 
   items: any[]; 
-  currentTrack: any;
   onItemPress: (item: any) => void 
 }) {
-  const watchItems = items.slice(0, 3);
+  const watchItems = items.slice(0, 4);
+
+  if (watchItems.length === 0) {
+    return null;
+  }
 
   return (
     <View style={styles.continueSection}>
-      <View style={styles.continueLeft}>
+      <View style={styles.hubHeader}>
         <Text style={styles.hubTitle}>CONTINUEZ À REGARDER</Text>
-        <View style={styles.continueCards}>
-          {watchItems.length > 0 ? watchItems.map((item, index) => (
-            <TouchableOpacity 
-              key={item.id || index} 
-              style={styles.continueCard} 
-              onPress={() => onItemPress(item)} 
-              activeOpacity={0.9}
-            >
-              <ImageBackground 
-                source={{ uri: item.artwork || item.image }} 
-                style={styles.continueCardImage} 
-                imageStyle={styles.continueCardImageStyle}
-              >
-                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.continueCardGradient} />
-                <View style={styles.continueCardContent}>
-                  <Text style={styles.continueCardTitle} numberOfLines={1}>{item.title}</Text>
-                  <Text style={styles.continueCardMeta}>{item.type || 'Audio'} • {item.duration || '3:45'}</Text>
-                </View>
-                {/* Progress Bar */}
-                <View style={styles.progressBarContainer}>
-                  <View style={[styles.progressBar, { width: `${(item.progress || Math.random()) * 100}%` }]} />
-                </View>
-              </ImageBackground>
-            </TouchableOpacity>
-          )) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>Commencez à écouter pour voir votre historique</Text>
-            </View>
-          )}
-        </View>
+        <ChevronRightIcon size={18} color={CINEMA.cream} />
       </View>
-
-      {/* Mini Player */}
-      <View style={styles.miniPlayerContainer}>
-        <Text style={styles.miniPlayerLabel}>LECTURE EN COURS</Text>
-        <View style={styles.miniPlayer}>
-          <Image
-            source={{ uri: currentTrack?.artwork || 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300' }}
-            style={styles.miniPlayerArt}
-          />
-          <Text style={styles.miniPlayerTitle}>{currentTrack?.title || 'GOOD ENERGY'}</Text>
-          <Text style={styles.miniPlayerArtist}>{currentTrack?.artist || 'Kora Collective'}</Text>
-          
-          <View style={styles.miniPlayerProgress}>
-            <Text style={styles.miniPlayerTime}>1:32</Text>
-            <View style={styles.miniPlayerSlider}>
-              <View style={styles.miniPlayerSliderFill} />
-              <View style={styles.miniPlayerSliderThumb} />
-            </View>
-            <Text style={styles.miniPlayerTime}>3:45</Text>
-          </View>
-
-          <View style={styles.miniPlayerControls}>
-            <TouchableOpacity><ShuffleIcon size={18} color="rgba(255,255,255,0.5)" /></TouchableOpacity>
-            <TouchableOpacity><SkipBackIcon size={22} color={CINEMA.cream} /></TouchableOpacity>
-            <TouchableOpacity style={styles.miniPlayerPlayBtn}>
-              <PauseIcon size={24} color={CINEMA.black} />
-            </TouchableOpacity>
-            <TouchableOpacity><SkipForwardIcon size={22} color={CINEMA.cream} /></TouchableOpacity>
-            <TouchableOpacity><HeartIcon size={18} color="rgba(255,255,255,0.5)" /></TouchableOpacity>
-          </View>
-        </View>
+      <View style={styles.continueCards}>
+        {watchItems.map((item, index) => (
+          <TouchableOpacity 
+            key={item.id || index} 
+            style={styles.continueCard} 
+            onPress={() => onItemPress(item)} 
+            activeOpacity={0.9}
+          >
+            <ImageBackground 
+              source={{ uri: item.artwork || item.image }} 
+              style={styles.continueCardImage} 
+              imageStyle={styles.continueCardImageStyle}
+            >
+              <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.continueCardGradient} />
+              <View style={styles.continueCardContent}>
+                <Text style={styles.continueCardTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.continueCardMeta}>{item.type || 'Audio'} • {item.duration || '3:45'}</Text>
+              </View>
+              {/* Progress Bar */}
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: `${(item.progress || Math.random()) * 100}%` }]} />
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -827,13 +798,13 @@ function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
             <Text style={styles.footerLinkTitle}>Entreprise</Text>
             <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>À propos</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigate('/(static)/contact')}><Text style={styles.footerLinkItem}>Contact</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>Presse</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/press')}><Text style={styles.footerLinkItem}>Presse</Text></TouchableOpacity>
           </View>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Communautés</Text>
-            <TouchableOpacity onPress={() => onNavigate('/creator/studio')}><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigate('/(static)/about')}><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
-            <TouchableOpacity onPress={() => onNavigate('/(static)/contact')}><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/artists')}><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/developers')}><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/advertising')}><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
           </View>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Aide</Text>
@@ -854,7 +825,7 @@ function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
           <Text style={styles.footerLegalDot}>•</Text>
           <TouchableOpacity onPress={() => onNavigate('/(static)/privacy')}><Text style={styles.footerLegalLink}>Confidentialité</Text></TouchableOpacity>
           <Text style={styles.footerLegalDot}>•</Text>
-          <TouchableOpacity onPress={() => onNavigate('/(static)/privacy')}><Text style={styles.footerLegalLink}>Cookies</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => onNavigate('/(static)/cookies')}><Text style={styles.footerLegalLink}>Cookies</Text></TouchableOpacity>
         </View>
 
         <View style={styles.footerMeta}>
@@ -931,12 +902,14 @@ export default function KoraHome() {
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Global Player Store - DSP architecture
+  const { setCurrentTrack: setGlobalTrack, setMiniPlayerVisible } = usePlayerStore();
+
   // Real data states
   const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
   const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
   const [creators, setCreators] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentTrack, setCurrentTrack] = useState<any>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -952,9 +925,6 @@ export default function KoraHome() {
       if (featuredRes.ok) {
         const data = await featuredRes.json();
         setFeaturedTracks(data.tracks || []);
-        if (data.tracks?.length > 0) {
-          setCurrentTrack(data.tracks[0]);
-        }
       }
 
       // Load trending (can be same endpoint with different params)
@@ -982,10 +952,20 @@ export default function KoraHome() {
     setRefreshing(false);
   }, []);
 
+  // UPDATED: Set track in global store AND navigate to player
   const handlePlay = useCallback((item?: any) => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Heavy);
     if (item) {
-      setCurrentTrack(item);
+      // Set track in global store - this triggers the mini-player
+      setGlobalTrack({
+        id: item.id,
+        title: item.title,
+        artist: item.artist || 'KORA',
+        artwork: item.artwork || item.image || '',
+        stream_url: item.stream_url || '',
+        type: item.type || 'audio',
+        source: item.source || 'jamendo',
+      });
     }
     router.push({
       pathname: '/player',
@@ -999,11 +979,20 @@ export default function KoraHome() {
         artwork: item.artwork || item.image || '',
       } : {}
     });
-  }, [router, hapticFeedback]);
+  }, [router, hapticFeedback, setGlobalTrack]);
 
   const handleCategoryPress = useCallback((cat: any) => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
     switch (cat.id) {
+      case 'music':
+        router.push('/music');
+        break;
+      case 'video':
+        router.push('/video');
+        break;
+      case 'territories':
+        router.push('/territories');
+        break;
       case 'playlists':
         router.push('/playlists');
         break;
@@ -1017,7 +1006,6 @@ export default function KoraHome() {
         router.push('/creator/studio');
         break;
       default:
-        // Stay on home, could filter by category
         break;
     }
   }, [router, hapticFeedback]);
@@ -1116,10 +1104,9 @@ export default function KoraHome() {
         {/* Trending Hub */}
         <TrendingHub items={trendingTracks} onItemPress={handlePlay} />
         
-        {/* Continue Watching + Mini Player */}
+        {/* Continue Watching (Mini-player is now global in _layout.tsx) */}
         <ContinueWatchingSection 
-          items={featuredTracks.slice(0, 3)} 
-          currentTrack={currentTrack}
+          items={featuredTracks.slice(0, 4)} 
           onItemPress={handlePlay} 
         />
         
@@ -1628,25 +1615,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.45)',
   },
 
-  // ─── Continue Watching ────────────────────────────────────────────────────────
+  // ─── Continue Watching — Immersive scroll section ────────────────────────────
   continueSection: {
-    flexDirection: SW > 600 ? 'row' : 'column',
     marginTop: 36,
     paddingHorizontal: 20,
-    gap: 16,
-  },
-  continueLeft: {
-    flex: SW > 600 ? 2 : undefined,
   },
   continueCards: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 12,
     marginTop: 14,
   },
   continueCard: {
-    flex: 1,
-    height: 120,
-    borderRadius: 8,
+    width: SW > 600 ? (SW - 64) / 4 : (SW - 52) / 2,
+    height: SW > 600 ? 140 : 120,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   continueCardImage: {
@@ -1885,12 +1868,12 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
   },
 
-  // ─── Footer ───────────────────────────────────────────────────────────────────
+  // ─── Footer — Seamless blend with content ───────────────────────────────────
   footerContainer: {
-    marginTop: 32,
-    backgroundColor: CINEMA.black,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    marginTop: 48,
+    paddingTop: 32,
+    paddingBottom: 24,
+    borderTopWidth: 0,
   },
   footerTop: {
     flexDirection: SW > 600 ? 'row' : 'column',
