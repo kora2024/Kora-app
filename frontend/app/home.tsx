@@ -593,177 +593,81 @@ function CreatorsToFollow({ creators, onCreatorPress }: { creators: any[]; onCre
 // PREMIUM PRICING SECTION — Netflix/Spotify Level + Pack Famille
 // ══════════════════════════════════════════════════════════════════════════════
 
-function PremiumPricingSection({ onSelectPlan }: { onSelectPlan: (plan: 'premium' | 'family') => void }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const [activeUsers, setActiveUsers] = useState(47832);
-  const counterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPACT PRICING BANNER (Floating style)
+// ══════════════════════════════════════════════════════════════════════════════
 
-  // Animate on mount
+function CompactPricingBanner({ onSelectPlan }: { onSelectPlan: (plan: 'premium' | 'family') => void }) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
-    ]).start();
+    // Subtle pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.02, duration: 2000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
 
-    // Subtle live counter animation
-    counterRef.current = setInterval(() => {
-      setActiveUsers(prev => prev + Math.floor(Math.random() * 3));
-    }, 5000);
-
-    return () => {
-      if (counterRef.current) clearInterval(counterRef.current);
-    };
+    // Glow animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 0.6, duration: 1500, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0.3, duration: 1500, useNativeDriver: true }),
+      ])
+    ).start();
   }, []);
 
-  const PREMIUM_FEATURES = [
-    { id: 'noads', label: 'Sans publicité', sublabel: 'Écoute ininterrompue' },
-    { id: 'hd', label: 'Qualité Lossless', sublabel: 'Audio Hi-Res 24-bit' },
-    { id: 'download', label: 'Téléchargement', sublabel: 'Écoute hors-ligne' },
-    { id: 'exclusive', label: 'Contenus exclusifs', sublabel: 'Lives, documentaires' },
-  ];
+  const handlePremium = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    onSelectPlan('premium');
+  }, [onSelectPlan]);
 
-  const FAMILY_FEATURES = [
-    { id: 'accounts', label: 'Jusqu\'à 6 comptes', sublabel: 'Chacun son profil' },
-    { id: 'noads', label: 'Sans publicité', sublabel: 'Pour toute la famille' },
-    { id: 'hd', label: 'Qualité Lossless', sublabel: 'Sur tous les comptes' },
-    { id: 'parental', label: 'Contrôle parental', sublabel: 'Contenus adaptés' },
-  ];
+  const handleFamily = useCallback(() => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    onSelectPlan('family');
+  }, [onSelectPlan]);
 
   return (
-    <Animated.View style={[styles.pricingSectionContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-      {/* Subtle gradient background */}
-      <LinearGradient
-        colors={['rgba(201,168,76,0.03)', 'rgba(10,10,10,0)', 'rgba(166,93,71,0.02)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.pricingGradientBg}
-      />
-
-      {/* Social Proof - Animated */}
-      <View style={styles.socialProofContainer}>
-        <View style={styles.socialProofDot} />
-        <Text style={styles.socialProofText}>
-          <Text style={styles.socialProofNumber}>{activeUsers.toLocaleString('fr-FR')}</Text>
-          {' '}auditeurs en ce moment
-        </Text>
-      </View>
-
-      {/* Comparison Cards */}
-      <View style={styles.comparisonContainer}>
-        {/* Free Tier */}
-        <View style={styles.tierCard}>
-          <Text style={styles.tierLabel}>GRATUIT</Text>
-          <Text style={styles.tierPrice}>0€</Text>
-          <View style={styles.tierFeatures}>
-            <View style={styles.tierFeatureRow}>
-              <View style={styles.tierFeatureIconFree}>
-                <Text style={styles.tierFeatureIconText}>✓</Text>
-              </View>
-              <Text style={styles.tierFeatureText}>Catalogue limité</Text>
-            </View>
-            <View style={styles.tierFeatureRow}>
-              <View style={styles.tierFeatureIconFree}>
-                <Text style={styles.tierFeatureIconText}>✓</Text>
-              </View>
-              <Text style={styles.tierFeatureText}>Avec publicités</Text>
-            </View>
-            <View style={styles.tierFeatureRow}>
-              <View style={[styles.tierFeatureIconFree, styles.tierFeatureIconDisabled]}>
-                <Text style={styles.tierFeatureIconTextDisabled}>—</Text>
-              </View>
-              <Text style={styles.tierFeatureTextDisabled}>Téléchargement</Text>
-            </View>
-            <View style={styles.tierFeatureRow}>
-              <View style={[styles.tierFeatureIconFree, styles.tierFeatureIconDisabled]}>
-                <Text style={styles.tierFeatureIconTextDisabled}>—</Text>
-              </View>
-              <Text style={styles.tierFeatureTextDisabled}>Qualité HD</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Premium Tier */}
-        <View style={[styles.tierCard, styles.tierCardPremium]}>
+    <View style={styles.pricingBannerContainer}>
+      <Animated.View style={[styles.pricingBanner, { transform: [{ scale: pulseAnim }] }]}>
+        <BlurView intensity={Platform.OS === 'ios' ? 60 : 80} tint="dark" style={styles.pricingBannerBlur}>
           <LinearGradient
-            colors={['rgba(201,168,76,0.15)', 'rgba(201,168,76,0.05)']}
-            style={styles.tierCardPremiumGlow}
+            colors={['rgba(201,168,76,0.1)', 'rgba(20,20,20,0.95)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
           />
-          <View style={styles.tierBadge}>
-            <Text style={styles.tierBadgeText}>POPULAIRE</Text>
-          </View>
-          <Text style={styles.tierLabelPremium}>PREMIUM</Text>
-          <View style={styles.tierPriceRow}>
-            <Text style={styles.tierPricePremium}>3,98€</Text>
-            <Text style={styles.tierPricePeriod}>/mois</Text>
-          </View>
-          <View style={styles.tierFeatures}>
-            {PREMIUM_FEATURES.map((feature) => (
-              <View key={feature.id} style={styles.tierFeatureRow}>
-                <View style={styles.tierFeatureIconPremium}>
-                  <CheckIcon size={12} color={CINEMA.gold} />
-                </View>
-                <View style={styles.tierFeatureTextContainer}>
-                  <Text style={styles.tierFeatureTextPremium}>{feature.label}</Text>
-                  <Text style={styles.tierFeatureSublabel}>{feature.sublabel}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity style={styles.tierCTA} onPress={() => onSelectPlan('premium')} activeOpacity={0.9}>
-            <LinearGradient
-              colors={[CINEMA.gold, '#B8963F']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.tierCTAGradient}
-            >
-              <Text style={styles.tierCTAText}>S'ABONNER</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <Text style={styles.tierCTASubtext}>7 jours gratuits puis 3,98€/mois</Text>
-        </View>
+          
+          <View style={styles.pricingBannerContent}>
+            {/* Live indicator */}
+            <View style={styles.pricingLiveIndicator}>
+              <Animated.View style={[styles.pricingLiveDot, { opacity: glowAnim }]} />
+              <Text style={styles.pricingLiveText}>47K+ en écoute</Text>
+            </View>
 
-        {/* Family Tier */}
-        <View style={[styles.tierCard, styles.tierCardFamily]}>
-          <LinearGradient
-            colors={['rgba(166,93,71,0.15)', 'rgba(166,93,71,0.05)']}
-            style={styles.tierCardPremiumGlow}
-          />
-          <View style={[styles.tierBadge, styles.tierBadgeFamily]}>
-            <Text style={styles.tierBadgeText}>FAMILLE</Text>
+            {/* Main CTA */}
+            <View style={styles.pricingBannerMain}>
+              <Text style={styles.pricingBannerTitle}>Passez Premium</Text>
+              <Text style={styles.pricingBannerSubtitle}>Sans pub • Qualité HD • Offline</Text>
+            </View>
+
+            {/* Price buttons */}
+            <View style={styles.pricingBannerButtons}>
+              <TouchableOpacity style={styles.pricingBtnPremium} onPress={handlePremium} activeOpacity={0.8}>
+                <LinearGradient colors={[CINEMA.gold, '#B8973D']} style={styles.pricingBtnGradient}>
+                  <Text style={styles.pricingBtnText}>3,98€/mois</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pricingBtnFamily} onPress={handleFamily} activeOpacity={0.8}>
+                <Text style={styles.pricingBtnFamilyText}>Famille 7,98€</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.tierLabelFamily}>PACK FAMILLE</Text>
-          <View style={styles.tierPriceRow}>
-            <Text style={styles.tierPriceFamily}>7,98€</Text>
-            <Text style={styles.tierPricePeriod}>/mois</Text>
-          </View>
-          <View style={styles.tierFeatures}>
-            {FAMILY_FEATURES.map((feature) => (
-              <View key={feature.id} style={styles.tierFeatureRow}>
-                <View style={styles.tierFeatureIconFamily}>
-                  <CheckIcon size={12} color={CINEMA.terra} />
-                </View>
-                <View style={styles.tierFeatureTextContainer}>
-                  <Text style={styles.tierFeatureTextPremium}>{feature.label}</Text>
-                  <Text style={styles.tierFeatureSublabel}>{feature.sublabel}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-          <TouchableOpacity style={[styles.tierCTA, styles.tierCTAFamily]} onPress={() => onSelectPlan('family')} activeOpacity={0.9}>
-            <LinearGradient
-              colors={[CINEMA.terra, '#8B4D3B']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.tierCTAGradient}
-            >
-              <Text style={styles.tierCTAText}>CHOISIR FAMILLE</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-          <Text style={styles.tierCTASubtext}>7 jours gratuits puis 7,98€/mois</Text>
-        </View>
-      </View>
-    </Animated.View>
+        </BlurView>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -773,6 +677,187 @@ function CheckIcon({ size = 16, color = CINEMA.gold }: { size?: number; color?: 
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={3}>
       <Path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
     </Svg>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PREMIUM PRICING — Horizontal Scroll Cards (Netflix-style)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function PremiumPricingSection({ onSelectPlan }: { onSelectPlan: (plan: 'premium' | 'family') => void }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(40)).current;
+  const cardScales = useRef([new Animated.Value(0.9), new Animated.Value(0.9)]).current;
+  const glowAnim = useRef(new Animated.Value(0.3)).current;
+  const [activeUsers] = useState(47832);
+
+  useEffect(() => {
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 50, friction: 12, useNativeDriver: true }),
+    ]).start();
+
+    // Staggered card entrance
+    cardScales.forEach((scale, i) => {
+      Animated.spring(scale, {
+        toValue: 1,
+        tension: 60,
+        friction: 8,
+        delay: i * 150,
+        useNativeDriver: true,
+      }).start();
+    });
+
+    // Subtle glow pulse
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 0.6, duration: 2000, useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0.3, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  const handleCardPress = useCallback((plan: 'premium' | 'family', index: number) => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    
+    // Bounce animation
+    Animated.sequence([
+      Animated.timing(cardScales[index], { toValue: 0.95, duration: 100, useNativeDriver: true }),
+      Animated.spring(cardScales[index], { toValue: 1, tension: 200, friction: 10, useNativeDriver: true }),
+    ]).start();
+    
+    onSelectPlan(plan);
+  }, [onSelectPlan, cardScales]);
+
+  return (
+    <Animated.View style={[styles.pricingSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      {/* Section Header */}
+      <View style={styles.pricingHeader}>
+        <View style={styles.pricingHeaderLeft}>
+          <Text style={styles.pricingSectionTitle}>PASSEZ À L'EXPÉRIENCE PREMIUM</Text>
+          <View style={styles.pricingLiveRow}>
+            <Animated.View style={[styles.pricingLiveDot, { opacity: glowAnim }]} />
+            <Text style={styles.pricingLiveText}>{activeUsers.toLocaleString('fr-FR')} en écoute</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Horizontal Cards */}
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.pricingCardsScroll}
+        decelerationRate="fast"
+        snapToInterval={SW > 600 ? 320 : SW * 0.85 + 16}
+      >
+        {/* Premium Card */}
+        <Animated.View style={{ transform: [{ scale: cardScales[0] }] }}>
+          <TouchableOpacity 
+            style={styles.pricingCard} 
+            onPress={() => handleCardPress('premium', 0)}
+            activeOpacity={0.95}
+          >
+            <LinearGradient
+              colors={['rgba(201,168,76,0.12)', 'rgba(201,168,76,0.03)', 'transparent']}
+              style={styles.pricingCardGlow}
+            />
+            <View style={styles.pricingCardBadge}>
+              <Text style={styles.pricingCardBadgeText}>POPULAIRE</Text>
+            </View>
+            
+            <View style={styles.pricingCardHeader}>
+              <Text style={styles.pricingCardTitle}>Premium</Text>
+              <View style={styles.pricingCardPriceRow}>
+                <Text style={styles.pricingCardPrice}>3,98€</Text>
+                <Text style={styles.pricingCardPeriod}>/mois</Text>
+              </View>
+            </View>
+            
+            <View style={styles.pricingCardFeatures}>
+              <PricingFeatureRow icon="check" text="Sans publicité" highlight />
+              <PricingFeatureRow icon="check" text="Qualité Lossless 24-bit" />
+              <PricingFeatureRow icon="check" text="Téléchargement offline" />
+              <PricingFeatureRow icon="check" text="Contenus exclusifs" />
+            </View>
+            
+            <View style={styles.pricingCardCTA}>
+              <LinearGradient colors={[CINEMA.gold, '#B8963F']} style={styles.pricingCardCTAGradient}>
+                <Text style={styles.pricingCardCTAText}>ESSAI GRATUIT 7 JOURS</Text>
+              </LinearGradient>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Family Card */}
+        <Animated.View style={{ transform: [{ scale: cardScales[1] }] }}>
+          <TouchableOpacity 
+            style={[styles.pricingCard, styles.pricingCardFamily]} 
+            onPress={() => handleCardPress('family', 1)}
+            activeOpacity={0.95}
+          >
+            <LinearGradient
+              colors={['rgba(166,93,71,0.12)', 'rgba(166,93,71,0.03)', 'transparent']}
+              style={styles.pricingCardGlow}
+            />
+            <View style={[styles.pricingCardBadge, styles.pricingCardBadgeFamily]}>
+              <Text style={styles.pricingCardBadgeText}>FAMILLE</Text>
+            </View>
+            
+            <View style={styles.pricingCardHeader}>
+              <Text style={styles.pricingCardTitleFamily}>Pack Famille</Text>
+              <View style={styles.pricingCardPriceRow}>
+                <Text style={styles.pricingCardPriceFamily}>7,98€</Text>
+                <Text style={styles.pricingCardPeriod}>/mois</Text>
+              </View>
+            </View>
+            
+            <View style={styles.pricingCardFeatures}>
+              <PricingFeatureRow icon="users" text="Jusqu'à 6 comptes" highlight family />
+              <PricingFeatureRow icon="check" text="Sans pub pour tous" family />
+              <PricingFeatureRow icon="check" text="Contrôle parental" family />
+              <PricingFeatureRow icon="check" text="Profils personnalisés" family />
+            </View>
+            
+            <View style={styles.pricingCardCTA}>
+              <LinearGradient colors={[CINEMA.terra, '#8B4D3B']} style={styles.pricingCardCTAGradient}>
+                <Text style={styles.pricingCardCTAText}>CHOISIR FAMILLE</Text>
+              </LinearGradient>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      </ScrollView>
+    </Animated.View>
+  );
+}
+
+// Pricing Feature Row Component
+function PricingFeatureRow({ 
+  icon, 
+  text, 
+  highlight = false,
+  family = false 
+}: { 
+  icon: 'check' | 'users'; 
+  text: string; 
+  highlight?: boolean;
+  family?: boolean;
+}) {
+  return (
+    <View style={styles.pricingFeatureRow}>
+      <View style={[styles.pricingFeatureIcon, family && styles.pricingFeatureIconFamily]}>
+        {icon === 'check' ? (
+          <CheckIcon size={10} color={family ? CINEMA.terra : CINEMA.gold} />
+        ) : (
+          <Svg width={10} height={10} viewBox="0 0 24 24" fill={family ? CINEMA.terra : CINEMA.gold}>
+            <Path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
+          </Svg>
+        )}
+      </View>
+      <Text style={[styles.pricingFeatureText, highlight && styles.pricingFeatureTextHighlight]}>
+        {text}
+      </Text>
+    </View>
   );
 }
 
@@ -2147,6 +2232,233 @@ const styles = StyleSheet.create({
   },
   tierCTAFamily: {
     // Inherits from tierCTA, gradient is set in component
+  },
+
+  // ─── NEW Pricing Section (Netflix-style Horizontal) ────────────────────────────
+  pricingSection: {
+    marginTop: 48,
+    paddingTop: 8,
+  },
+  pricingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  pricingHeaderLeft: {
+    flex: 1,
+  },
+  pricingSectionTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  pricingLiveRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  pricingLiveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4ADE80',
+  },
+  pricingLiveText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+  },
+  pricingCardsScroll: {
+    paddingHorizontal: 16,
+    gap: 16,
+    paddingBottom: 8,
+  },
+  pricingCard: {
+    width: SW > 600 ? 300 : SW * 0.85,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.2)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  pricingCardFamily: {
+    borderColor: 'rgba(166,93,71,0.2)',
+  },
+  pricingCardGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '50%',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  pricingCardBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: CINEMA.gold,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  pricingCardBadgeFamily: {
+    backgroundColor: CINEMA.terra,
+  },
+  pricingCardBadgeText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 9,
+    color: CINEMA.black,
+    letterSpacing: 1,
+  },
+  pricingCardHeader: {
+    marginBottom: 20,
+  },
+  pricingCardTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: CINEMA.gold,
+    marginBottom: 8,
+  },
+  pricingCardTitleFamily: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: CINEMA.terra,
+    marginBottom: 8,
+  },
+  pricingCardPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  pricingCardPrice: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 32,
+    color: CINEMA.gold,
+  },
+  pricingCardPriceFamily: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 32,
+    color: CINEMA.terra,
+  },
+  pricingCardPeriod: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.4)',
+    marginLeft: 4,
+  },
+  pricingCardFeatures: {
+    gap: 10,
+    marginBottom: 24,
+  },
+  pricingFeatureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  pricingFeatureIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pricingFeatureIconFamily: {
+    backgroundColor: 'rgba(166,93,71,0.15)',
+  },
+  pricingFeatureText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  pricingFeatureTextHighlight: {
+    color: CINEMA.cream,
+    fontFamily: FONTS.jostMedium,
+  },
+  pricingCardCTA: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  pricingCardCTAGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  pricingCardCTAText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.black,
+    letterSpacing: 1,
+  },
+  
+  // Compact Banner (alternative)
+  pricingBannerContainer: {
+    paddingHorizontal: 12,
+    marginTop: 24,
+  },
+  pricingBanner: {
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  pricingBannerBlur: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.15)',
+  },
+  pricingBannerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+  },
+  pricingBannerMain: {
+    flex: 1,
+  },
+  pricingBannerTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 15,
+    color: CINEMA.cream,
+    marginBottom: 2,
+  },
+  pricingBannerSubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+  },
+  pricingBannerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  pricingBtnPremium: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  pricingBtnGradient: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  pricingBtnText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.black,
+  },
+  pricingBtnFamily: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(166,93,71,0.4)',
+  },
+  pricingBtnFamilyText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: CINEMA.terra,
   },
 
   // ─── Footer (DSP Level) ───────────────────────────────────────────────────────

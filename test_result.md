@@ -1094,6 +1094,89 @@ agent_communication:
       All screens render correctly, navigation works, API integration verified.
       Ready for data population and user testing.
   
+  
+  - agent: "testing"
+    message: |
+      ✅ KORA MINI-PLAYER DSP & PRICING SECTION TESTING - 2026-06-30
+      
+      Test URL: https://orbit-connect-15.preview.emergentagent.com/home
+      Device: Mobile (390x844 - iPhone 14)
+      Test Method: Playwright automation with visual verification
+      
+      🎯 TESTS EFFECTUÉS (Review Request):
+      
+      ✅ TEST 1 - MINI-PLAYER DSP (P0 - CRITIQUE):
+         FONCTIONNEL:
+         - Bouton "COMMENCER L'EXPÉRIENCE" déclenche le player ✓
+         - AdGate s'affiche avec 3 options correctes:
+           * "REGARDER APRÈS LA PUB" (5 secondes de publicité) ✓
+           * "REGARDER UNE PUB LONGUE" (30 min sans pub ensuite) ✓
+           * "PASSER PREMIUM - 3,98€/MOIS" (Sans publicité, à vie) ✓
+         - Bouton "Annuler" ferme l'AdGate ✓
+         - Mini-player apparaît en bas après fermeture AdGate ✓
+         - Mini-player contient:
+           * Pochette vinyl ronde (visible) ✓
+           * Titre: "Zouk Love Cla..." (tronqué) ✓
+           * Artiste: "FRK-KORADEM01" ✓
+           * Contrôles: cœur, previous, play/pause (bouton terra), next ✓
+           * Indicateur de swipe en bas (ligne blanche) ✓
+         
+         NON VÉRIFIABLE (Limitations système):
+         - Rotation de la pochette vinyl (nécessite vidéo/live testing) ⚠️
+         - Equalizer animé (barres colorées) - non visible dans screenshots ⚠️
+         - Barre de progression interactive en haut - non clairement visible ⚠️
+         - Expansion vers player complet par clic - non testé (navigation échouée) ⚠️
+         - Changement d'icône play/pause - non testé (nécessite audio playback) ⚠️
+      
+      ❌ TEST 2 - NAVIGATION AVEC MINI-PLAYER PERSISTANT (P1 - BLOQUANT):
+         PROBLÈME CRITIQUE:
+         - Navigation vers /music: Mini-player DISPARAÎT ✗
+         - Navigation vers /video: Élément non visible (timeout) ✗
+         
+         ROOT CAUSE PROBABLE:
+         Le mini-player est bien rendu globalement dans _layout.tsx (ligne 271),
+         mais la condition de visibilité (isMiniPlayerVisible) n'est pas maintenue
+         lors de la navigation entre pages. Le playerStore perd probablement son état
+         ou la condition de rendu ne persiste pas correctement.
+         
+         FIX SUGGÉRÉ:
+         Vérifier que usePlayerStore maintient l'état global lors des navigations.
+         Possiblement ajouter une persistance (AsyncStorage) ou vérifier que
+         isMiniPlayerVisible reste true après navigation.
+      
+      ✅ TEST 3 - SECTION PRICING NETFLIX-STYLE (P1):
+         FONCTIONNEL:
+         - Section "PASSEZ À L'EXPÉRIENCE PREMIUM" présente ✓
+         - Indicateur live "47832 en écoute" avec animation ✓
+         - 2 cartes horizontales visibles:
+           * Carte Premium: 3,98€/mois avec badge "POPULAIRE" ✓
+           * Carte Famille: 7,98€/mois (partiellement visible en scroll) ✓
+         - Features listées sur carte Premium:
+           * Sans publicité ✓
+           * Qualité Lossless 24-bit ✓
+           * Téléchargement offline ✓
+           * Contenus exclusifs ✓
+         - Bouton CTA "ESSAI GRATUIT 7 JOURS" en gold ✓
+         - Layout horizontal scroll (Netflix-style) ✓
+         - Animation tactile: Clic sur carte fonctionne ✓
+      
+      ✅ TEST 4 - ANIMATIONS GÉNÉRALES (P2):
+         FONCTIONNEL:
+         - Cartes ont feedback visuel au touch ✓
+         - Clic sur carte "Zouk Love Classics" ouvre modal "REGARDER MAINTENANT" ✓
+         - Transitions fluides observées ✓
+      
+      📊 RÉSUMÉ:
+      - Tests réussis: 3/4 (75%)
+      - Test échoué: 1/4 (Navigation avec mini-player persistant)
+      - Fonctionnalités non vérifiables: 5 (animations audio/vidéo)
+      
+      🚨 PROBLÈME CRITIQUE À CORRIGER:
+      Le mini-player ne persiste PAS lors de la navigation entre pages.
+      C'est un bug BLOQUANT pour l'expérience DSP (Spotify/Apple Music level).
+      
+      RECOMMANDATION: Fixer la persistance du mini-player avant release.
+
   - agent: "testing"
     message: |
       ✅ KORA POST-REFACTORING TESTING COMPLETE - 2026-06-10
