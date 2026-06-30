@@ -354,7 +354,7 @@ function HeroSection({ onStart, onTrailer }: { onStart: () => void; onTrailer: (
       <Animated.View style={[styles.heroContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <Text style={styles.heroHeadline}>LA CULTURE{'\n'}EN MOUVEMENT</Text>
         <Text style={styles.heroSubheadline}>
-          MUSIQUE. CINÉMA. PERFORMANCES.{'\n'}UNE SEULE EXPÉRIENCE.
+          ÉCOUTE GRATUITE • PREMIUM SANS PUB À 3,98€
         </Text>
 
         <View style={styles.heroCTAContainer}>
@@ -365,7 +365,7 @@ function HeroSection({ onStart, onTrailer }: { onStart: () => void; onTrailer: (
               end={{ x: 1, y: 0 }}
               style={styles.heroPrimaryCTAGradient}
             >
-              <Text style={styles.heroPrimaryCTAText}>COMMENCER L'EXPÉRIENCE</Text>
+              <Text style={styles.heroPrimaryCTAText}>ÉCOUTER GRATUITEMENT</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -696,17 +696,29 @@ export default function LandingScreen() {
 
   const handleStart = useCallback(() => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Heavy);
-    router.push('/auth/signup');
+    // NOUVEAU FLUX: Écoute gratuite d'abord, pas d'inscription forcée
+    router.push('/home');
   }, [router, hapticFeedback]);
 
   const handleTrailer = useCallback(() => {
     hapticFeedback();
-    router.push('/player');
+    // Ouvrir le player avec un track featured
+    router.push({
+      pathname: '/player',
+      params: {
+        title: 'GOOD MOOD LIVE',
+        artist: 'KORA Featured',
+        type: 'video',
+        stream_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        artwork: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800',
+      }
+    });
   }, [router, hapticFeedback]);
 
   const handleItemPress = useCallback((item: any) => {
     hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
-    router.push('/auth/login');
+    // NOUVEAU: Aller au home pour écouter, pas forcer login
+    router.push('/home');
   }, [router, hapticFeedback]);
 
   const handleJoin = useCallback(() => {

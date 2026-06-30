@@ -114,9 +114,9 @@ user_problem_statement: |
 frontend:
   - task: "Landing Page - Netflix-Style Cinematic Interface"
     implemented: true
-    working: true
+    working: false
     file: "frontend/app/landing.tsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
@@ -129,6 +129,9 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ NETFLIX-STYLE LANDING PAGE FULLY TESTED on mobile (390x844) and desktop (1920x800). COMPLETE REDESIGN verified with all requested elements: [HEADER] KORA logo in gold (#C9A84C), 6 navigation items (ACCUEIL, MUSIQUE, VIDÉO, LIVE, CRÉATEURS, PLAYLISTS), SE CONNECTER button. [HERO] 'LA CULTURE EN MOUVEMENT' title (Playfair 52px), subtitle 'MUSIQUE. CINÉMA. PERFORMANCES. UNE SEULE EXPÉRIENCE.', COMMENCER L'EXPÉRIENCE button → /auth/signup ✓, REGARDER LE TRAILER button → /player ✓. [FEATURED GRID] Main card 'GOOD MOOD LIVE' with Featured badge, sidebar cards TAYC (NOUVEAU CLIP), BLACK SUN (COURT MÉTRAGE), DIASPORA (DOCUMENTAIRE). [CATEGORY ROW] All 7 icons verified: MUSIQUE (Écouter), VIDÉO (Regarder), LIVE (En direct), CRÉATEURS (Découvrir), PLAYLISTS (Vos sélections), TERRITOIRES (Explorer), PODCASTS (Écouter). [TRENDING HUB] EN TENDANCE section with horizontal scroll, all 7 artists found: Asake, Tiakola, Burnaboy, Aya Nakamura, Wizkid, Tems, Rema. [CONTINUE WATCHING] CONTINUEZ À REGARDER with 3 items (KABEAUSHÉ LIVE, BEHIND THE VISION, DIASPORA TALES) with progress bars. [MINI PLAYER] LECTURE EN COURS with GOOD ENERGY track, play/pause controls, shuffle, skip buttons. [CREATORS] CRÉATEURS À SUIVRE with 5 circular avatars (Nadir El Fassi, Lakecia Benjamin, Adama Sanogo, Lous and The Yakuza, Junior Roy). [FOOTER] 3 columns (KORA, LÉGAL, AIDE), pricing 3,98€ / MOIS, ESSAYER MAINTENANT button → /paywall ✓. Navigation tested: 3/4 buttons working (SE CONNECTER has Playwright viewport limitation with fixed header but code is correct). Dark cinematic theme (#0A0A0A), gold accents (#C9A84C), terra color (#A65D47). No errors detected. Production-ready."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE - PARCOURS UTILISATEUR BLOQUÉ (2026-06-30). TESTED on mobile (390x844). PROBLÈME 1: Bouton 'COMMENCER L'EXPÉRIENCE' redirige vers /auth/signup au lieu de /home - VIOLE l'exigence fondateur 'Il clique. Il écoute gratuitement.' Code landing.tsx ligne 697-701 montre handleStart devrait aller à /home mais navigation va à /auth/signup. PROBLÈME 2: Message 'ÉCOUTE GRATUITE • PREMIUM SANS PUB À 3,98€' NON VISIBLE - Code ligne 357 montre heroSubheadline mais affiche 'MUSIQUE. CINÉMA. PERFORMANCES.' à la place. PROBLÈME 3: Hero 'Lecture' button ouvre player avec 'Informations manquantes' - URL montre stream_url vide. ✅ FONCTIONNEL: Titre 'LA CULTURE EN MOUVEMENT' visible, Paywall affiche 3,98€/mois correctement. IMPACT: Parcours utilisateur gratuit CASSÉ - inscription forcée bloque l'écoute gratuite promise."
 
   - task: "Signup Page - FREK-ID Registration"
     implemented: true
@@ -633,6 +636,61 @@ frontend:
         comment: "❌ CRITICAL ROUTING ISSUE: File exists at /app/frontend/app/creator/studio.tsx (64KB, fully implemented with all 8 tabs) but expo-router is NOT recognizing the route. Console error: 'No route named creator/studio exists in nested children'. When navigating to /creator/studio, app redirects to /auth/login. Route is not being picked up even after restarting expo service. Available routes: [biometric, eveil, home, index, landing, noyau, orbite, paywall, player, settings, upload, auth, creator]. The 'creator' directory is recognized but individual files inside (studio.tsx, [id].tsx) are not being registered as routes. This is a BLOCKING ISSUE preventing any testing of the Creator Studio feature."
 
 agent_communication:
+  - agent: "testing"
+    message: |
+      ❌ PARCOURS UTILISATEUR KORA - TESTS CRITIQUES ÉCHOUÉS - 2026-06-30
+      
+      Test URL: https://orbit-connect-15.preview.emergentagent.com/landing
+      Device: Mobile (390x844 - iPhone 12/13/14)
+      Test Method: Playwright automation - Parcours utilisateur complet
+      
+      PROBLÈMES CRITIQUES TROUVÉS:
+      
+      1. ❌ INSCRIPTION FORCÉE (BLOQUANT):
+         - Bouton "COMMENCER L'EXPÉRIENCE" redirige vers /auth/signup
+         - DEVRAIT aller vers /home pour écoute gratuite
+         - Code landing.tsx ligne 697-701: handleStart() → router.push('/home')
+         - MAIS navigation réelle va à /auth/signup
+         - VIOLE exigence fondateur: "Il clique. Il écoute gratuitement."
+         - Screenshot: 02_home_page.png montre page signup au lieu de home
+      
+      2. ❌ MESSAGE MANQUANT (HAUTE PRIORITÉ):
+         - Message "ÉCOUTE GRATUITE • PREMIUM SANS PUB À 3,98€" NON VISIBLE
+         - Code landing.tsx ligne 357: heroSubheadline devrait afficher ce message
+         - Affiche à la place: "MUSIQUE. CINÉMA. PERFORMANCES. UNE SEULE EXPÉRIENCE."
+         - Utilisateur ne comprend pas l'offre gratuite en 3 secondes
+      
+      3. ❌ PLAYER CASSÉ (BLOQUANT):
+         - Bouton "Lecture" du hero ouvre player avec "Informations manquantes"
+         - URL player: stream_url=&artwork= (vides)
+         - Code home.tsx ligne 978-992: handlePlay() ne passe pas les bonnes données
+         - Screenshot: 03_player.png montre erreur rouge
+      
+      TESTS RÉUSSIS:
+      
+      ✅ SCÉNARIO 1 (PARTIEL):
+         - Titre "LA CULTURE EN MOUVEMENT" visible ✓
+         - Page charge en <3 secondes ✓
+         - Design Netflix-style correct ✓
+      
+      ✅ SCÉNARIO 4:
+         - Paywall affiche "3,98 €/mois" correctement ✓
+         - Bouton "S'abonner maintenant" présent ✓
+         - Liste de 8 fonctionnalités visible ✓
+         - Screenshot: 04_paywall.png confirme
+      
+      IMPACT BUSINESS:
+      🚨 Le parcours utilisateur promis par le fondateur est CASSÉ:
+         "Un utilisateur tape KORA dans Google. Il arrive sur la landing. 
+          En 3 secondes il comprend ce que c'est. Il clique. Il écoute gratuitement."
+      
+      ACTUELLEMENT:
+         ❌ Message gratuit pas clair
+         ❌ Clic → Inscription forcée (pas écoute gratuite)
+         ❌ Player ne fonctionne pas
+      
+      RECOMMANDATION: PRIORITÉ ABSOLUE - Fixer ces 3 bugs avant tout autre développement.
+  
   - agent: "testing"
     message: |
       ✅ PLAYER AUDIO FIX VERIFIED - 2026-06-30
