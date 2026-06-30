@@ -44,6 +44,7 @@ import {
   StaggerReveal,
   PulseButton,
 } from '../src/components/CinematicAnimations';
+import { formatArtistName } from '../src/utils/formatters';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
@@ -389,7 +390,7 @@ function FeaturedContentGrid({ items, onItemPress }: { items: any[]; onItemPress
               <Text style={styles.featuredBadgeText}>Featured</Text>
             </View>
             <Text style={styles.featuredMainTitle}>{mainItem.title}</Text>
-            <Text style={styles.featuredMainSubtitle}>{mainItem.artist || 'KORA Exclusive'}</Text>
+            <Text style={styles.featuredMainSubtitle}>{formatArtistName(mainItem.artist)}</Text>
             <Text style={styles.featuredMainDescription}>
               Un show. Une énergie.{'\n'}Une culture qui unit les mondes.
             </Text>
@@ -424,7 +425,7 @@ function FeaturedContentGrid({ items, onItemPress }: { items: any[]; onItemPress
                   </Text>
                 </View>
                 <Text style={styles.sidebarTitle}>{item.title}</Text>
-                <Text style={styles.sidebarSubtitle}>{item.artist}</Text>
+                <Text style={styles.sidebarSubtitle}>{formatArtistName(item.artist)}</Text>
               </View>
               <View style={styles.sidebarPlayBtn}>
                 <PlayIcon size={18} color={CINEMA.cream} />
@@ -499,7 +500,7 @@ function TrendingHub({ items, onItemPress }: { items: any[]; onItemPress: (item:
                 <PlayIcon size={16} color={CINEMA.white} />
               </View>
             </View>
-            <Text style={styles.trendingName} numberOfLines={1}>{item.artist || item.title}</Text>
+            <Text style={styles.trendingName} numberOfLines={1}>{formatArtistName(item.artist) || item.title}</Text>
             <Text style={styles.trendingTrack} numberOfLines={1}>{item.title}</Text>
           </TouchableOpacity>
         )}
