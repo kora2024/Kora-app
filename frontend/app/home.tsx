@@ -1,953 +1,754 @@
 /**
- * KORA Home — Expérience Ultra Premium Diasporique
+ * KORA Home — Netflix/Apple TV Premium Interface
  * 
- * NIVEAU: Apple Music × Netflix × Afrofuturisme
- * 
- * Animations:
- * - Entrées staggerées avec spring physics
- * - Parallaxe multi-couches au scroll
- * - Micro-interactions haptiques
- * - Globe animé avec particules
- * - Cards avec scale + glow au press
- * - Hero cinématique avec ken burns effect
+ * "La Culture en Mouvement"
+ * Design TV-first identique au mockup de référence
+ * Palette: Dark #0A0A0A / Gold #C9A84C / Terra #A65D47
  */
 
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  Dimensions,
   ScrollView,
   TouchableOpacity,
-  Pressable,
   Image,
-  Dimensions,
-  FlatList,
   Animated,
-  ImageBackground,
   StatusBar,
-  TextInput,
+  FlatList,
+  ImageBackground,
   RefreshControl,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Circle, G, Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
-import { PlayIcon, SearchIcon, PlusIcon } from '../src/components/icons/KoraIcons';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ANIMATION CONSTANTS — PREMIUM TIMING
+// DESIGN TOKENS — Netflix Premium
 // ══════════════════════════════════════════════════════════════════════════════
 
-const TIMING = {
-  micro: 120,
-  fast: 200,
-  normal: 320,
-  slow: 480,
-  cinematic: 600,
+const CINEMA = {
+  black: '#0A0A0A',
+  darkGray: '#141414',
+  gold: '#C9A84C',
+  goldLight: '#D4B55A',
+  amber: '#D4A853',
+  terra: '#A65D47',
+  cream: '#F5F0E6',
+  white: '#FFFFFF',
+  red: '#E50914',
 };
 
-const SPRING = {
-  gentle: { tension: 100, friction: 12 },
-  snappy: { tension: 180, friction: 14 },
-  bouncy: { tension: 200, friction: 8 },
-};
-
 // ══════════════════════════════════════════════════════════════════════════════
-// ANIMATED CARD WRAPPER — Premium Press Effect
+// API Configuration
 // ══════════════════════════════════════════════════════════════════════════════
 
-function AnimatedCard({ children, onPress, style, delay = 0 }: any) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(1)).current; // Start visible!
-  const translateY = useRef(new Animated.Value(0)).current; // Start at position!
-  const [hasAnimated, setHasAnimated] = useState(false);
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
 
-  useEffect(() => {
-    // Only animate if not already animated and delay is reasonable
-    if (!hasAnimated && delay < 500) {
-      opacity.setValue(0);
-      translateY.setValue(20);
-      
-      const timer = setTimeout(() => {
-        Animated.parallel([
-          Animated.timing(opacity, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.spring(translateY, {
-            toValue: 0,
-            tension: 100,
-            friction: 12,
-            useNativeDriver: true,
-          }),
-        ]).start(() => setHasAnimated(true));
-      }, delay);
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
+// ══════════════════════════════════════════════════════════════════════════════
+// ICONS — SVG Premium
+// ══════════════════════════════════════════════════════════════════════════════
 
-  const handlePressIn = () => {
-    Animated.spring(scale, {
-      toValue: 0.96,
-      tension: 200,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      tension: 200,
-      friction: 8,
-      useNativeDriver: true,
-    }).start();
-  };
-
+function PlayIcon({ size = 24, color = CINEMA.white }: { size?: number; color?: string }) {
   return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-    >
-      <Animated.View
-        style={[
-          style,
-          {
-            opacity,
-            transform: [{ scale }, { translateY }],
-          },
-        ]}
-      >
-        {children}
-      </Animated.View>
-    </Pressable>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M8 5v14l11-7z" />
+    </Svg>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ANIMATED GLOBE — Diaspora Pulse
-// ══════════════════════════════════════════════════════════════════════════════
-
-function AnimatedGlobe({ selectedTerritory, onSelectTerritory }: { 
-  selectedTerritory: string | null; 
-  onSelectTerritory: (t: string) => void;
-}) {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-  const particleAnims = useRef(
-    Array.from({ length: 8 }, () => ({
-      x: new Animated.Value(0),
-      y: new Animated.Value(0),
-      opacity: new Animated.Value(0),
-      scale: new Animated.Value(0),
-    }))
-  ).current;
-
-  useEffect(() => {
-    // Rotation lente et continue
-    Animated.loop(
-      Animated.timing(rotateAnim, {
-        toValue: 1,
-        duration: 60000,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    // Pulse du globe
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.03,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Glow effect
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Particules flottantes
-    particleAnims.forEach((particle, i) => {
-      const delay = i * 400;
-      const duration = 4000 + Math.random() * 2000;
-      
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.parallel([
-            Animated.timing(particle.opacity, {
-              toValue: 0.6,
-              duration: duration * 0.3,
-              useNativeDriver: true,
-            }),
-            Animated.timing(particle.scale, {
-              toValue: 1,
-              duration: duration * 0.3,
-              useNativeDriver: true,
-            }),
-            Animated.timing(particle.y, {
-              toValue: -80 - Math.random() * 40,
-              duration: duration,
-              useNativeDriver: true,
-            }),
-            Animated.timing(particle.x, {
-              toValue: (Math.random() - 0.5) * 100,
-              duration: duration,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(particle.opacity, {
-              toValue: 0,
-              duration: duration * 0.2,
-              useNativeDriver: true,
-            }),
-            Animated.timing(particle.scale, {
-              toValue: 0,
-              duration: duration * 0.2,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(particle.y, {
-              toValue: 0,
-              duration: 0,
-              useNativeDriver: true,
-            }),
-            Animated.timing(particle.x, {
-              toValue: 0,
-              duration: 0,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      ).start();
-    });
-  }, []);
-
-  const territories = [
-    { id: 'caribbean', name: 'Caraïbes', x: 30, y: 45, color: COLORS.terra, size: 12 },
-    { id: 'africa', name: 'Afrique', x: 70, y: 50, color: '#C9A84C', size: 14 },
-    { id: 'diaspora', name: 'Diaspora', x: 55, y: 35, color: '#4A7FA5', size: 10 },
-    { id: 'latin', name: 'Latin', x: 25, y: 55, color: '#7B4B94', size: 11 },
-    { id: 'world', name: 'Monde', x: 50, y: 60, color: '#46D369', size: 10 },
-  ];
-
-  const handleTerritoryPress = (id: string) => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    onSelectTerritory(id);
-  };
-
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.6],
-  });
-
+function SearchIcon({ size = 24, color = CINEMA.white }: { size?: number; color?: string }) {
   return (
-    <View style={styles.globeContainer}>
-      {/* Glow background */}
-      <Animated.View style={[styles.globeGlow, { opacity: glowOpacity }]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(166,93,71,0.15)', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </Animated.View>
-
-      {/* Floating particles */}
-      {particleAnims.map((particle, i) => (
-        <Animated.View
-          key={i}
-          style={[
-            styles.particle,
-            {
-              left: 75 + (i % 4) * 20,
-              bottom: 60,
-              opacity: particle.opacity,
-              transform: [
-                { translateX: particle.x },
-                { translateY: particle.y },
-                { scale: particle.scale },
-              ],
-            },
-          ]}
-        >
-          <View style={[styles.particleDot, { backgroundColor: i % 2 === 0 ? COLORS.terra : '#C9A84C' }]} />
-        </Animated.View>
-      ))}
-
-      {/* Globe */}
-      <Animated.View style={[styles.globeWrapper, { transform: [{ scale: pulseAnim }] }]}>
-        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-          <Svg width={160} height={160} viewBox="0 0 160 160">
-            <Defs>
-              <RadialGradient id="globeGrad2" cx="35%" cy="35%" r="65%">
-                <Stop offset="0%" stopColor="#2d2d3a" />
-                <Stop offset="50%" stopColor="#1a1a22" />
-                <Stop offset="100%" stopColor="#0d0d0d" />
-              </RadialGradient>
-              <RadialGradient id="atmosphereGrad" cx="50%" cy="50%" r="50%">
-                <Stop offset="70%" stopColor="transparent" />
-                <Stop offset="100%" stopColor="rgba(166,93,71,0.2)" />
-              </RadialGradient>
-            </Defs>
-            
-            {/* Atmosphere */}
-            <Circle cx="80" cy="80" r="78" fill="url(#atmosphereGrad)" />
-            
-            {/* Globe base */}
-            <Circle cx="80" cy="80" r="70" fill="url(#globeGrad2)" />
-            
-            {/* Grid lines with glow */}
-            <Ellipse cx="80" cy="80" rx="70" ry="25" stroke="rgba(166,93,71,0.15)" strokeWidth="0.5" fill="none" />
-            <Ellipse cx="80" cy="80" rx="70" ry="50" stroke="rgba(166,93,71,0.1)" strokeWidth="0.5" fill="none" />
-            <Path d="M80 10 Q120 80 80 150" stroke="rgba(166,93,71,0.1)" strokeWidth="0.5" fill="none" />
-            <Path d="M80 10 Q40 80 80 150" stroke="rgba(166,93,71,0.1)" strokeWidth="0.5" fill="none" />
-            
-            {/* Connection lines between territories */}
-            <Path 
-              d="M48 72 Q80 50 112 80" 
-              stroke="rgba(166,93,71,0.2)" 
-              strokeWidth="1" 
-              strokeDasharray="4,4"
-              fill="none" 
-            />
-            <Path 
-              d="M40 88 Q60 100 48 72" 
-              stroke="rgba(201,168,76,0.2)" 
-              strokeWidth="1" 
-              strokeDasharray="4,4"
-              fill="none" 
-            />
-          </Svg>
-        </Animated.View>
-
-        {/* Territory points - positioned absolutely */}
-        {territories.map((t) => {
-          const isSelected = selectedTerritory === t.id;
-          return (
-            <TouchableOpacity
-              key={t.id}
-              style={[
-                styles.territoryPoint,
-                {
-                  left: t.x * 1.6 - 15,
-                  top: t.y * 1.6 - 15,
-                },
-              ]}
-              onPress={() => handleTerritoryPress(t.id)}
-              activeOpacity={0.7}
-            >
-              {/* Pulse ring when selected */}
-              {isSelected && (
-                <Animated.View
-                  style={[
-                    styles.territoryPulse,
-                    {
-                      borderColor: t.color,
-                      transform: [{ scale: pulseAnim }],
-                    },
-                  ]}
-                />
-              )}
-              <View
-                style={[
-                  styles.territoryDot,
-                  {
-                    backgroundColor: t.color,
-                    width: isSelected ? t.size + 4 : t.size,
-                    height: isSelected ? t.size + 4 : t.size,
-                    borderRadius: (isSelected ? t.size + 4 : t.size) / 2,
-                    shadowColor: t.color,
-                    shadowOpacity: isSelected ? 0.8 : 0.4,
-                    shadowRadius: isSelected ? 12 : 6,
-                  },
-                ]}
-              />
-            </TouchableOpacity>
-          );
-        })}
-      </Animated.View>
-
-      {/* Territory selector chips */}
-      <View style={styles.territoryChips}>
-        {territories.map((t, index) => {
-          const isSelected = selectedTerritory === t.id;
-          const chipAnim = useRef(new Animated.Value(0)).current;
-          
-          useEffect(() => {
-            Animated.spring(chipAnim, {
-              toValue: 1,
-              ...SPRING.gentle,
-              delay: index * 80,
-              useNativeDriver: true,
-            }).start();
-          }, []);
-
-          return (
-            <Animated.View
-              key={t.id}
-              style={{
-                opacity: chipAnim,
-                transform: [{
-                  translateY: chipAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [20, 0],
-                  }),
-                }],
-              }}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.territoryChip,
-                  isSelected && { 
-                    backgroundColor: t.color, 
-                    borderColor: t.color,
-                    shadowColor: t.color,
-                    shadowOpacity: 0.4,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 4 },
-                  },
-                ]}
-                onPress={() => handleTerritoryPress(t.id)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.chipDot, { backgroundColor: t.color }]} />
-                <Text style={[
-                  styles.chipText,
-                  isSelected && styles.chipTextActive
-                ]}>
-                  {t.name}
-                </Text>
-              </TouchableOpacity>
-            </Animated.View>
-          );
-        })}
-      </View>
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+      <Circle cx="11" cy="11" r="8" />
+      <Path d="M21 21l-4.35-4.35" />
+    </Svg>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// HERO WITH KEN BURNS EFFECT
-// ══════════════════════════════════════════════════════════════════════════════
-
-function AnimatedHero({ content, onPlay, insets }: any) {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-  const panAnim = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const titleAnim = useRef(new Animated.Value(0)).current;
-  const buttonAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Ken Burns effect - slow zoom and pan
-    Animated.loop(
-      Animated.sequence([
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 1.1,
-            duration: 20000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(panAnim, {
-            toValue: 1,
-            duration: 20000,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.timing(scaleAnim, {
-            toValue: 1,
-            duration: 20000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(panAnim, {
-            toValue: 0,
-            duration: 20000,
-            useNativeDriver: true,
-          }),
-        ]),
-      ])
-    ).start();
-
-    // Content fade in
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: TIMING.cinematic,
-        delay: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(titleAnim, {
-        toValue: 1,
-        ...SPRING.gentle,
-        useNativeDriver: true,
-      }),
-      Animated.spring(buttonAnim, {
-        toValue: 1,
-        ...SPRING.snappy,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const translateX = panAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20],
-  });
-
-  const translateY = panAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -10],
-  });
-
+function MusicIcon({ size = 28 }: { size?: number }) {
   return (
-    <View style={styles.heroSection}>
-      <Animated.View
-        style={[
-          styles.heroImageContainer,
-          {
-            transform: [
-              { scale: scaleAnim },
-              { translateX },
-              { translateY },
-            ],
-          },
-        ]}
-      >
-        <ImageBackground source={{ uri: content.image }} style={styles.heroImage}>
-          <LinearGradient
-            colors={[
-              'rgba(13,13,13,0.1)',
-              'rgba(13,13,13,0.3)',
-              'rgba(13,13,13,0.7)',
-              COLORS.dark,
-            ]}
-            locations={[0, 0.3, 0.6, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-        </ImageBackground>
-      </Animated.View>
-
-      <Animated.View style={[styles.heroContent, { paddingTop: insets.top + 80, opacity: fadeAnim }]}>
-        <Animated.Text
-          style={[
-            styles.heroSubtitle,
-            {
-              transform: [{
-                translateY: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          {content.subtitle}
-        </Animated.Text>
-        
-        <Animated.Text
-          style={[
-            styles.heroTitle,
-            {
-              opacity: titleAnim,
-              transform: [{
-                translateY: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [30, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          {content.title}
-        </Animated.Text>
-        
-        <Animated.Text
-          style={[
-            styles.heroDescription,
-            {
-              opacity: titleAnim,
-              transform: [{
-                translateY: titleAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          {content.description}
-        </Animated.Text>
-
-        <Animated.View
-          style={[
-            styles.heroMeta,
-            {
-              opacity: titleAnim,
-            },
-          ]}
-        >
-          <Text style={styles.heroMatch}>{content.match}% Match</Text>
-          <View style={styles.heroRating}>
-            <Text style={styles.heroRatingText}>HD</Text>
-          </View>
-          <View style={styles.heroRating}>
-            <Text style={styles.heroRatingText}>5.1</Text>
-          </View>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.heroButtons,
-            {
-              opacity: buttonAnim,
-              transform: [{
-                translateY: buttonAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [20, 0],
-                }),
-              }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.playBtn}
-            onPress={() => onPlay({
-              id: 'hero-featured',
-              title: content.title,
-              artist: content.subtitle || 'KORA Featured',
-              type: 'audio',
-              source: 'kora',
-              stream_url: 'https://archive.org/download/HaitiMusique/03-track-3.mp3',
-              artwork: content.image,
-            })}
-            activeOpacity={0.9}
-          >
-            <PlayIcon size={22} color={COLORS.dark} />
-            <Text style={styles.playBtnText}>Lecture</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.listBtn} activeOpacity={0.8}>
-            <PlusIcon size={20} color={COLORS.cream} />
-            <Text style={styles.listBtnText}>Ma liste</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
-    </View>
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Path d="M9 18V5l12-2v13" />
+      <Circle cx="6" cy="18" r="3" />
+      <Circle cx="18" cy="16" r="3" />
+    </Svg>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SECTION HEADER WITH STAGGER ANIMATION
-// ══════════════════════════════════════════════════════════════════════════════
-
-function AnimatedSection({ title, subtitle, action, onAction, children, delay = 0 }: any) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: TIMING.slow,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        ...SPRING.gentle,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay]);
-
+function VideoIcon({ size = 28 }: { size?: number }) {
   return (
-    <Animated.View
-      style={[
-        styles.section,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }],
-        },
-      ]}
-    >
-      <View style={styles.sectionHeader}>
-        <View>
-          <Text style={styles.sectionTitle}>{title}</Text>
-          {subtitle && <Text style={styles.sectionSubtitle}>{subtitle}</Text>}
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Rect x="2" y="4" width="20" height="16" rx="2" />
+      <Path d="M10 9l5 3-5 3V9z" fill={CINEMA.gold} />
+    </Svg>
+  );
+}
+
+function LiveIcon({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Circle cx="12" cy="12" r="3" fill={CINEMA.gold} />
+      <Path d="M16.24 7.76a6 6 0 0 1 0 8.49M7.76 16.24a6 6 0 0 1 0-8.49" />
+      <Path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14" />
+    </Svg>
+  );
+}
+
+function CreatorsIcon({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Circle cx="12" cy="8" r="4" />
+      <Path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
+    </Svg>
+  );
+}
+
+function PlaylistIcon({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Path d="M3 6h18M3 10h18M3 14h12M3 18h12" />
+      <Circle cx="19" cy="16" r="3" />
+    </Svg>
+  );
+}
+
+function TerritoriesIcon({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Circle cx="12" cy="12" r="10" />
+      <Path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </Svg>
+  );
+}
+
+function PodcastIcon({ size = 28 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={CINEMA.gold} strokeWidth={1.5}>
+      <Path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+      <Circle cx="12" cy="12" r="5" />
+      <Circle cx="12" cy="12" r="2" fill={CINEMA.gold} />
+    </Svg>
+  );
+}
+
+function ChevronRightIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2}>
+      <Path d="M9 18l6-6-6-6" />
+    </Svg>
+  );
+}
+
+function ShuffleIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+    </Svg>
+  );
+}
+
+function SkipBackIcon({ size = 24, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M19 20L9 12l10-8v16zM7 19V5H5v14h2z" />
+    </Svg>
+  );
+}
+
+function SkipForwardIcon({ size = 24, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Path d="M5 4l10 8-10 8V4zm14-1v14h-2V5h2z" />
+    </Svg>
+  );
+}
+
+function PauseIcon({ size = 28, color = CINEMA.black }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+      <Rect x="6" y="4" width="4" height="16" />
+      <Rect x="14" y="4" width="4" height="16" />
+    </Svg>
+  );
+}
+
+function HeartIcon({ size = 20, color = CINEMA.cream }: { size?: number; color?: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5}>
+      <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </Svg>
+  );
+}
+
+function getCategoryIcon(iconName: string) {
+  switch (iconName) {
+    case 'music': return <MusicIcon />;
+    case 'video': return <VideoIcon />;
+    case 'live': return <LiveIcon />;
+    case 'creators': return <CreatorsIcon />;
+    case 'playlists': return <PlaylistIcon />;
+    case 'territories': return <TerritoriesIcon />;
+    case 'podcasts': return <PodcastIcon />;
+    default: return <MusicIcon />;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STATIC DATA — Category Navigation
+// ══════════════════════════════════════════════════════════════════════════════
+
+const CATEGORY_ITEMS = [
+  { id: 'music', icon: 'music', label: 'MUSIQUE', sublabel: 'Écouter' },
+  { id: 'video', icon: 'video', label: 'VIDÉO', sublabel: 'Regarder' },
+  { id: 'live', icon: 'live', label: 'LIVE', sublabel: 'En direct' },
+  { id: 'creators', icon: 'creators', label: 'CRÉATEURS', sublabel: 'Découvrir' },
+  { id: 'playlists', icon: 'playlists', label: 'PLAYLISTS', sublabel: 'Vos sélections' },
+  { id: 'territories', icon: 'territories', label: 'TERRITOIRES', sublabel: 'Explorer' },
+  { id: 'podcasts', icon: 'podcasts', label: 'PODCASTS', sublabel: 'Écouter' },
+];
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HEADER COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+
+function Header({ onSettings, onSearch }: { onSettings: () => void; onSearch: () => void }) {
+  const insets = useSafeAreaInsets();
+  const navItems = ['ACCUEIL', 'MUSIQUE', 'VIDÉO', 'LIVE', 'CRÉATEURS', 'PLAYLISTS'];
+  
+  return (
+    <Animated.View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+      <View style={styles.headerLeft}>
+        <Text style={styles.headerLogo}>KORA</Text>
+        <View style={styles.headerTagline}>
+          <Text style={styles.headerTaglineText}>BEYOND SOUND.</Text>
+          <Text style={styles.headerTaglineText}>BEYOND TIME.</Text>
         </View>
-        {action && (
-          <TouchableOpacity onPress={onAction} activeOpacity={0.7}>
-            <Text style={styles.sectionAction}>{action}</Text>
-          </TouchableOpacity>
-        )}
       </View>
-      {children}
+      
+      <View style={styles.headerNav}>
+        {navItems.slice(0, SW > 600 ? 6 : 3).map((item, index) => (
+          <TouchableOpacity key={item} style={styles.headerNavItem}>
+            <Text style={[styles.headerNavText, index === 0 && styles.headerNavTextActive]}>
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      
+      <View style={styles.headerRight}>
+        <TouchableOpacity style={styles.headerSearchBtn} onPress={onSearch}>
+          <SearchIcon size={20} color={CINEMA.cream} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.headerProfileBtn} onPress={onSettings}>
+          <LinearGradient
+            colors={[CINEMA.terra, '#8B4D3B']}
+            style={styles.headerProfileGradient}
+          >
+            <Text style={styles.headerProfileInitial}>K</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </Animated.View>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PREMIUM CARD COMPONENTS
+// HERO SECTION — Cinematic Landing
 // ══════════════════════════════════════════════════════════════════════════════
 
-function ContinueCard({ item, onPress, index }: any) {
-  return (
-    <AnimatedCard onPress={onPress} style={styles.continueCard} delay={index * 60}>
-      <View style={styles.continueImageWrapper}>
-        <Image source={{ uri: item.image }} style={styles.continueImage} />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.8)']}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.continuePlayOverlay}>
-          <View style={styles.playCircle}>
-            <PlayIcon size={18} color={COLORS.dark} />
-          </View>
-        </View>
-        <View style={styles.continueTypeBadge}>
-          <Text style={styles.continueTypeText}>{item.type}</Text>
-        </View>
-        <View style={styles.continueInfoOverlay}>
-          <Text style={styles.continueTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.continueRemaining}>{item.remaining}</Text>
-        </View>
-      </View>
-      <View style={styles.continueProgressBar}>
-        <Animated.View style={[styles.continueProgressFill, { width: `${item.progress * 100}%` }]} />
-      </View>
-    </AnimatedCard>
-  );
-}
-
-function LiveCard({ item, onPress, index }: any) {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+function HeroSection({ onPlay, featuredContent }: { onPlay: (item: any) => void; featuredContent: any }) {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
   
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.4, duration: 600, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
-      ])
-    ).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, delay: 200, useNativeDriver: true }),
+    ]).start();
   }, []);
 
-  return (
-    <AnimatedCard onPress={onPress} style={styles.liveCard} delay={index * 80}>
-      <Image source={{ uri: item.image }} style={styles.liveImage} />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.liveGradient} />
-      <View style={styles.liveBadge}>
-        <Animated.View style={[styles.livePulse, { transform: [{ scale: pulseAnim }] }]} />
-        <View style={styles.liveDot} />
-        <Text style={styles.liveText}>LIVE</Text>
-        <Text style={styles.liveViewers}>{item.viewers}</Text>
-      </View>
-      <View style={styles.liveInfo}>
-        <Text style={styles.liveTitle}>{item.title}</Text>
-        <Text style={styles.liveCreator}>{item.creator} • {item.territory}</Text>
-      </View>
-    </AnimatedCard>
-  );
-}
+  const heroImage = featuredContent?.artwork || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200';
+  const heroTitle = featuredContent?.title || 'LA CULTURE EN MOUVEMENT';
 
-function ContentCard({ item, onPress, index }: any) {
   return (
-    <AnimatedCard onPress={onPress} style={styles.contentCard} delay={index * 50}>
-      <View style={styles.contentImageWrapper}>
-        <Image source={{ uri: item.image }} style={styles.contentImage} />
+    <View style={styles.heroContainer}>
+      <ImageBackground
+        source={{ uri: heroImage }}
+        style={styles.heroBackground}
+        resizeMode="cover"
+      >
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.4)']}
-          style={StyleSheet.absoluteFill}
+          colors={['rgba(10,10,10,0.4)', 'rgba(10,10,10,0.2)', 'rgba(10,10,10,0.95)']}
+          style={styles.heroGradient}
         />
-      </View>
-      <View style={styles.contentInfo}>
-        <Text style={styles.contentTitle} numberOfLines={1}>{item.title}</Text>
-        <Text style={styles.contentArtist} numberOfLines={1}>{item.artist}</Text>
-        <Text style={styles.contentType}>{item.type}</Text>
-      </View>
-    </AnimatedCard>
+      </ImageBackground>
+
+      <Animated.View style={[styles.heroContent, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <Text style={styles.heroHeadline}>LA CULTURE{'\n'}EN MOUVEMENT</Text>
+        <Text style={styles.heroSubheadline}>
+          MUSIQUE. CINÉMA. PERFORMANCES.{'\n'}UNE SEULE EXPÉRIENCE.
+        </Text>
+
+        <View style={styles.heroCTAContainer}>
+          <TouchableOpacity 
+            style={styles.heroPrimaryCTA} 
+            onPress={() => onPlay(featuredContent)} 
+            activeOpacity={0.9}
+          >
+            <LinearGradient
+              colors={[CINEMA.gold, CINEMA.goldLight]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.heroPrimaryCTAGradient}
+            >
+              <Text style={styles.heroPrimaryCTAText}>COMMENCER L'EXPÉRIENCE</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.heroSecondaryCTA} onPress={() => onPlay(featuredContent)} activeOpacity={0.8}>
+            <PlayIcon size={16} color={CINEMA.cream} />
+            <Text style={styles.heroSecondaryCTAText}>REGARDER LE TRAILER</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+    </View>
   );
 }
 
-function CreatorCard({ item, onPress, index }: any) {
+// ══════════════════════════════════════════════════════════════════════════════
+// FEATURED CONTENT GRID — Main + Sidebar Layout
+// ══════════════════════════════════════════════════════════════════════════════
+
+function FeaturedContentGrid({ items, onItemPress }: { items: any[]; onItemPress: (item: any) => void }) {
+  const mainItem = items[0];
+  const sidebarItems = items.slice(1, 4);
+
+  if (!mainItem) {
+    return (
+      <View style={styles.featuredContainer}>
+        <View style={styles.loadingState}>
+          <ActivityIndicator size="large" color={CINEMA.gold} />
+          <Text style={styles.loadingText}>Chargement du catalogue...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
-    <AnimatedCard onPress={onPress} style={styles.creatorCard} delay={index * 70}>
-      <Image source={{ uri: item.image }} style={styles.creatorImage} />
-      <View style={styles.creatorInfo}>
-        <View style={styles.creatorNameRow}>
-          <Text style={styles.creatorName}>{item.name}</Text>
-          {item.verified && (
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓</Text>
+    <View style={styles.featuredContainer}>
+      {/* Main Featured Card */}
+      <View style={styles.featuredMain}>
+        <ImageBackground 
+          source={{ uri: mainItem.artwork || mainItem.image }} 
+          style={styles.featuredMainImage} 
+          imageStyle={styles.featuredMainImageStyle}
+        >
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.featuredMainGradient} />
+          <View style={styles.featuredMainContent}>
+            <View style={styles.featuredBadge}>
+              <Text style={styles.featuredBadgeText}>Featured</Text>
+            </View>
+            <Text style={styles.featuredMainTitle}>{mainItem.title}</Text>
+            <Text style={styles.featuredMainSubtitle}>{mainItem.artist || 'KORA Exclusive'}</Text>
+            <Text style={styles.featuredMainDescription}>
+              Un show. Une énergie.{'\n'}Une culture qui unit les mondes.
+            </Text>
+            <TouchableOpacity style={styles.featuredMainCTA} onPress={() => onItemPress(mainItem)} activeOpacity={0.9}>
+              <PlayIcon size={14} color={CINEMA.black} />
+              <Text style={styles.featuredMainCTAText}>REGARDER MAINTENANT</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Carousel Dots */}
+          <View style={styles.carouselDots}>
+            {[0, 1, 2, 3].map((i) => (
+              <View key={i} style={[styles.carouselDot, i === 0 && styles.carouselDotActive]} />
+            ))}
+          </View>
+        </ImageBackground>
+      </View>
+
+      {/* Sidebar Items */}
+      <View style={styles.featuredSidebar}>
+        {sidebarItems.map((item, index) => (
+          <TouchableOpacity key={item.id || index} style={styles.sidebarCard} onPress={() => onItemPress(item)} activeOpacity={0.9}>
+            <ImageBackground 
+              source={{ uri: item.artwork || item.image }} 
+              style={styles.sidebarCardImage} 
+              imageStyle={styles.sidebarCardImageStyle}
+            >
+              <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.75)']} style={styles.sidebarCardGradient} />
+              <View style={styles.sidebarCardContent}>
+                <View style={styles.sidebarBadge}>
+                  <Text style={styles.sidebarBadgeText}>
+                    {item.type === 'video' ? 'NOUVEAU CLIP' : item.type === 'audio' ? 'AUDIO' : 'CONTENU'}
+                  </Text>
+                </View>
+                <Text style={styles.sidebarTitle}>{item.title}</Text>
+                <Text style={styles.sidebarSubtitle}>{item.artist}</Text>
+              </View>
+              <View style={styles.sidebarPlayBtn}>
+                <PlayIcon size={18} color={CINEMA.cream} />
+              </View>
+            </ImageBackground>
+          </TouchableOpacity>
+        ))}
+        {sidebarItems.length > 0 && (
+          <TouchableOpacity style={styles.sidebarNavArrow}>
+            <ChevronRightIcon size={24} color={CINEMA.cream} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CATEGORY ROW — Icon Navigation
+// ══════════════════════════════════════════════════════════════════════════════
+
+function CategoryRow({ onCategoryPress }: { onCategoryPress: (cat: any) => void }) {
+  return (
+    <View style={styles.categoryContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryScrollContent}
+      >
+        {CATEGORY_ITEMS.map((cat) => (
+          <TouchableOpacity key={cat.id} style={styles.categoryItem} onPress={() => onCategoryPress(cat)} activeOpacity={0.8}>
+            <View style={styles.categoryIconWrapper}>
+              {getCategoryIcon(cat.icon)}
+            </View>
+            <Text style={styles.categoryLabel}>{cat.label}</Text>
+            <Text style={styles.categorySublabel}>{cat.sublabel}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TRENDING HUB — Artists with Play Buttons
+// ══════════════════════════════════════════════════════════════════════════════
+
+function TrendingHub({ items, onItemPress }: { items: any[]; onItemPress: (item: any) => void }) {
+  if (items.length === 0) return null;
+
+  return (
+    <View style={styles.hubContainer}>
+      <View style={styles.hubHeader}>
+        <Text style={styles.hubTitle}>EN TENDANCE</Text>
+        <ChevronRightIcon size={18} color={CINEMA.cream} />
+      </View>
+      <FlatList
+        horizontal
+        data={items}
+        keyExtractor={(item, index) => item.id || `trending-${index}`}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.hubList}
+        renderItem={({ item, index }) => (
+          <TouchableOpacity
+            style={[styles.trendingCard, index === 0 && { marginLeft: 20 }]}
+            onPress={() => onItemPress(item)}
+            activeOpacity={0.9}
+          >
+            <View style={styles.trendingImageWrapper}>
+              <Image source={{ uri: item.artwork || item.image }} style={styles.trendingImage} />
+              <View style={styles.trendingPlayBtn}>
+                <PlayIcon size={16} color={CINEMA.white} />
+              </View>
+            </View>
+            <Text style={styles.trendingName} numberOfLines={1}>{item.artist || item.title}</Text>
+            <Text style={styles.trendingTrack} numberOfLines={1}>{item.title}</Text>
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONTINUE WATCHING SECTION + MINI PLAYER
+// ══════════════════════════════════════════════════════════════════════════════
+
+function ContinueWatchingSection({ items, currentTrack, onItemPress }: { 
+  items: any[]; 
+  currentTrack: any;
+  onItemPress: (item: any) => void 
+}) {
+  const watchItems = items.slice(0, 3);
+
+  return (
+    <View style={styles.continueSection}>
+      <View style={styles.continueLeft}>
+        <Text style={styles.hubTitle}>CONTINUEZ À REGARDER</Text>
+        <View style={styles.continueCards}>
+          {watchItems.length > 0 ? watchItems.map((item, index) => (
+            <TouchableOpacity 
+              key={item.id || index} 
+              style={styles.continueCard} 
+              onPress={() => onItemPress(item)} 
+              activeOpacity={0.9}
+            >
+              <ImageBackground 
+                source={{ uri: item.artwork || item.image }} 
+                style={styles.continueCardImage} 
+                imageStyle={styles.continueCardImageStyle}
+              >
+                <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.continueCardGradient} />
+                <View style={styles.continueCardContent}>
+                  <Text style={styles.continueCardTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.continueCardMeta}>{item.type || 'Audio'} • {item.duration || '3:45'}</Text>
+                </View>
+                {/* Progress Bar */}
+                <View style={styles.progressBarContainer}>
+                  <View style={[styles.progressBar, { width: `${(item.progress || Math.random()) * 100}%` }]} />
+                </View>
+              </ImageBackground>
+            </TouchableOpacity>
+          )) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>Commencez à écouter pour voir votre historique</Text>
             </View>
           )}
         </View>
-        <Text style={styles.creatorRole}>{item.role}</Text>
-        <Text style={styles.creatorFollowers}>{item.followers}</Text>
       </View>
-      <TouchableOpacity style={styles.followBtn} activeOpacity={0.7}>
-        <PlusIcon size={16} color={COLORS.cream} />
-      </TouchableOpacity>
-    </AnimatedCard>
-  );
-}
 
-function NebuleuseCard({ item, onPress, index }: any) {
-  const glowAnim = useRef(new Animated.Value(0)).current;
+      {/* Mini Player */}
+      <View style={styles.miniPlayerContainer}>
+        <Text style={styles.miniPlayerLabel}>LECTURE EN COURS</Text>
+        <View style={styles.miniPlayer}>
+          <Image
+            source={{ uri: currentTrack?.artwork || 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=300' }}
+            style={styles.miniPlayerArt}
+          />
+          <Text style={styles.miniPlayerTitle}>{currentTrack?.title || 'GOOD ENERGY'}</Text>
+          <Text style={styles.miniPlayerArtist}>{currentTrack?.artist || 'Kora Collective'}</Text>
+          
+          <View style={styles.miniPlayerProgress}>
+            <Text style={styles.miniPlayerTime}>1:32</Text>
+            <View style={styles.miniPlayerSlider}>
+              <View style={styles.miniPlayerSliderFill} />
+              <View style={styles.miniPlayerSliderThumb} />
+            </View>
+            <Text style={styles.miniPlayerTime}>3:45</Text>
+          </View>
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
-        Animated.timing(glowAnim, { toValue: 0, duration: 2000, useNativeDriver: true }),
-      ])
-    ).start();
-  }, []);
-
-  return (
-    <AnimatedCard onPress={onPress} style={styles.nebuleuseCard} delay={index * 100}>
-      <Image source={{ uri: item.image }} style={styles.nebuleuseImage} />
-      <LinearGradient colors={['transparent', item.color]} style={styles.nebuleuseGradient} />
-      <Animated.View
-        style={[
-          styles.nebuleuseGlow,
-          {
-            backgroundColor: item.color,
-            opacity: glowAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.1, 0.3],
-            }),
-          },
-        ]}
-      />
-      <View style={styles.nebuleuseInfo}>
-        <Text style={styles.nebuleuseTitle}>{item.title}</Text>
-        <Text style={styles.nebuleuseDesc}>{item.description}</Text>
-      </View>
-      <View style={[styles.nebuleusePlayBtn, { backgroundColor: item.color }]}>
-        <PlayIcon size={20} color={COLORS.cream} />
-      </View>
-    </AnimatedCard>
-  );
-}
-
-function CinemaCard({ item, onPress, index }: any) {
-  return (
-    <AnimatedCard onPress={onPress} style={styles.cinemaCard} delay={index * 90}>
-      <Image source={{ uri: item.image }} style={styles.cinemaImage} />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.cinemaGradient} />
-      <View style={styles.cinemaPlayOverlay}>
-        <View style={styles.cinemaPlayCircle}>
-          <PlayIcon size={24} color={COLORS.dark} />
+          <View style={styles.miniPlayerControls}>
+            <TouchableOpacity><ShuffleIcon size={18} color="rgba(255,255,255,0.5)" /></TouchableOpacity>
+            <TouchableOpacity><SkipBackIcon size={22} color={CINEMA.cream} /></TouchableOpacity>
+            <TouchableOpacity style={styles.miniPlayerPlayBtn}>
+              <PauseIcon size={24} color={CINEMA.black} />
+            </TouchableOpacity>
+            <TouchableOpacity><SkipForwardIcon size={22} color={CINEMA.cream} /></TouchableOpacity>
+            <TouchableOpacity><HeartIcon size={18} color="rgba(255,255,255,0.5)" /></TouchableOpacity>
+          </View>
         </View>
       </View>
-      <View style={styles.cinemaInfo}>
-        <Text style={styles.cinemaTitle}>{item.title}</Text>
-        <Text style={styles.cinemaDuration}>{item.duration}</Text>
-      </View>
-    </AnimatedCard>
+    </View>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════════════════
-// REAL DATA FROM MONGODB — No more mocks!
+// CREATORS TO FOLLOW
 // ══════════════════════════════════════════════════════════════════════════════
 
-const HERO_CONTENT = {
-  id: 'hero_1',
-  title: 'KORA',
-  subtitle: 'LA CULTURE EN STREAMING',
-  description: 'Plateforme souveraine de la diaspora. Audio, vidéo, live — tout en un.',
-  image: 'https://images.unsplash.com/photo-1590845947676-fa3b6a0b6faa?w=1200',
-  match: 100,
-};
+function CreatorsToFollow({ creators, onCreatorPress }: { creators: any[]; onCreatorPress: (creator: any) => void }) {
+  const displayCreators = creators.length > 0 ? creators : [
+    { id: 'cr1', name: 'Nadir El Fassi', role: 'Réalisateur', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' },
+    { id: 'cr2', name: 'Lakecia Benjamin', role: 'Musicienne', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' },
+    { id: 'cr3', name: 'Adama Sanogo', role: 'Réalisateur', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200' },
+    { id: 'cr4', name: 'Lous and The Yakuza', role: 'Artiste', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200' },
+    { id: 'cr5', name: 'Junior Roy', role: 'Réalisateur', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200' },
+  ];
 
-// Ces données seront chargées depuis l'API - fallbacks vides
-const EMPTY_ARRAY: any[] = [];
+  return (
+    <View style={styles.creatorsContainer}>
+      <Text style={styles.hubTitle}>CRÉATEURS À SUIVRE</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.creatorsScrollContent}
+      >
+        {displayCreators.map((creator) => (
+          <TouchableOpacity 
+            key={creator.id} 
+            style={styles.creatorCard} 
+            onPress={() => onCreatorPress(creator)} 
+            activeOpacity={0.9}
+          >
+            <Image source={{ uri: creator.image || creator.avatar }} style={styles.creatorAvatar} />
+            <Text style={styles.creatorName} numberOfLines={1}>{creator.name || creator.display_name}</Text>
+            <Text style={styles.creatorRole}>{creator.role || 'Artiste'}</Text>
+          </TouchableOpacity>
+        ))}
+        <TouchableOpacity style={styles.creatorNavArrow}>
+          <ChevronRightIcon size={24} color={CINEMA.gold} />
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PLATFORMS BANNER
+// ══════════════════════════════════════════════════════════════════════════════
+
+function PlatformsBanner() {
+  const PLATFORMS = [
+    { id: 'smarttv', label: 'Smart TV', sublabel: 'Samsung, LG, Android TV' },
+    { id: 'appletv', label: 'Apple TV', sublabel: '' },
+    { id: 'firetv', label: 'Fire TV', sublabel: '' },
+    { id: 'roku', label: 'Roku', sublabel: '' },
+    { id: 'ios', label: 'iOS', sublabel: '' },
+    { id: 'android', label: 'Android', sublabel: '' },
+    { id: 'web', label: 'Web', sublabel: 'kora.tv' },
+  ];
+
+  return (
+    <View style={styles.platformsContainer}>
+      <Text style={styles.platformsTitle}>DISPONIBLE SUR TOUS VOS ÉCRANS</Text>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.platformsScrollContent}
+      >
+        {PLATFORMS.map((p) => (
+          <View key={p.id} style={styles.platformItem}>
+            <View style={styles.platformIcon}>
+              <Text style={styles.platformIconText}>{p.label.charAt(0)}</Text>
+            </View>
+            <Text style={styles.platformLabel}>{p.label}</Text>
+            {p.sublabel ? <Text style={styles.platformSublabel}>{p.sublabel}</Text> : null}
+          </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FOOTER
+// ══════════════════════════════════════════════════════════════════════════════
+
+function Footer({ onJoin }: { onJoin: () => void }) {
+  return (
+    <View style={styles.footerContainer}>
+      <View style={styles.footerTop}>
+        {/* Logo + Socials */}
+        <View style={styles.footerLogoSection}>
+          <Text style={styles.footerLogo}>KORA</Text>
+          <Text style={styles.footerTagline}>BEYOND SOUND.{'\n'}BEYOND TIME.</Text>
+          <View style={styles.footerSocials}>
+            {['IG', 'YT', 'TK', 'X'].map((s) => (
+              <View key={s} style={styles.footerSocialIcon}>
+                <Text style={styles.footerSocialText}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Links Columns */}
+        <View style={styles.footerColumns}>
+          <View style={styles.footerColumn}>
+            <Text style={styles.footerColumnTitle}>KORA</Text>
+            {['À propos', 'Carrières', 'Presse', 'Partenaires'].map((link) => (
+              <Text key={link} style={styles.footerLink}>{link}</Text>
+            ))}
+          </View>
+
+          <View style={styles.footerColumn}>
+            <Text style={styles.footerColumnTitle}>LÉGAL</Text>
+            {['Conditions', 'Confidentialité', 'Cookies', 'Mentions'].map((link) => (
+              <Text key={link} style={styles.footerLink}>{link}</Text>
+            ))}
+          </View>
+
+          <View style={styles.footerColumn}>
+            <Text style={styles.footerColumnTitle}>AIDE</Text>
+            {['Centre d\'aide', 'Contact', 'Abonnement', 'FAQ'].map((link) => (
+              <Text key={link} style={styles.footerLink}>{link}</Text>
+            ))}
+          </View>
+        </View>
+
+        {/* Pricing CTA */}
+        <View style={styles.footerPricing}>
+          <Text style={styles.footerPrice}>3,98€</Text>
+          <Text style={styles.footerPriceLabel}>/ MOIS</Text>
+          <Text style={styles.footerPriceSubtext}>ACCÉDEZ À TOUT KORA</Text>
+          <TouchableOpacity style={styles.footerCTA} onPress={onJoin} activeOpacity={0.9}>
+            <Text style={styles.footerCTAText}>ESSAYER MAINTENANT</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.footerBottom}>
+        <Text style={styles.footerCopyright}>© 2024 KORA. TOUS DROITS RÉSERVÉS.</Text>
+        <View style={styles.footerLang}>
+          <Text style={styles.footerLangText}>FR</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN HOME SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 
-// API Configuration
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
-
 export default function KoraHome() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const [selectedTerritory, setSelectedTerritory] = useState<string>('caribbean');
+  const scrollRef = useRef<ScrollView>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [searchVisible, setSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Real catalog data states
-  const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
-  const [territoryTracks, setTerritoryTracks] = useState<any[]>([]);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Load catalog data
+  // Real data states
+  const [featuredTracks, setFeaturedTracks] = useState<any[]>([]);
+  const [trendingTracks, setTrendingTracks] = useState<any[]>([]);
+  const [creators, setCreators] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTrack, setCurrentTrack] = useState<any>(null);
+
+  // Load data on mount
   useEffect(() => {
     loadCatalogData();
   }, []);
-
-  // Load territory-specific tracks when territory changes
-  useEffect(() => {
-    loadTerritoryTracks(selectedTerritory);
-  }, [selectedTerritory]);
 
   const loadCatalogData = async () => {
     try {
       setIsLoading(true);
       
       // Load featured tracks
-      const featuredRes = await fetch(`${API_BASE}/api/catalog/featured?limit=10`);
+      const featuredRes = await fetch(`${API_BASE}/api/catalog/featured?limit=12`);
       if (featuredRes.ok) {
         const data = await featuredRes.json();
         setFeaturedTracks(data.tracks || []);
+        if (data.tracks?.length > 0) {
+          setCurrentTrack(data.tracks[0]);
+        }
       }
-      
-      // Load initial territory tracks
-      await loadTerritoryTracks(selectedTerritory);
+
+      // Load trending (can be same endpoint with different params)
+      const trendingRes = await fetch(`${API_BASE}/api/catalog/featured?limit=10&sort=plays`);
+      if (trendingRes.ok) {
+        const data = await trendingRes.json();
+        setTrendingTracks(data.tracks || []);
+      }
       
     } catch (error) {
       console.error('Error loading catalog:', error);
@@ -956,523 +757,259 @@ export default function KoraHome() {
     }
   };
 
-  const loadTerritoryTracks = async (territory: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/api/catalog/territory/${territory}?limit=12`);
-      if (res.ok) {
-        const data = await res.json();
-        setTerritoryTracks(data.tracks || []);
-      }
-    } catch (error) {
-      console.error('Error loading territory tracks:', error);
-    }
-  };
-
-  const handleSearchSubmit = async () => {
-    if (!searchQuery.trim()) return;
-    
-    try {
-      const res = await fetch(`${API_BASE}/api/catalog/search?q=${encodeURIComponent(searchQuery)}&limit=20`);
-      if (res.ok) {
-        const data = await res.json();
-        setSearchResults(data.tracks || []);
-      }
-    } catch (error) {
-      console.error('Search error:', error);
-    }
-  };
-
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [0, 200],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
+  const hapticFeedback = useCallback((style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Medium) => {
+    try { Haptics.impactAsync(style); } catch {}
+  }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch {}
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
     await loadCatalogData();
     setRefreshing(false);
-  }, [selectedTerritory]);
+  }, []);
 
   const handlePlay = useCallback((item?: any) => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch {}
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Heavy);
+    if (item) {
+      setCurrentTrack(item);
+    }
     router.push({
       pathname: '/player',
       params: item ? { 
         id: item.id,
         title: item.title, 
-        artist: item.artist || item.creator || 'KORA',
+        artist: item.artist || 'KORA',
         type: item.type || 'audio',
         source: item.source || 'jamendo',
         stream_url: item.stream_url || '',
         artwork: item.artwork || item.image || '',
       } : {}
     });
-  }, [router]);
+  }, [router, hapticFeedback]);
+
+  const handleCategoryPress = useCallback((cat: any) => {
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
+    switch (cat.id) {
+      case 'playlists':
+        router.push('/playlists');
+        break;
+      case 'podcasts':
+        router.push('/podcasts');
+        break;
+      case 'live':
+        router.push('/live');
+        break;
+      case 'creators':
+        router.push('/creator/studio');
+        break;
+      default:
+        // Stay on home, could filter by category
+        break;
+    }
+  }, [router, hapticFeedback]);
+
+  const handleSettings = useCallback(() => {
+    hapticFeedback();
+    router.push('/settings');
+  }, [router, hapticFeedback]);
 
   const handleSearch = useCallback(() => {
     setSearchVisible(!searchVisible);
-    if (searchVisible) {
-      setSearchQuery('');
-      setSearchResults([]);
-    }
-    try { Haptics.selectionAsync(); } catch {}
-  }, [searchVisible]);
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
+  }, [searchVisible, hapticFeedback]);
 
-  const handleProfile = useCallback(() => {
-    try { Haptics.selectionAsync(); } catch {}
-    router.push('/settings');
-  }, [router]);
-
-  const handleCreatorPress = useCallback((item: any) => {
-    try { Haptics.selectionAsync(); } catch {}
+  const handleCreatorPress = useCallback((creator: any) => {
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Light);
     router.push({
       pathname: '/creator/[id]',
-      params: { id: item.id }
+      params: { id: creator.id }
     });
-  }, [router]);
+  }, [router, hapticFeedback]);
 
-  const handlePremium = useCallback(() => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+  const handleJoin = useCallback(() => {
+    hapticFeedback(Haptics.ImpactFeedbackStyle.Heavy);
     router.push('/paywall');
-  }, [router]);
+  }, [router, hapticFeedback]);
 
-  const handleUpload = useCallback(() => {
-    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
-    router.push('/upload');
-  }, [router]);
-
-  // Transform catalog tracks to display format
-  const transformTrackForDisplay = (track: any) => ({
-    id: track.id,
-    title: track.title,
-    artist: track.artist,
-    type: track.type || 'audio',
-    displayType: track.type === 'audio' ? 'Audio' : 'Vidéo',
+  // Transform tracks for display
+  const transformedFeatured = featuredTracks.map((track) => ({
+    ...track,
     image: track.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    artwork: track.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    source: track.source || 'kora',
-    stream_url: track.stream_url,
-    territory: track.territory,
-  });
-
-  // Use ONLY real data from MongoDB - no mocks!
-  const displayTracks = territoryTracks.map(transformTrackForDisplay);
-
-  const territoryNames: Record<string, string> = {
-    caribbean: 'Caraïbes',
-    africa: 'Afrique',
-    diaspora: 'Diaspora',
-    latin: 'Latin',
-    world: 'Monde',
-  };
+  }));
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Fixed Header Background */}
-      <Animated.View style={[styles.fixedHeader, { paddingTop: insets.top }]}>
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: headerOpacity }]}>
-          <BlurView intensity={80} style={StyleSheet.absoluteFill} tint="dark" />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(13,13,13,0.7)' }]} />
-        </Animated.View>
-      </Animated.View>
-      
-      {/* Floating Header */}
-      <View style={[styles.floatingHeader, { paddingTop: insets.top + 8 }]}>
-        <Text style={styles.logoText}>KORA</Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePremium} activeOpacity={0.7}>
-            <PlusIcon size={22} color={COLORS.cream} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerBtn} onPress={handleSearch} activeOpacity={0.7}>
-            <SearchIcon size={22} color={COLORS.cream} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.profileBtn} onPress={handleProfile} activeOpacity={0.8}>
-            <LinearGradient
-              colors={[COLORS.terra, '#8B4D3B']}
-              style={styles.profileGradient}
-            >
-              <Text style={styles.profileInitial}>K</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Fixed Header */}
+      <Header onSettings={handleSettings} onSearch={handleSearch} />
 
-      {/* Search Bar */}
+      {/* Search Overlay */}
       {searchVisible && (
-        <View style={[styles.searchContainer, { top: insets.top + 56 }]}>
+        <View style={[styles.searchOverlay, { top: insets.top + 60 }]}>
           <BlurView intensity={90} style={styles.searchBlur} tint="dark">
             <View style={styles.searchBar}>
-              <SearchIcon size={18} color={COLORS.gray} />
+              <SearchIcon size={18} color={CINEMA.gold} />
               <TextInput
                 style={styles.searchInput}
                 placeholder="Artistes, albums, films..."
-                placeholderTextColor={COLORS.gray}
+                placeholderTextColor="rgba(255,255,255,0.4)"
                 autoFocus
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearchSubmit}
                 returnKeyType="search"
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
-                  <Text style={{ color: COLORS.gray, fontSize: 16 }}>✕</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity onPress={() => setSearchVisible(false)}>
+                <Text style={styles.searchClose}>Fermer</Text>
+              </TouchableOpacity>
             </View>
-            {/* Search Results */}
-            {searchResults.length > 0 && (
-              <View style={styles.searchResults}>
-                <Text style={styles.searchResultsTitle}>
-                  {searchResults.length} résultats pour "{searchQuery}"
-                </Text>
-                <FlatList
-                  data={searchResults.slice(0, 8)}
-                  keyExtractor={(item) => item.id}
-                  renderItem={({ item }) => (
-                    <TouchableOpacity 
-                      style={styles.searchResultItem}
-                      onPress={() => {
-                        handlePlay(item);
-                        setSearchVisible(false);
-                        setSearchQuery('');
-                        setSearchResults([]);
-                      }}
-                    >
-                      <Image 
-                        source={{ uri: item.artwork || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=100' }} 
-                        style={styles.searchResultImage} 
-                      />
-                      <View style={styles.searchResultInfo}>
-                        <Text style={styles.searchResultTitle} numberOfLines={1}>{item.title}</Text>
-                        <Text style={styles.searchResultArtist} numberOfLines={1}>{item.artist}</Text>
-                      </View>
-                      <View style={[styles.searchResultType, { backgroundColor: item.type === 'audio' ? COLORS.terra : '#4A7FA5' }]}>
-                        <Text style={styles.searchResultTypeText}>{item.type === 'audio' ? '♪' : '▶'}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-            )}
           </BlurView>
         </View>
       )}
 
-      {/* Main Scroll */}
-      <Animated.ScrollView
+      <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={COLORS.terra}
-            colors={[COLORS.terra]}
+            tintColor={CINEMA.gold}
+            colors={[CINEMA.gold]}
           />
         }
       >
         {/* Hero */}
-        <AnimatedHero content={HERO_CONTENT} onPlay={handlePlay} insets={insets} />
-
-        {/* Content Sections */}
-        <View style={styles.sectionsContainer}>
-          
-          {/* Globe Section */}
-          <AnimatedSection title="Explorer par territoire" delay={100}>
-            <AnimatedGlobe 
-              selectedTerritory={selectedTerritory} 
-              onSelectTerritory={setSelectedTerritory} 
-            />
-          </AnimatedSection>
-
-          {/* Catalogue Souverain - REAL DATA */}
-          <AnimatedSection 
-            title={`${territoryNames[selectedTerritory] || 'Monde'}`}
-            subtitle={territoryTracks.length > 0 ? `${territoryTracks.length} titres streamables` : 'Chargement...'}
-            action="Tout voir" 
-            delay={200}
-          >
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <Text style={styles.loadingText}>Chargement du catalogue souverain...</Text>
-              </View>
-            ) : territoryTracks.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-              >
-                {territoryTracks.map(transformTrackForDisplay).map((item, index) => (
-                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Catalogue en construction — Soyez le premier créateur !</Text>
-                <TouchableOpacity style={styles.uploadCTA} onPress={handleUpload}>
-                  <Text style={styles.uploadCTAText}>+ Uploader du contenu</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </AnimatedSection>
-
-          {/* Featured Tracks - REAL DATA */}
-          {featuredTracks.length > 0 && (
-            <AnimatedSection 
-              title="Populaire maintenant"
-              subtitle={`${featuredTracks.length} titres — Catalogue mondial`}
-              action="Tout voir" 
-              delay={300}
-            >
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-              >
-                {featuredTracks.map(transformTrackForDisplay).map((item, index) => (
-                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
-                ))}
-              </ScrollView>
-            </AnimatedSection>
-          )}
-
-          {/* Video Content - REAL DATA */}
-          {featuredTracks.filter(t => t.type === 'video').length > 0 && (
-            <AnimatedSection 
-              title="Cinéma & Vidéos"
-              subtitle="Contenu audiovisuel"
-              action="Tout voir" 
-              delay={400}
-            >
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.horizontalList}
-              >
-                {featuredTracks.filter(t => t.type === 'video').map(transformTrackForDisplay).map((item, index) => (
-                  <ContentCard key={item.id} item={item} onPress={() => handlePlay(item)} index={index} />
-                ))}
-              </ScrollView>
-            </AnimatedSection>
-          )}
-
-          {/* P2-P3 Quick Navigation */}
-          <AnimatedSection title="Explorez KORA" subtitle="Toute la culture en un lieu" delay={450}>
-            <View style={styles.quickNavGrid}>
-              <TouchableOpacity 
-                style={styles.quickNavCard}
-                onPress={() => router.push('/playlists')}
-                activeOpacity={0.85}
-              >
-                <LinearGradient colors={['#2d1f3d', '#1a1a2e']} style={styles.quickNavGradient}>
-                  <Text style={styles.quickNavEmoji}>🎵</Text>
-                  <Text style={styles.quickNavTitle}>Playlists</Text>
-                  <Text style={styles.quickNavSubtitle}>Créez et partagez</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickNavCard}
-                onPress={() => router.push('/podcasts')}
-                activeOpacity={0.85}
-              >
-                <LinearGradient colors={['#1f3d2d', '#1a2e1a']} style={styles.quickNavGradient}>
-                  <Text style={styles.quickNavEmoji}>🎙️</Text>
-                  <Text style={styles.quickNavTitle}>Podcasts</Text>
-                  <Text style={styles.quickNavSubtitle}>Voix de la diaspora</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickNavCard}
-                onPress={() => router.push('/live')}
-                activeOpacity={0.85}
-              >
-                <LinearGradient colors={['#3d1f1f', '#2e1a1a']} style={styles.quickNavGradient}>
-                  <Text style={styles.quickNavEmoji}>📺</Text>
-                  <Text style={styles.quickNavTitle}>Live Events</Text>
-                  <Text style={styles.quickNavSubtitle}>Concerts et talks</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            </View>
-          </AnimatedSection>
-
-          {/* Premium CTA */}
-          <AnimatedSection title="" delay={500}>
-            <TouchableOpacity style={styles.premiumBanner} onPress={handlePremium} activeOpacity={0.85}>
-              <LinearGradient
-                colors={[COLORS.terra, '#8B4D3B']}
-                style={styles.premiumGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.premiumTitle}>KORA PREMIUM</Text>
-                <Text style={styles.premiumSubtitle}>Streaming illimité • 3,98€/mois</Text>
-                <View style={styles.premiumButton}>
-                  <Text style={styles.premiumButtonText}>S'abonner</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </AnimatedSection>
-
-          {/* Creator CTA */}
-          <AnimatedSection title="Créateurs" subtitle="Partagez votre art" delay={600}>
-            <TouchableOpacity style={styles.creatorBanner} onPress={() => router.push('/creator/studio')} activeOpacity={0.85}>
-              <LinearGradient
-                colors={['#1a1a2e', '#16213e']}
-                style={styles.creatorGradient}
-              >
-                <Text style={styles.creatorTitle}>KORA for Creators</Text>
-                <Text style={styles.creatorSubtitle}>Uploadez • Monétisez • Connectez</Text>
-                <View style={styles.creatorButton}>
-                  <Text style={styles.creatorButtonText}>Accéder au Studio</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </AnimatedSection>
-
-          {/* KORA for Developers */}
-          <AnimatedSection title="Développeurs" subtitle="API & Intégrations" delay={700}>
-            <TouchableOpacity style={styles.devBanner} onPress={() => router.push('/developers')} activeOpacity={0.85}>
-              <LinearGradient
-                colors={['#0f172a', '#1e293b']}
-                style={styles.devGradient}
-              >
-                <Text style={styles.devTitle}>KORA for Developers</Text>
-                <Text style={styles.devSubtitle}>API REST • SDK Mobile • Webhooks</Text>
-                <View style={styles.devFeatures}>
-                  <View style={styles.devFeature}>
-                    <Text style={styles.devFeatureText}>OAuth 2.0</Text>
-                  </View>
-                  <View style={styles.devFeature}>
-                    <Text style={styles.devFeatureText}>GraphQL</Text>
-                  </View>
-                  <View style={styles.devFeature}>
-                    <Text style={styles.devFeatureText}>Streaming API</Text>
-                  </View>
-                </View>
-                <View style={styles.devButton}>
-                  <Text style={styles.devButtonText}>Documentation API</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </AnimatedSection>
-
-          {/* KORA Family */}
-          <AnimatedSection title="Famille" subtitle="Offre multi-comptes" delay={800}>
-            <TouchableOpacity style={styles.familyBanner} onPress={handlePremium} activeOpacity={0.85}>
-              <LinearGradient
-                colors={['#2d1a4a', '#1a1a2e']}
-                style={styles.familyGradient}
-              >
-                <Text style={styles.familyTitle}>KORA Family</Text>
-                <Text style={styles.familyPrice}>9,98€<Text style={styles.familyPriceUnit}>/mois</Text></Text>
-                <Text style={styles.familySubtitle}>Jusqu'à 6 comptes • Contrôle parental • Écoute hors ligne</Text>
-                <View style={styles.familyAvatars}>
-                  <View style={[styles.familyAvatar, { backgroundColor: COLORS.terra }]}><Text style={styles.familyAvatarText}>👨</Text></View>
-                  <View style={[styles.familyAvatar, { backgroundColor: '#4A7FA5', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👩</Text></View>
-                  <View style={[styles.familyAvatar, { backgroundColor: '#46D369', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👦</Text></View>
-                  <View style={[styles.familyAvatar, { backgroundColor: '#F7D794', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👧</Text></View>
-                  <View style={[styles.familyAvatar, { backgroundColor: '#FF6B6B', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>+2</Text></View>
-                </View>
-                <View style={styles.familyButton}>
-                  <Text style={styles.familyButtonText}>Essayer 30 jours gratuits</Text>
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          </AnimatedSection>
-
-          {/* Bottom spacing */}
-          <View style={{ height: insets.bottom + 60 }} />
-        </View>
-      </Animated.ScrollView>
+        <HeroSection onPlay={handlePlay} featuredContent={featuredTracks[0]} />
+        
+        {/* Featured Content Grid */}
+        <FeaturedContentGrid items={transformedFeatured} onItemPress={handlePlay} />
+        
+        {/* Category Row */}
+        <CategoryRow onCategoryPress={handleCategoryPress} />
+        
+        {/* Trending Hub */}
+        <TrendingHub items={trendingTracks} onItemPress={handlePlay} />
+        
+        {/* Continue Watching + Mini Player */}
+        <ContinueWatchingSection 
+          items={featuredTracks.slice(0, 3)} 
+          currentTrack={currentTrack}
+          onItemPress={handlePlay} 
+        />
+        
+        {/* Creators to Follow */}
+        <CreatorsToFollow creators={creators} onCreatorPress={handleCreatorPress} />
+        
+        {/* Platforms Banner */}
+        <PlatformsBanner />
+        
+        {/* Footer */}
+        <Footer onJoin={handleJoin} />
+      </ScrollView>
     </View>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// STYLES
+// STYLES — Netflix Premium Theme
 // ══════════════════════════════════════════════════════════════════════════════
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark,
+    backgroundColor: CINEMA.black,
   },
   scrollView: {
     flex: 1,
   },
-  
-  // Header
-  fixedHeader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    zIndex: 90,
-  },
-  floatingHeader: {
+
+  // ─── Header ───────────────────────────────────────────────────────────────────
+  header: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 100,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: 'rgba(10,10,10,0.9)',
   },
-  logoText: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 28,
-    color: COLORS.terra,
-    letterSpacing: 4,
-  },
-  headerActions: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 10,
   },
-  headerBtn: {
-    width: 44,
-    height: 44,
+  headerLogo: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: CINEMA.gold,
+    letterSpacing: 3,
+  },
+  headerTagline: {
+    marginLeft: 6,
+  },
+  headerTaglineText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 7,
+    color: 'rgba(255,255,255,0.4)',
+    letterSpacing: 1,
+  },
+  headerNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerNavItem: {
+    paddingVertical: 4,
+  },
+  headerNavText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.6)',
+    letterSpacing: 1,
+  },
+  headerNavTextActive: {
+    color: CINEMA.cream,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerSearchBtn: {
+    padding: 8,
+  },
+  headerProfileBtn: {
+    // Profile button
+  },
+  headerProfileGradient: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  profileBtn: {
-    marginLeft: 4,
-  },
-  profileGradient: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileInitial: {
+  headerProfileInitial: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 15,
-    color: COLORS.cream,
+    fontSize: 14,
+    color: CINEMA.cream,
   },
-  
-  // Search
-  searchContainer: {
+
+  // ─── Search ───────────────────────────────────────────────────────────────────
+  searchOverlay: {
     position: 'absolute',
     left: 16,
     right: 16,
-    zIndex: 100,
+    zIndex: 200,
   },
   searchBlur: {
-    borderRadius: 16,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   searchBar: {
@@ -1485,877 +1022,765 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontFamily: FONTS.jostRegular,
-    fontSize: 16,
-    color: COLORS.cream,
+    fontSize: 15,
+    color: CINEMA.cream,
   },
-  
-  // Hero
-  heroSection: {
-    height: SH * 0.58,
+  searchClose: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.gold,
+  },
+
+  // ─── Hero ─────────────────────────────────────────────────────────────────────
+  heroContainer: {
+    height: SH * 0.55,
+    width: SW,
     position: 'relative',
   },
-  heroImageContainer: {
-    ...StyleSheet.absoluteFillObject,
+  heroBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  heroImage: {
-    width: '100%',
-    height: '100%',
+  heroGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   heroContent: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 28,
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    right: 20,
   },
-  heroSubtitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 11,
-    color: COLORS.terra,
-    letterSpacing: 3,
-    marginBottom: 10,
-  },
-  heroTitle: {
+  heroHeadline: {
     fontFamily: FONTS.playfairBold,
-    fontSize: 48,
-    color: COLORS.cream,
-    letterSpacing: 3,
-    marginBottom: 10,
+    fontSize: SW > 400 ? 48 : 36,
+    color: CINEMA.white,
+    lineHeight: SW > 400 ? 54 : 42,
+    marginBottom: 12,
   },
-  heroDescription: {
+  heroSubheadline: {
     fontFamily: FONTS.jostLight,
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 22,
-    marginBottom: 14,
-    maxWidth: '90%',
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 1.5,
+    lineHeight: 20,
+    marginBottom: 24,
   },
-  heroMeta: {
+  heroCTAContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 18,
+    gap: 12,
+    flexWrap: 'wrap',
   },
-  heroMatch: {
+  heroPrimaryCTA: {
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  heroPrimaryCTAGradient: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  heroPrimaryCTAText: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 13,
-    color: '#46D369',
+    fontSize: 12,
+    color: CINEMA.black,
+    letterSpacing: 1,
   },
-  heroRating: {
-    paddingVertical: 3,
-    paddingHorizontal: 8,
+  heroSecondaryCTA: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    gap: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 4,
   },
-  heroRatingText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 10,
-    color: COLORS.cream,
+  heroSecondaryCTAText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 11,
+    color: CINEMA.cream,
     letterSpacing: 1,
   },
-  heroButtons: {
-    flexDirection: 'row',
+
+  // ─── Featured Grid ────────────────────────────────────────────────────────────
+  featuredContainer: {
+    flexDirection: SW > 600 ? 'row' : 'column',
+    paddingHorizontal: 20,
+    marginTop: 24,
     gap: 12,
   },
-  playBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.cream,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 6,
-    gap: 10,
-  },
-  playBtnText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 16,
-    color: COLORS.dark,
-  },
-  listBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    paddingVertical: 14,
-    paddingHorizontal: 22,
-    borderRadius: 6,
-    gap: 10,
-  },
-  listBtnText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 15,
-    color: COLORS.cream,
-  },
-  
-  // Sections
-  sectionsContainer: {
-    backgroundColor: COLORS.dark,
-    paddingTop: 28,
-  },
-  section: {
-    marginBottom: 36,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 18,
-  },
-  sectionTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 22,
-    color: COLORS.cream,
-  },
-  sectionSubtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 13,
-    color: COLORS.gray,
-    marginTop: 3,
-  },
-  sectionAction: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 13,
-    color: COLORS.terra,
-  },
-  horizontalList: {
-    paddingHorizontal: 20,
-    paddingRight: 6,
-    flexDirection: 'row',
-  },
-  
-  // Globe
-  globeContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-  },
-  globeGlow: {
-    position: 'absolute',
-    width: 300,
-    height: 200,
-    borderRadius: 150,
-  },
-  globeWrapper: {
-    width: 160,
-    height: 160,
-    position: 'relative',
-    marginBottom: 24,
-  },
-  particle: {
-    position: 'absolute',
-    width: 6,
-    height: 6,
-  },
-  particleDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  territoryPoint: {
-    position: 'absolute',
-    width: 30,
-    height: 30,
+  loadingState: {
+    height: 250,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  territoryPulse: {
-    position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    opacity: 0.5,
-  },
-  territoryDot: {
-    shadowOffset: { width: 0, height: 0 },
-  },
-  territoryChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 20,
-  },
-  territoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    gap: 8,
-  },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chipText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.cream,
-  },
-  chipTextActive: {
-    color: COLORS.cream,
-  },
-  
-  // Continue Card
-  continueCard: {
-    width: 140,
-    marginRight: 12,
-  },
-  continueImageWrapper: {
     width: '100%',
-    height: 200,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: COLORS.dark2,
-  },
-  continueImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  continuePlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  continueTypeBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 4,
-  },
-  continueTypeText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 9,
-    color: COLORS.cream,
-    textTransform: 'capitalize',
-  },
-  continueProgressBar: {
-    height: 3,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 2,
-    marginTop: 8,
-    overflow: 'hidden',
-  },
-  continueProgressFill: {
-    height: '100%',
-    backgroundColor: COLORS.terra,
-    borderRadius: 2,
-  },
-  continueTitle: {
-    fontFamily: FONTS.jostSemiBold,
-    fontSize: 13,
-    color: COLORS.cream,
-    marginTop: 8,
-    lineHeight: 16,
-  },
-  continueRemaining: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 11,
-    color: COLORS.gray,
-    marginTop: 4,
-  },
-  continueInfoOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 10,
-  },
-  
-  // Live Card
-  liveCard: {
-    width: 210,
-    height: 135,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  liveImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  liveGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  liveBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(229,9,20,0.95)',
-    paddingVertical: 5,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    gap: 6,
-  },
-  livePulse: {
-    position: 'absolute',
-    left: 12,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#fff',
-  },
-  liveText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 11,
-    color: '#fff',
-    letterSpacing: 1,
-  },
-  liveViewers: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.9)',
-  },
-  liveInfo: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    right: 12,
-  },
-  liveTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 15,
-    color: COLORS.cream,
-  },
-  liveCreator: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    marginTop: 3,
-  },
-  
-  // Content Card
-  contentCard: {
-    width: 140,
-    marginRight: 14,
-  },
-  contentImageWrapper: {
-    width: '100%',
-    height: 140,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: COLORS.dark2,
-  },
-  contentImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  contentInfo: {
-    marginTop: 12,
-  },
-  contentTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.cream,
-  },
-  contentArtist: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    marginTop: 3,
-  },
-  contentType: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 10,
-    color: COLORS.terra,
-    marginTop: 5,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  
-  // Creator Card
-  creatorCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 230,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 14,
-    padding: 14,
-    gap: 14,
-  },
-  creatorImage: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: COLORS.dark2,
-  },
-  creatorInfo: {
-    flex: 1,
-  },
-  creatorNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  creatorName: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 15,
-    color: COLORS.cream,
-  },
-  verifiedBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.terra,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  verifiedText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 9,
-    color: COLORS.cream,
-  },
-  creatorRole: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    marginTop: 3,
-  },
-  creatorFollowers: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 11,
-    color: COLORS.terra,
-    marginTop: 3,
-  },
-  followBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  // Nébuleuse Card
-  nebuleuseCard: {
-    width: 165,
-    height: 210,
-    borderRadius: 14,
-    overflow: 'hidden',
-  },
-  nebuleuseImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  nebuleuseGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  nebuleuseGlow: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-  },
-  nebuleuseInfo: {
-    position: 'absolute',
-    bottom: 18,
-    left: 14,
-    right: 14,
-  },
-  nebuleuseTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 17,
-    color: COLORS.cream,
-  },
-  nebuleuseDesc: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 3,
-  },
-  nebuleusePlayBtn: {
-    position: 'absolute',
-    bottom: 14,
-    right: 14,
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  
-  // Cinema Card
-  cinemaCard: {
-    width: 250,
-    height: 145,
-    borderRadius: 10,
-    overflow: 'hidden',
-  },
-  cinemaImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  cinemaGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  cinemaPlayOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cinemaPlayCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cinemaInfo: {
-    position: 'absolute',
-    bottom: 14,
-    left: 14,
-  },
-  cinemaTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 16,
-    color: COLORS.cream,
-  },
-  cinemaDuration: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 12,
-    color: COLORS.gray,
-    marginTop: 3,
-  },
-  // Loading & Empty states
-  loadingContainer: {
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
   },
   loadingText: {
     fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: COLORS.gray,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 12,
   },
-  emptyState: {
-    width: SW - 40,
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: COLORS.gray,
-    textAlign: 'center',
-  },
-  uploadCTA: {
-    marginTop: 16,
-    backgroundColor: COLORS.terra,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 24,
-  },
-  uploadCTAText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.cream,
-  },
-  // Premium Banner
-  premiumBanner: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-    borderRadius: 16,
+  featuredMain: {
+    flex: SW > 600 ? 2 : undefined,
+    height: SW > 600 ? 300 : 260,
+    borderRadius: 12,
     overflow: 'hidden',
   },
-  premiumGradient: {
-    padding: 24,
-    alignItems: 'center',
+  featuredMainImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end',
   },
-  premiumTitle: {
-    fontFamily: FONTS.jostBold,
-    fontSize: 22,
-    color: COLORS.cream,
-    letterSpacing: 2,
+  featuredMainImageStyle: {
+    borderRadius: 12,
   },
-  premiumSubtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: 8,
+  featuredMainGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '75%',
+    borderRadius: 12,
   },
-  premiumButton: {
-    marginTop: 16,
-    backgroundColor: COLORS.cream,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
+  featuredMainContent: {
+    padding: 18,
   },
-  premiumButtonText: {
+  featuredBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: CINEMA.gold,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    marginBottom: 10,
+  },
+  featuredBadgeText: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.dark,
-  },
-  // Creator Banner
-  creatorBanner: {
-    marginHorizontal: 20,
-    marginVertical: 10,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  creatorGradient: {
-    padding: 24,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-  },
-  creatorTitle: {
-    fontFamily: FONTS.jostBold,
-    fontSize: 20,
-    color: COLORS.cream,
+    fontSize: 9,
+    color: CINEMA.black,
     letterSpacing: 1,
   },
-  creatorSubtitle: {
+  featuredMainTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: CINEMA.white,
+    marginBottom: 4,
+  },
+  featuredMainSubtitle: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: CINEMA.cream,
+    marginBottom: 6,
+  },
+  featuredMainDescription: {
     fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 8,
-  },
-  creatorButton: {
-    marginTop: 16,
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: COLORS.terra,
-    paddingHorizontal: 28,
-    paddingVertical: 10,
-    borderRadius: 24,
-  },
-  creatorButtonText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.terra,
-  },
-  // Search Results
-  searchResults: {
-    maxHeight: 400,
-    marginTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    paddingTop: 12,
-  },
-  searchResultsTitle: {
-    fontFamily: FONTS.jostMedium,
     fontSize: 12,
-    color: COLORS.gray,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    color: 'rgba(255,255,255,0.65)',
+    lineHeight: 17,
+    marginBottom: 14,
   },
-  searchResultItem: {
+  featuredMainCTA: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: CINEMA.cream,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    gap: 8,
   },
-  searchResultImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  searchResultInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  searchResultTitle: {
+  featuredMainCTAText: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 15,
-    color: COLORS.cream,
+    fontSize: 10,
+    color: CINEMA.black,
+    letterSpacing: 1,
   },
-  searchResultArtist: {
+  carouselDots: {
+    position: 'absolute',
+    bottom: 12,
+    left: 18,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  carouselDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  carouselDotActive: {
+    backgroundColor: CINEMA.gold,
+  },
+  featuredSidebar: {
+    flex: SW > 600 ? 1 : undefined,
+    gap: 8,
+    position: 'relative',
+    flexDirection: SW > 600 ? 'column' : 'row',
+    marginTop: SW > 600 ? 0 : 12,
+  },
+  sidebarCard: {
+    flex: 1,
+    height: SW > 600 ? undefined : 100,
+    minHeight: 90,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  sidebarCardImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'space-between',
+    padding: 10,
+  },
+  sidebarCardImageStyle: {
+    borderRadius: 8,
+  },
+  sidebarCardGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  sidebarCardContent: {
+    zIndex: 1,
+  },
+  sidebarBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    marginBottom: 4,
+  },
+  sidebarBadgeText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 7,
+    color: CINEMA.gold,
+    letterSpacing: 1,
+  },
+  sidebarTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 14,
+    color: CINEMA.white,
+  },
+  sidebarSubtitle: {
     fontFamily: FONTS.jostLight,
-    fontSize: 13,
-    color: COLORS.gray,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.65)',
     marginTop: 2,
   },
-  searchResultType: {
+  sidebarPlayBtn: {
+    alignSelf: 'flex-end',
     width: 28,
     height: 28,
     borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
+    zIndex: 1,
   },
-  searchResultTypeText: {
-    fontSize: 14,
-    color: COLORS.cream,
-  },
-  // Quick Navigation Grid (P2-P3)
-  quickNavGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    paddingHorizontal: 20,
-  },
-  quickNavCard: {
-    width: (SW - 52) / 3,
-    height: 120,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  quickNavGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
-  quickNavEmoji: {
-    fontSize: 28,
-    marginBottom: 8,
-  },
-  quickNavTitle: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.cream,
-    textAlign: 'center',
-  },
-  quickNavSubtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-    textAlign: 'center',
-    marginTop: 2,
-  },
-  // KORA for Developers
-  devBanner: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  devGradient: {
-    padding: 24,
-  },
-  devTitle: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 24,
-    color: COLORS.cream,
-  },
-  devSubtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 8,
-  },
-  devFeatures: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 16,
-  },
-  devFeature: {
+  sidebarNavArrow: {
+    position: 'absolute',
+    right: -10,
+    top: '50%',
+    marginTop: -18,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  devFeatureText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 12,
-    color: '#46D369',
-  },
-  devButton: {
-    backgroundColor: '#46D369',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    marginTop: 20,
-  },
-  devButtonText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: '#0f172a',
-  },
-  // KORA Family
-  familyBanner: {
-    marginHorizontal: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  familyGradient: {
-    padding: 24,
     alignItems: 'center',
+    justifyContent: 'center',
+    display: SW > 600 ? 'flex' : 'none',
   },
-  familyTitle: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 28,
-    color: COLORS.cream,
+
+  // ─── Category Row ─────────────────────────────────────────────────────────────
+  categoryContainer: {
+    marginTop: 28,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.06)',
+    paddingVertical: 18,
   },
-  familyPrice: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 42,
-    color: COLORS.cream,
-    marginTop: 8,
+  categoryScrollContent: {
+    paddingHorizontal: 20,
+    gap: SW > 600 ? 28 : 18,
   },
-  familyPriceUnit: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.6)',
+  categoryItem: {
+    alignItems: 'center',
+    minWidth: 60,
   },
-  familySubtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    marginTop: 12,
-    maxWidth: 280,
-  },
-  familyAvatars: {
-    flexDirection: 'row',
-    marginTop: 20,
-  },
-  familyAvatar: {
+  categoryIconWrapper: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    backgroundColor: 'rgba(201,168,76,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: '#2d1a4a',
+    marginBottom: 8,
   },
-  familyAvatarText: {
-    fontSize: 20,
-  },
-  familyButton: {
-    backgroundColor: COLORS.cream,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 28,
-    marginTop: 24,
-  },
-  familyButtonText: {
+  categoryLabel: {
     fontFamily: FONTS.jostMedium,
-    fontSize: 16,
-    color: COLORS.dark,
+    fontSize: 9,
+    color: CINEMA.cream,
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  categorySublabel: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 8,
+    color: 'rgba(255,255,255,0.4)',
+  },
+
+  // ─── Trending Hub ─────────────────────────────────────────────────────────────
+  hubContainer: {
+    marginTop: 28,
+  },
+  hubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+    gap: 6,
+  },
+  hubTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.cream,
+    letterSpacing: 2,
+  },
+  hubList: {
+    paddingRight: 20,
+  },
+  trendingCard: {
+    width: 110,
+    marginRight: 12,
+  },
+  trendingImageWrapper: {
+    width: 110,
+    height: 110,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 8,
+    position: 'relative',
+  },
+  trendingImage: {
+    width: '100%',
+    height: '100%',
+  },
+  trendingPlayBtn: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendingName: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: CINEMA.cream,
+  },
+  trendingTrack: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.45)',
+  },
+
+  // ─── Continue Watching ────────────────────────────────────────────────────────
+  continueSection: {
+    flexDirection: SW > 600 ? 'row' : 'column',
+    marginTop: 36,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  continueLeft: {
+    flex: SW > 600 ? 2 : undefined,
+  },
+  continueCards: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  continueCard: {
+    flex: 1,
+    height: 120,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  continueCardImage: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  continueCardImageStyle: {
+    borderRadius: 8,
+  },
+  continueCardGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '70%',
+  },
+  continueCardContent: {
+    padding: 10,
+  },
+  continueCardTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 12,
+    color: CINEMA.white,
+    marginBottom: 2,
+  },
+  continueCardMeta: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.55)',
+  },
+  progressBarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: CINEMA.terra,
+  },
+  emptyState: {
+    flex: 1,
+    height: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 8,
+  },
+  emptyStateText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.4)',
+    textAlign: 'center',
+  },
+
+  // ─── Mini Player ──────────────────────────────────────────────────────────────
+  miniPlayerContainer: {
+    flex: SW > 600 ? 1 : undefined,
+    marginTop: SW > 600 ? 0 : 24,
+  },
+  miniPlayerLabel: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 2,
+    marginBottom: 14,
+  },
+  miniPlayer: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  miniPlayerArt: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+    marginBottom: 14,
+  },
+  miniPlayerTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 14,
+    color: CINEMA.cream,
+    marginBottom: 4,
+  },
+  miniPlayerArtist: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    marginBottom: 14,
+  },
+  miniPlayerProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    gap: 8,
+    marginBottom: 14,
+  },
+  miniPlayerTime: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.45)',
+  },
+  miniPlayerSlider: {
+    flex: 1,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 2,
+    position: 'relative',
+  },
+  miniPlayerSliderFill: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: '40%',
+    backgroundColor: CINEMA.cream,
+    borderRadius: 2,
+  },
+  miniPlayerSliderThumb: {
+    position: 'absolute',
+    left: '40%',
+    top: -3,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: CINEMA.cream,
+    marginLeft: -4,
+  },
+  miniPlayerControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+  },
+  miniPlayerPlayBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: CINEMA.cream,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ─── Creators ─────────────────────────────────────────────────────────────────
+  creatorsContainer: {
+    marginTop: 36,
+    paddingHorizontal: 20,
+  },
+  creatorsScrollContent: {
+    marginTop: 14,
+    gap: 18,
+  },
+  creatorCard: {
+    alignItems: 'center',
+    width: 70,
+  },
+  creatorAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: 'rgba(201,168,76,0.25)',
+    marginBottom: 8,
+  },
+  creatorName: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: CINEMA.cream,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  creatorRole: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.45)',
+  },
+  creatorNavArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(201,168,76,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginLeft: 8,
+  },
+
+  // ─── Platforms ────────────────────────────────────────────────────────────────
+  platformsContainer: {
+    marginTop: 40,
+    paddingVertical: 22,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+    alignItems: 'center',
+  },
+  platformsTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.55)',
+    letterSpacing: 2,
+    marginBottom: 18,
+  },
+  platformsScrollContent: {
+    paddingHorizontal: 20,
+    gap: 24,
+  },
+  platformItem: {
+    alignItems: 'center',
+  },
+  platformIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  platformIconText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 13,
+    color: CINEMA.cream,
+  },
+  platformLabel: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 9,
+    color: CINEMA.cream,
+  },
+  platformSublabel: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 7,
+    color: 'rgba(255,255,255,0.35)',
+  },
+
+  // ─── Footer ───────────────────────────────────────────────────────────────────
+  footerContainer: {
+    marginTop: 32,
+    backgroundColor: CINEMA.black,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  footerTop: {
+    flexDirection: SW > 600 ? 'row' : 'column',
+    paddingHorizontal: 20,
+    paddingVertical: 32,
+    gap: SW > 600 ? 32 : 24,
+  },
+  footerLogoSection: {
+    flex: SW > 600 ? 1 : undefined,
+    marginBottom: SW > 600 ? 0 : 20,
+  },
+  footerLogo: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 28,
+    color: CINEMA.gold,
+    letterSpacing: 3,
+    marginBottom: 6,
+  },
+  footerTagline: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.35)',
+    lineHeight: 13,
+    marginBottom: 14,
+  },
+  footerSocials: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  footerSocialIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerSocialText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 9,
+    color: CINEMA.cream,
+  },
+  footerColumns: {
+    flexDirection: 'row',
+    flex: SW > 600 ? 2 : undefined,
+    gap: SW > 600 ? 28 : 20,
+  },
+  footerColumn: {
+    flex: 1,
+  },
+  footerColumnTitle: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 10,
+    color: CINEMA.cream,
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  footerLink: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    marginBottom: 8,
+  },
+  footerPricing: {
+    flex: SW > 600 ? 1 : undefined,
+    alignItems: SW > 600 ? 'flex-end' : 'center',
+    marginTop: SW > 600 ? 0 : 20,
+  },
+  footerPrice: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 32,
+    color: CINEMA.gold,
+  },
+  footerPriceLabel: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    marginBottom: 4,
+  },
+  footerPriceSubtext: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.35)',
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  footerCTA: {
+    backgroundColor: CINEMA.terra,
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 4,
+  },
+  footerCTAText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 11,
+    color: CINEMA.cream,
+    letterSpacing: 1,
+  },
+  footerBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.04)',
+  },
+  footerCopyright: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.25)',
+    letterSpacing: 1,
+  },
+  footerLang: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerLangText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.4)',
   },
 });

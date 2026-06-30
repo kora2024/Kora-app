@@ -1,5 +1,5 @@
 /**
- * KORA Root Layout — UPGRADE 7 (Transitions Fluides)
+ * KORA Root Layout — Netflix Premium Typography
  * 
  * Configuration des animations de navigation :
  * - default: fade simple (280ms)
@@ -7,31 +7,21 @@
  * - noyau: slide_from_right (descente centrale)
  * - eveil: fade (onboarding)
  * - tabs: fade
+ * 
+ * Fonts loaded via expo-font for better native compatibility
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import {
-  useFonts,
-  PlayfairDisplay_400Regular,
-  PlayfairDisplay_700Bold,
-  PlayfairDisplay_400Regular_Italic,
-  PlayfairDisplay_700Bold_Italic,
-} from '@expo-google-fonts/playfair-display';
-import {
-  Jost_200ExtraLight,
-  Jost_300Light,
-  Jost_400Regular,
-  Jost_500Medium,
-} from '@expo-google-fonts/jost';
-import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
+import { View, StyleSheet, ActivityIndicator, Text } from 'react-native';
+import * as Font from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { COLORS } from '../src/theme';
 import TransitionOverlay from '../src/components/TransitionOverlay';
 import { ToastContainer } from '../src/components/Toast';
 
+// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -45,18 +35,40 @@ const TRANSITION_DURATION = {
   cinematic: 500,
 };
 
+// Font configuration - using Google Fonts packages that are already installed
+// These will fallback to system fonts if loading fails
+const GOOGLE_FONTS = {
+  'PlayfairDisplay_400Regular': require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular,
+  'PlayfairDisplay_700Bold': require('@expo-google-fonts/playfair-display').PlayfairDisplay_700Bold,
+  'PlayfairDisplay_400Regular_Italic': require('@expo-google-fonts/playfair-display').PlayfairDisplay_400Regular_Italic,
+  'PlayfairDisplay_700Bold_Italic': require('@expo-google-fonts/playfair-display').PlayfairDisplay_700Bold_Italic,
+  'Jost_200ExtraLight': require('@expo-google-fonts/jost').Jost_200ExtraLight,
+  'Jost_300Light': require('@expo-google-fonts/jost').Jost_300Light,
+  'Jost_400Regular': require('@expo-google-fonts/jost').Jost_400Regular,
+  'Jost_500Medium': require('@expo-google-fonts/jost').Jost_500Medium,
+  'JetBrainsMono_400Regular': require('@expo-google-fonts/jetbrains-mono').JetBrainsMono_400Regular,
+};
+
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    PlayfairDisplay_400Regular,
-    PlayfairDisplay_700Bold,
-    PlayfairDisplay_400Regular_Italic,
-    PlayfairDisplay_700Bold_Italic,
-    Jost_200ExtraLight,
-    Jost_300Light,
-    Jost_400Regular,
-    Jost_500Medium,
-    JetBrainsMono_400Regular,
-  });
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [fontError, setFontError] = useState<Error | null>(null);
+
+  // Load fonts using expo-font for better native compatibility
+  const loadFonts = useCallback(async () => {
+    try {
+      await Font.loadAsync(GOOGLE_FONTS);
+      setFontsLoaded(true);
+    } catch (error) {
+      console.warn('Font loading failed, using system fonts:', error);
+      setFontError(error as Error);
+      // Continue with system fonts fallback
+      setFontsLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadFonts();
+  }, [loadFonts]);
 
   useEffect(() => {
     if (fontsLoaded) {

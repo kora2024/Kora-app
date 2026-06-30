@@ -91,7 +91,6 @@ function CategoryChip({ category, isSelected, onPress, index }: any) {
         onPress={onPress}
         activeOpacity={0.8}
       >
-        <Text style={styles.categoryIcon}>{category.icon}</Text>
         <Text style={[styles.categoryName, isSelected && styles.categoryNameActive]}>
           {category.name}
         </Text>
@@ -257,10 +256,14 @@ export default function PodcastsScreen() {
       console.error('Error fetching categories:', err);
       // Fallback categories
       setCategories([
-        { id: 'culture', name: 'Culture', icon: '🌍' },
-        { id: 'music', name: 'Musique', icon: '🎵' },
-        { id: 'talk', name: 'Talk', icon: '🎙️' },
-        { id: 'education', name: 'Éducation', icon: '📚' },
+        { id: 'culture', name: 'Culture & Société' },
+        { id: 'music', name: 'Musique' },
+        { id: 'talk', name: 'Talk Show' },
+        { id: 'education', name: 'Éducation' },
+        { id: 'news', name: 'Actualités' },
+        { id: 'history', name: 'Histoire' },
+        { id: 'comedy', name: 'Humour' },
+        { id: 'stories', name: 'Récits' },
       ]);
     }
   };
@@ -421,7 +424,7 @@ export default function PodcastsScreen() {
         contentContainerStyle={styles.categoriesContainer}
       >
         <CategoryChip
-          category={{ id: null, name: 'Tous', icon: '✨' }}
+          category={{ id: null, name: 'Tous' }}
           isSelected={selectedCategory === null}
           onPress={() => setSelectedCategory(null)}
           index={0}
@@ -520,9 +523,6 @@ const styles = StyleSheet.create({
   },
   categoryChipActive: {
     backgroundColor: COLORS.terra,
-  },
-  categoryIcon: {
-    fontSize: 14,
   },
   categoryName: {
     fontFamily: FONTS.jostMedium,
