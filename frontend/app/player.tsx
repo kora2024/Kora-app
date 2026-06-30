@@ -648,6 +648,9 @@ function VideoPlayerView({
 // MAIN PLAYER SCREEN
 // ══════════════════════════════════════════════════════════════════════════════
 
+import AdGate from '../src/components/AdGate';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export default function PlayerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -660,6 +663,11 @@ export default function PlayerScreen() {
   const [trackDetails, setTrackDetails] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Ad Gating State
+  const [showAdGate, setShowAdGate] = useState(true);
+  const [adGateComplete, setAdGateComplete] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
 
   // Animations
   const slideAnim = useRef(new Animated.Value(SH)).current;
@@ -667,6 +675,23 @@ export default function PlayerScreen() {
 
   // API Base
   const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
+
+  // Load user ID for ad gating
+  useEffect(() => {
+    const loadUserId = async () => {
+      try {
+        const token = await AsyncStorage.getItem('kora_token');
+        if (token) {
+          // Decode token to get user ID (simple extraction)
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserId(payload.sub);
+        }
+      } catch (e) {
+        console.log('No auth token found');
+      }
+    };
+    loadUserId();
+  }, []);
 
   // Determine content type
   const contentType = (params.type as string) || 'audio';
@@ -773,6 +798,16 @@ export default function PlayerScreen() {
     setRepeat((r) => r === 'off' ? 'all' : r === 'all' ? 'one' : 'off');
   }, []);
 
+  // Handle ad gate completion
+  const handleAdGateComplete = useCallback(() => {
+    setShowAdGate(false);
+    setAdGateComplete(true);
+  }, []);
+
+  const handleAdGateCancel = useCallback(() => {
+    router.back();
+  }, [router]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -799,6 +834,22 @@ export default function PlayerScreen() {
             <Text style={styles.errorBackBtnText}>Retour</Text>
           </TouchableOpacity>
         </View>
+      </Animated.View>
+    );
+  }
+
+  // Show Ad Gate for non-premium users before playback
+  if (showAdGate && !adGateComplete) {
+    return (
+      <Animated.View style={[styles.container, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <StatusBar barStyle="light-content" />
+        <AdGate
+          userId={userId}
+          contentId={content.id}
+          contentTitle={content.title}
+          onProceed={handleAdGateComplete}
+          onCancel={handleAdGateCancel}
+        />
       </Animated.View>
     );
   }

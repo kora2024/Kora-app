@@ -513,17 +513,32 @@ async def get_subscription_status(current_user: dict = Depends(get_current_user)
 
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    """Handle Stripe webhook events"""
+    """
+    Handle Stripe webhook events - SECURED
+    
+    SECURITY: Signature verification is MANDATORY in production.
+    Without STRIPE_WEBHOOK_SECRET, only test mode is allowed.
+    """
     payload = await request.body()
     sig_header = request.headers.get('stripe-signature')
     
+    # Security: Log all webhook attempts
+    logger.info(f"Stripe webhook received - has signature: {bool(sig_header)}")
+    
     try:
-        if STRIPE_WEBHOOK_SECRET:
+        if STRIPE_WEBHOOK_SECRET and STRIPE_WEBHOOK_SECRET.startswith('whsec_'):
+            # Production mode: Signature verification REQUIRED
+            if not sig_header:
+                logger.error("SECURITY: Webhook missing signature header")
+                raise HTTPException(status_code=401, detail="Missing signature")
+            
             event = stripe.Webhook.construct_event(
                 payload, sig_header, STRIPE_WEBHOOK_SECRET
             )
+            logger.info(f"Webhook signature verified successfully")
         else:
-            # For testing without webhook secret
+            # Development mode: Allow unsigned webhooks with warning
+            logger.warning("SECURITY WARNING: Webhook secret not configured - accepting unsigned webhook")
             import json
             event = json.loads(payload)
             
@@ -531,25 +546,58 @@ async def stripe_webhook(request: Request):
         logger.error(f"Invalid payload: {str(e)}")
         raise HTTPException(status_code=400, detail="Invalid payload")
     except stripe.error.SignatureVerificationError as e:
-        logger.error(f"Invalid signature: {str(e)}")
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        logger.error(f"SECURITY: Invalid webhook signature - possible attack: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid signature")
     
     # Handle events
     event_type = event.get('type') if isinstance(event, dict) else event.type
+    logger.info(f"Processing Stripe event: {event_type}")
     
     if event_type == 'checkout.session.completed':
         session = event.get('data', {}).get('object', {}) if isinstance(event, dict) else event.data.object
         user_id = session.get('metadata', {}).get('user_id')
+        customer_id = session.get('customer')
         
         if user_id:
+            # Update user subscription status - BOTH fields for compatibility
             await db.users.update_one(
                 {'_id': user_id},
                 {'$set': {
+                    'stripe_status': 'active',
                     'subscription_status': 'active',
-                    'subscription_updated_at': datetime.now(timezone.utc)
+                    'stripe_customer_id': customer_id,
+                    'subscription_updated_at': datetime.now(timezone.utc),
+                    'premium_since': datetime.now(timezone.utc)
                 }}
             )
-            logger.info(f"Subscription activated for user {user_id}")
+            logger.info(f"PAYMENT SUCCESS: Subscription activated for user {user_id}")
+            
+    elif event_type == 'customer.subscription.updated':
+        subscription = event.get('data', {}).get('object', {}) if isinstance(event, dict) else event.data.object
+        customer_id = subscription.get('customer')
+        status = subscription.get('status')
+        
+        # Map Stripe status to our status
+        stripe_status_map = {
+            'active': 'active',
+            'past_due': 'past_due',
+            'canceled': 'cancelled',
+            'unpaid': 'inactive',
+            'incomplete': 'inactive',
+            'incomplete_expired': 'inactive',
+            'trialing': 'active',
+        }
+        mapped_status = stripe_status_map.get(status, 'inactive')
+        
+        await db.users.update_one(
+            {'stripe_customer_id': customer_id},
+            {'$set': {
+                'stripe_status': mapped_status,
+                'subscription_status': mapped_status,
+                'subscription_updated_at': datetime.now(timezone.utc)
+            }}
+        )
+        logger.info(f"Subscription updated for customer {customer_id}: {mapped_status}")
             
     elif event_type == 'customer.subscription.deleted':
         customer_id = event.get('data', {}).get('object', {}).get('customer') if isinstance(event, dict) else event.data.object.customer
@@ -557,11 +605,26 @@ async def stripe_webhook(request: Request):
         await db.users.update_one(
             {'stripe_customer_id': customer_id},
             {'$set': {
+                'stripe_status': 'cancelled',
                 'subscription_status': 'cancelled',
+                'subscription_updated_at': datetime.now(timezone.utc),
+                'ad_free_until': None  # Remove any ad-free session on cancellation
+            }}
+        )
+        logger.info(f"SUBSCRIPTION CANCELLED: Customer {customer_id}")
+    
+    elif event_type == 'invoice.payment_failed':
+        customer_id = event.get('data', {}).get('object', {}).get('customer') if isinstance(event, dict) else event.data.object.customer
+        
+        await db.users.update_one(
+            {'stripe_customer_id': customer_id},
+            {'$set': {
+                'stripe_status': 'past_due',
+                'subscription_status': 'past_due',
                 'subscription_updated_at': datetime.now(timezone.utc)
             }}
         )
-        logger.info(f"Subscription cancelled for customer {customer_id}")
+        logger.warning(f"PAYMENT FAILED: Customer {customer_id}")
     
     return JSONResponse(content={"received": True})
 
@@ -659,6 +722,10 @@ api_router.include_router(podcast_router)
 from routes.reputation_routes import create_reputation_router
 reputation_router = create_reputation_router(db, get_current_user)
 api_router.include_router(reputation_router)
+
+# Include ads/monetization router
+from routes.ads_routes import router as ads_router
+app.include_router(ads_router)
 
 # Include api router in app
 app.include_router(api_router)
