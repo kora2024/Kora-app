@@ -22,6 +22,7 @@ import {
   RefreshControl,
   TextInput,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -1037,7 +1038,8 @@ export default function KoraHome() {
         ref={scrollRef}
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40, flexGrow: 1 }}
+        nestedScrollEnabled={true}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1087,9 +1089,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: CINEMA.black,
+    ...(Platform.OS === 'web' && {
+      height: '100vh',
+      overflow: 'hidden',
+    }),
   },
   scrollView: {
     flex: 1,
+    ...(Platform.OS === 'web' && {
+      height: '100%',
+      overflowY: 'auto',
+    } as any),
   },
 
   // ─── Header ───────────────────────────────────────────────────────────────────
