@@ -1326,6 +1326,57 @@ export default function KoraHome() {
             </TouchableOpacity>
           </AnimatedSection>
 
+          {/* KORA for Developers */}
+          <AnimatedSection title="Développeurs" subtitle="API & Intégrations" delay={700}>
+            <TouchableOpacity style={styles.devBanner} onPress={() => router.push('/developers')} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#0f172a', '#1e293b']}
+                style={styles.devGradient}
+              >
+                <Text style={styles.devTitle}>KORA for Developers</Text>
+                <Text style={styles.devSubtitle}>API REST • SDK Mobile • Webhooks</Text>
+                <View style={styles.devFeatures}>
+                  <View style={styles.devFeature}>
+                    <Text style={styles.devFeatureText}>OAuth 2.0</Text>
+                  </View>
+                  <View style={styles.devFeature}>
+                    <Text style={styles.devFeatureText}>GraphQL</Text>
+                  </View>
+                  <View style={styles.devFeature}>
+                    <Text style={styles.devFeatureText}>Streaming API</Text>
+                  </View>
+                </View>
+                <View style={styles.devButton}>
+                  <Text style={styles.devButtonText}>Documentation API</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </AnimatedSection>
+
+          {/* KORA Family */}
+          <AnimatedSection title="Famille" subtitle="Offre multi-comptes" delay={800}>
+            <TouchableOpacity style={styles.familyBanner} onPress={handlePremium} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#2d1a4a', '#1a1a2e']}
+                style={styles.familyGradient}
+              >
+                <Text style={styles.familyTitle}>KORA Family</Text>
+                <Text style={styles.familyPrice}>9,98€<Text style={styles.familyPriceUnit}>/mois</Text></Text>
+                <Text style={styles.familySubtitle}>Jusqu'à 6 comptes • Contrôle parental • Écoute hors ligne</Text>
+                <View style={styles.familyAvatars}>
+                  <View style={[styles.familyAvatar, { backgroundColor: COLORS.terra }]}><Text style={styles.familyAvatarText}>👨</Text></View>
+                  <View style={[styles.familyAvatar, { backgroundColor: '#4A7FA5', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👩</Text></View>
+                  <View style={[styles.familyAvatar, { backgroundColor: '#46D369', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👦</Text></View>
+                  <View style={[styles.familyAvatar, { backgroundColor: '#F7D794', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>👧</Text></View>
+                  <View style={[styles.familyAvatar, { backgroundColor: '#FF6B6B', marginLeft: -8 }]}><Text style={styles.familyAvatarText}>+2</Text></View>
+                </View>
+                <View style={styles.familyButton}>
+                  <Text style={styles.familyButtonText}>Essayer 30 jours gratuits</Text>
+                </View>
+              </LinearGradient>
+            </TouchableOpacity>
+          </AnimatedSection>
+
           {/* Bottom spacing */}
           <View style={{ height: insets.bottom + 60 }} />
         </View>
@@ -2181,5 +2232,116 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     marginTop: 2,
+  },
+  // KORA for Developers
+  devBanner: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  devGradient: {
+    padding: 24,
+  },
+  devTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 24,
+    color: COLORS.cream,
+  },
+  devSubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 8,
+  },
+  devFeatures: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  devFeature: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  devFeatureText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 12,
+    color: '#46D369',
+  },
+  devButton: {
+    backgroundColor: '#46D369',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    marginTop: 20,
+  },
+  devButtonText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  // KORA Family
+  familyBanner: {
+    marginHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  familyGradient: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  familyTitle: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 28,
+    color: COLORS.cream,
+  },
+  familyPrice: {
+    fontFamily: FONTS.playfairBold,
+    fontSize: 42,
+    color: COLORS.cream,
+    marginTop: 8,
+  },
+  familyPriceUnit: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  familySubtitle: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginTop: 12,
+    maxWidth: 280,
+  },
+  familyAvatars: {
+    flexDirection: 'row',
+    marginTop: 20,
+  },
+  familyAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#2d1a4a',
+  },
+  familyAvatarText: {
+    fontSize: 20,
+  },
+  familyButton: {
+    backgroundColor: COLORS.cream,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 28,
+    marginTop: 24,
+  },
+  familyButtonText: {
+    fontFamily: FONTS.jostMedium,
+    fontSize: 16,
+    color: COLORS.dark,
   },
 });
