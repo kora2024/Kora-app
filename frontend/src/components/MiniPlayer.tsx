@@ -7,6 +7,7 @@
  * - Interactive progress bar (seek by dragging)
  * - Animated waveform & rotating artwork
  * - Smooth transitions & haptic feedback
+ * - Quality badges (FrekCore, Spatial, Hi-Res)
  */
 
 import React, { useCallback, useRef, useEffect, useState } from 'react';
@@ -26,13 +27,45 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Rect, Circle } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
 import { COLORS, FONTS } from '../theme';
 import { usePlayerStore } from '../stores/playerStore';
 
 const { width: SW, height: SH } = Dimensions.get('window');
 const MINI_PLAYER_HEIGHT = 68;
 const SWIPE_THRESHOLD = 50;
+
+// Helper function to format artist name (remove technical prefixes like FRK-KORADEMO)
+function formatArtistName(artist: string): string {
+  if (!artist) return 'KORA';
+  // Remove common technical prefixes
+  const cleaned = artist
+    .replace(/^FRK-KORADEMO\d*/i, '')
+    .replace(/^FRK-/i, '')
+    .replace(/^KORA-/i, '')
+    .replace(/^DEMO-/i, '')
+    .trim();
+  return cleaned || 'KORA Collective';
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FREKCORE BADGE (Inline - very discreet)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function FrekCoreMini() {
+  return (
+    <Svg width={12} height={12} viewBox="0 0 24 24">
+      <Defs>
+        <SvgLinearGradient id="frekGradMini" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={COLORS.gold} />
+          <Stop offset="1" stopColor={COLORS.terra} />
+        </SvgLinearGradient>
+      </Defs>
+      <Circle cx="12" cy="12" r="11" fill="url(#frekGradMini)" />
+      <Path d="M12 7l1.2 2.8 2.8 1.2-2.8 1.2L12 15l-1.2-2.8L8 11l2.8-1.2z" fill="#0A0A0A" />
+    </Svg>
+  );
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ICONS (Animated versions)
@@ -444,10 +477,15 @@ export default function MiniPlayer() {
           {/* Equalizer */}
           <AnimatedEqualizer isPlaying={isPlaying} />
 
-          {/* Track Info */}
+          {/* Track Info with Quality Badge */}
           <TouchableOpacity style={styles.trackInfo} onPress={handleExpand} activeOpacity={0.8}>
-            <Text style={styles.trackTitle} numberOfLines={1}>{currentTrack.title}</Text>
-            <Text style={styles.trackArtist} numberOfLines={1}>{currentTrack.artist}</Text>
+            <View style={styles.trackTitleRow}>
+              <Text style={styles.trackTitle} numberOfLines={1}>{currentTrack.title}</Text>
+              <FrekCoreMini />
+            </View>
+            <Text style={styles.trackArtist} numberOfLines={1}>
+              {formatArtistName(currentTrack.artist)}
+            </Text>
           </TouchableOpacity>
 
           {/* Controls */}
@@ -613,11 +651,16 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     marginRight: 8,
   },
+  trackTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   trackTitle: {
     fontFamily: FONTS.jostMedium,
     fontSize: 13,
     color: COLORS.cream,
-    marginBottom: 1,
+    flex: 1,
   },
   trackArtist: {
     fontFamily: FONTS.jostLight,

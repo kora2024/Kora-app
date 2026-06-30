@@ -656,6 +656,70 @@ frontend:
 agent_communication:
   - agent: "testing"
     message: |
+      ✅ KORA UX SENIOR-LEVEL CORRECTIONS - TESTING COMPLETE - 2026-06-30
+      
+      Test Device: Mobile (390x844 - iPhone 14)
+      Test Method: Playwright automation - 4 comprehensive test scenarios
+      Test URL: http://localhost:3000/home
+      
+      🎯 CRITICAL TESTS PERFORMED:
+      
+      ✅ TEST 1 - PAGE DEVELOPERS + DOCUMENTATION (BUG CRITIQUE):
+         - Successfully navigated to /(static)/developers via footer "Développeurs" link ✓
+         - Found "CONSULTER LA DOCUMENTATION" button ✓
+         - Clicked button → navigated to /docs page ✓
+         - Documentation page has REAL content (NOT empty) ✓
+         - Found all 6 sections: Démarrage, Authentification, Catalog API, Playback API, Webhooks, SDKs ✓
+         - Found "Copier" buttons for code examples ✓
+         - Content verified: "L'API KORA", "Démarrage Rapide", endpoint cards, OAuth flow ✓
+         - Screenshots: 01_developers_page.png, 02_docs_page_initial.png, 03_docs_page_scrolled.png
+      
+      ❌ TEST 2 - MINI-PLAYER AVEC BADGE FREKCORE (BUG CRITIQUE):
+         - Clicked "COMMENCER L'EXPÉRIENCE" button ✓
+         - Player page opened with track "Zouk Love Classics" ✓
+         - Mini-player appeared at bottom ✓
+         - ✅ Mini-player displays "KORA Collective" (NOT "FRK-KORADEMO...") ✓
+         - ✅ FrekCore badge visible (12x12 SVG with gold/terra gradient star) ✓
+         - ✅ Animated equalizer working (5 bars with scaleY animation) ✓
+         - ✅ formatArtistName() function working correctly in mini-player ✓
+         
+         ❌ CRITICAL BUG FOUND - HOME PAGE FEATURED CARDS:
+         - Home page featured content cards display "FRK-KORADEMO01", "FRK-KORADEMO02", "FRK-KORADEMO03" ✗
+         - Sidebar cards show raw technical artist names instead of formatted names ✗
+         - ROOT CAUSE: home.tsx lines 392, 427, 502 display {item.artist} without formatting
+         - FIX NEEDED: Import formatArtistName() from MiniPlayer.tsx or create utility function
+         - Apply formatting to all artist name displays in FeaturedContentGrid, TrendingHub
+         - Screenshots show issue: 01_developers_page.png (bottom cards), 06_home_top.png
+      
+      ✅ TEST 3 - ANIMATIONS DE SECTIONS (P2):
+         - Section reveal animations working ✓
+         - Found all 4 animated sections: EN TENDANCE, CONTINUEZ À REGARDER, CRÉATEURS À SUIVRE, PASSEZ À L'EXPÉRIENCE PREMIUM ✓
+         - Ambient glow effects detected in page ✓
+         - Staggered entrance animations functioning ✓
+         - Parallax effects on hero section ✓
+         - Screenshots: 06_home_top.png, 07_home_after_scroll.png
+      
+      ✅ TEST 4 - NAVIGATION HEADER:
+         - Found "MUSIQUE" navigation item in header ✓
+         - Clicked "MUSIQUE" → navigated to /music page ✓
+         - Mini-player persisted after navigation (47 SVG elements still present) ✓
+         - URL changed to http://localhost:3000/music ✓
+         - Screenshots: 08_before_musique_click.png, 09_after_musique_click.png
+      
+      📊 TEST RESULTS SUMMARY:
+      ✅ PASSED: 3/4 critical tests
+      ❌ FAILED: 1/4 - Home page artist name formatting
+      
+      🔴 BLOCKING ISSUE:
+      Home page featured content cards display "FRK-KORADEMO..." technical IDs instead of proper artist names.
+      This violates the core UX requirement: "Le nom d'artiste ne doit PAS afficher 'FRK-KORADEMO...' mais 'KORA Collective' ou autre nom propre."
+      
+      The mini-player correctly formats artist names, but the home page does not.
+      
+      RECOMMENDATION: Fix artist name formatting on home page before production release.
+  
+  - agent: "testing"
+    message: |
       ❌ CRITICAL RENDERING ISSUE - Premium Pricing Section & Footer NOT VISIBLE - 2026-06-30
       
       Test URL: http://localhost:3000/home

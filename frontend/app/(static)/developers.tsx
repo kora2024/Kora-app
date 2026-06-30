@@ -125,7 +125,7 @@ export default function DevelopersPage() {
             </LinearGradient>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.secondaryCta}>
+          <TouchableOpacity style={styles.secondaryCta} onPress={() => router.push('/(static)/docs')}>
             <Text style={styles.secondaryCtaText}>CONSULTER LA DOCUMENTATION</Text>
           </TouchableOpacity>
         </View>
