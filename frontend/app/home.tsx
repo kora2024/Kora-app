@@ -342,7 +342,7 @@ function HeroSection({ onPlay, featuredContent }: { onPlay: (item: any) => void;
               end={{ x: 1, y: 0 }}
               style={styles.heroPrimaryCTAGradient}
             >
-              <Text style={styles.heroPrimaryCTAText}>COMMENCER L'EXPÉRIENCE</Text>
+              <Text style={styles.heroPrimaryCTAText}>COMMENCER L&apos;EXPÉRIENCE</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -746,7 +746,7 @@ function PremiumPricingSection({ onSelectPlan }: { onSelectPlan: (plan: 'premium
       {/* Section Header */}
       <View style={styles.pricingHeader}>
         <View style={styles.pricingHeaderLeft}>
-          <Text style={styles.pricingSectionTitle}>PASSEZ À L'EXPÉRIENCE PREMIUM</Text>
+          <Text style={styles.pricingSectionTitle}>PASSEZ À L&apos;EXPÉRIENCE PREMIUM</Text>
           <View style={styles.pricingLiveRow}>
             <Animated.View style={[styles.pricingLiveDot, { opacity: glowAnim }]} />
             <Text style={styles.pricingLiveText}>{activeUsers.toLocaleString('fr-FR')} en écoute</Text>
@@ -919,7 +919,7 @@ function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
           </View>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Aide</Text>
-            <TouchableOpacity onPress={() => onNavigate('/(static)/help')}><Text style={styles.footerLinkItem}>Centre d'aide</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/(static)/help')}><Text style={styles.footerLinkItem}>Centre d&apos;aide</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigate('/paywall')}><Text style={styles.footerLinkItem}>Abonnement</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigate('/settings')}><Text style={styles.footerLinkItem}>Compte</Text></TouchableOpacity>
           </View>
@@ -1261,9 +1261,11 @@ export default function KoraHome() {
 
       <Animated.ScrollView
         ref={scrollRef}
-        style={[styles.scrollView, { opacity: contentOpacity }]}
+        style={[styles.scrollView, { opacity: contentOpacity, flex: 1 }]}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 100, flexGrow: 1 }}
+        contentContainerStyle={{ 
+          paddingBottom: insets.bottom + 100,
+        }}
         nestedScrollEnabled={true}
         scrollEventThrottle={16}
         onScroll={handleScroll}
@@ -2571,38 +2573,7 @@ const styles = StyleSheet.create({
     color: CINEMA.terra,
   },
 
-  // ─── Footer (DSP Level) ───────────────────────────────────────────────────────
-  footerContainer: {
-    marginTop: 40,
-    paddingTop: 40,
-    paddingHorizontal: 20,
-    paddingBottom: 24,
-    backgroundColor: 'rgba(255,255,255,0.015)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.04)',
-  },
-  footerTop: {
-    flexDirection: SW > 600 ? 'row' : 'column',
-    gap: 32,
-    marginBottom: 32,
-  },
-  footerBrand: {
-    flex: SW > 600 ? 1 : undefined,
-    marginBottom: SW > 600 ? 0 : 20,
-  },
-  footerLogo: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 28,
-    color: CINEMA.gold,
-    letterSpacing: 3,
-    marginBottom: 8,
-  },
-  footerTagline: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.45)',
-    marginBottom: 20,
-  },
+  // NOTE: Footer styles already defined above (lines 2087+)
   footerSocialBtn: {
     width: 36,
     height: 36,
