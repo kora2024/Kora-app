@@ -752,6 +752,11 @@ api_router.include_router(reputation_router)
 from routes.ads_routes import router as ads_router
 app.include_router(ads_router)
 
+# Include CVE (Cultural Value Engine) routes
+from routes.cve_routes import router as cve_router, init_routes as init_cve_routes
+init_cve_routes(db, get_current_user, get_admin_user)
+api_router.include_router(cve_router)
+
 # Include api router in app
 app.include_router(api_router)
 

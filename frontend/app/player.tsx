@@ -867,6 +867,11 @@ export default function PlayerScreen() {
     );
   }
 
+  // Handle going premium from AdGate
+  const handleGoPremium = useCallback(() => {
+    router.push('/paywall');
+  }, [router]);
+
   // Show Ad Gate for non-premium users before playback
   if (showAdGate && !adGateComplete) {
     return (
@@ -878,6 +883,7 @@ export default function PlayerScreen() {
           contentTitle={content.title}
           onProceed={handleAdGateComplete}
           onCancel={handleAdGateCancel}
+          onGoPremium={handleGoPremium}
         />
       </Animated.View>
     );

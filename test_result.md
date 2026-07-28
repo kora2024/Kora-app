@@ -116,13 +116,16 @@ frontend:
     implemented: true
     working: false
     file: "frontend/app/home.tsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "❌ CRITICAL RENDERING ISSUE - 2026-06-30. TESTED on Desktop (1280x800) and Mobile (390x844). CODE IMPLEMENTATION: ✅ COMPLETE - PremiumPricingSection component (lines 606-733) and Footer component (lines 749-823) are fully implemented with all requested features. DOM CONTENT: ✅ PRESENT - All text content found in document.body.innerText including 'auditeurs en ce moment', 'GRATUIT', 'PREMIUM', 'COMMENCER L'ESSAI GRATUIT', '7 jours gratuits', 'La culture en mouvement', 'Entreprise', 'Communautés', 'Liens utiles', 'Légal', 'Confidentialité', 'Cookies', 'France (FR)', '© 2024 KORA Technologies'. VISUAL RENDERING: ❌ FAILED - Sections are NOT visible on screen. Page height reports only 800px (viewport height) instead of full content height. ScrollView is not expanding to show content below the fold. All screenshots (desktop_01-04, mobile_01-02) show only the top portion of the page (hero section and featured content). Scrolling to bottom does not reveal pricing section or footer. ROOT CAUSE: React Native Web ScrollView rendering issue - content below viewport is not being displayed even though it exists in DOM. IMPACT: Cannot test any of the new Premium Pricing or Footer features visually. FIX NEEDED: Investigate ScrollView contentContainerStyle, check parent View height constraints, ensure ScrollView can expand beyond viewport height on web. Possible solutions: (1) Add explicit minHeight to contentContainerStyle, (2) Check if parent View has fixed height, (3) Use FlatList instead of ScrollView for better web compatibility, (4) Add flexGrow: 1 to contentContainerStyle."
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL ISSUE STILL PRESENT - 2026-07-28. TESTED on Mobile (390x844 - iPhone 14). SCROLLVIEW RENDERING BUG CONFIRMED: Page height is exactly 844px (viewport height), proving ScrollView is NOT expanding to show content below the fold. Pricing section indicators found (3 text matches) and footer elements found (3 text matches) in DOM, but NOT VISIBLE on screen. Scrolling to bottom (window.scrollTo(0, document.body.scrollHeight)) does NOT reveal pricing or footer sections. Screenshots show only hero section and featured content grid. ROOT CAUSE CONFIRMED: React Native Web ScrollView with contentContainerStyle={{ paddingBottom: insets.bottom + 100, flexGrow: 1 }} (line 1266) is NOT working on web. The flexGrow: 1 is insufficient. BLOCKING ISSUE: Users cannot see premium pricing or footer on home page. RECOMMENDED FIX: (1) Add explicit minHeight to contentContainerStyle based on total content height, OR (2) Replace ScrollView with web-compatible solution for home page, OR (3) Add Platform.OS === 'web' check and use different scroll implementation for web."
 
   - task: "Landing Page - Netflix-Style Cinematic Interface"
     implemented: true
@@ -381,11 +384,11 @@ frontend:
 
   - task: "Admin Dashboard - Web Interface"
     implemented: true
-    working: false
+    working: true
     file: "backend/static/admin.html"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -393,6 +396,9 @@ frontend:
       - working: false
         agent: "testing"
         comment: "❌ ROUTING ISSUE FOUND. Admin dashboard HTML exists at backend/static/admin.html and works on localhost:8001/admin (confirmed via curl), but returns 404 'Not Found' on public URL /api/admin. Backend logs show: 'GET /api/admin HTTP/1.1 404 Not Found'. Root cause: Route defined as @app.get('/admin') but public URL expects /api/admin. FIX NEEDED: Change route to @app.get('/api/admin') in server.py line 639."
+      - working: true
+        agent: "testing"
+        comment: "✅ ROUTING ISSUE RESOLVED - 2026-07-28. TESTED via API request. GET /api/admin returns 200 OK. Admin dashboard is now accessible at the correct route. The routing fix has been applied successfully."
 
   - task: "Admin Dashboard - Pending Content API"
     implemented: true
@@ -1854,3 +1860,109 @@ agent_communication:
       RECOMMENDATION: KORA Monetization System is PRODUCTION READY.
       All backend APIs tested and working correctly. Security features implemented
       and logging properly. Ready for frontend integration and user testing.
+
+
+  - agent: "testing"
+    message: |
+      ✅ KORA APP COMPREHENSIVE TESTING COMPLETED - 2026-07-28
+      
+      Test Device: Mobile (390x844 - iPhone 14)
+      Test Method: Playwright automation with 7 comprehensive test scenarios
+      Test URL: https://orbit-connect-15.preview.emergentagent.com
+      
+      🎉 TESTS PASSED (6/7):
+      
+      ✅ TEST 1 - LANDING PAGE FLOW:
+         - Hero title "LA CULTURE EN MOUVEMENT" visible ✓
+         - "ÉCOUTER GRATUITEMENT" CTA present and functional ✓
+         - Navigation to /home works correctly ✓
+         - Screenshot: 01_landing_page.png
+      
+      ✅ TEST 2 - PAYWALL FLOW:
+         - Pricing "3.98€/mois" displayed correctly ✓
+         - "S'abonner maintenant" button exists ✓
+         - 4 premium features visible ✓
+         - Screenshot: 02_paywall.png
+      
+      ✅ TEST 3 - HOME PAGE & PLAYER:
+         - KORA logo present ✓
+         - Content sections loading (3 found) ✓
+         - 38 play buttons/icons detected ✓
+         - Page rendering correctly ✓
+         - Screenshots: 03_home_page.png, 04_home_scrolled.png
+      
+      ✅ TEST 4 - CVE BACKEND ENDPOINTS:
+         - GET /api/cve/stats: 200 OK ✓
+         - GET /api/cve/config/2026-07: 200 OK ✓
+         - GET /api/cve/leaderboard: 200 OK ✓
+         - All JSON responses valid ✓
+         - CVE integration working perfectly ✓
+      
+      ❌ TEST 5 - PREMIUM PRICING SECTION & FOOTER (CRITICAL ISSUE):
+         - Pricing section indicators found in DOM (3) ✓
+         - Footer elements found in DOM (3) ✓
+         - Page height: 844px (viewport height only) ❌
+         - Content below fold NOT VISIBLE ❌
+         - ScrollView NOT expanding on web ❌
+         - BLOCKING ISSUE: Users cannot see premium pricing or footer
+      
+      ✅ TEST 6 - ADMIN DASHBOARD ROUTING:
+         - GET /api/admin: 200 OK ✓
+         - Admin dashboard accessible ✓
+         - Previous routing issue RESOLVED ✓
+      
+      ✅ TEST 7 - CONSOLE ERRORS CHECK:
+         - No error messages found on page ✓
+         - No JavaScript console errors ✓
+      
+      📊 OVERALL RESULTS:
+      - 6 out of 7 test scenarios PASSED
+      - 1 CRITICAL ISSUE: ScrollView rendering on home page
+      - All backend APIs working correctly
+      - All navigation flows working
+      - No console errors detected
+      
+      🚨 CRITICAL ISSUE DETAILS:
+      
+      ISSUE: Premium Pricing Section & Footer NOT VISIBLE on Home Page
+      LOCATION: frontend/app/home.tsx (lines 1262-1332)
+      ROOT CAUSE: React Native Web ScrollView with contentContainerStyle={{ paddingBottom: insets.bottom + 100, flexGrow: 1 }}
+                  is NOT expanding to show content below viewport on web platform
+      IMPACT: Users cannot see premium pricing (3.98€/mois and 7.98€/mois plans) or footer information
+      SEVERITY: HIGH - Blocks monetization conversion funnel
+      
+      RECOMMENDED FIXES:
+      1. Add Platform.OS === 'web' check and use different scroll implementation for web
+      2. Add explicit minHeight to contentContainerStyle based on total content height
+      3. Replace ScrollView with FlatList for better web compatibility
+      4. Add CSS overflow: 'auto' for web platform
+      
+      CODE LOCATION:
+      File: /app/frontend/app/home.tsx
+      Lines: 1262-1278 (ScrollView configuration)
+      Lines: 698-843 (PremiumPricingSection component)
+      Lines: 879-954 (Footer component)
+      
+      🎯 NEXT STEPS FOR MAIN AGENT:
+      1. Fix ScrollView rendering issue on home page (HIGH PRIORITY)
+      2. Verify premium pricing section is visible after fix
+      3. Verify footer is visible after fix
+      4. Re-test on mobile viewport (390x844)
+      
+      📸 SCREENSHOTS CAPTURED:
+      - 01_landing_page.png: Landing page with hero section
+      - 02_paywall.png: Paywall with pricing and features
+      - 03_home_page.png: Home page initial view
+      - 04_home_scrolled.png: Home page after scroll (shows same content)
+      - 05_home_bottom.png: Home page bottom (pricing/footer not visible)
+      
+      🎉 POSITIVE FINDINGS:
+      - Landing page flow works perfectly
+      - Paywall displays correctly with all features
+      - CVE backend integration is fully functional
+      - Admin dashboard routing issue has been resolved
+      - No JavaScript errors or console warnings
+      - All navigation flows working correctly
+      - Content is loading from MongoDB catalog API
+      
+      RECOMMENDATION: Fix the ScrollView rendering issue on home page, then the app will be PRODUCTION READY for the Stripe monetization & CVE integration release.

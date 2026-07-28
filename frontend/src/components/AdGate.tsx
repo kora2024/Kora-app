@@ -99,6 +99,7 @@ interface AdGateProps {
   contentTitle?: string;
   onProceed: () => void;
   onCancel?: () => void;
+  onGoPremium?: () => void; // Navigate to paywall
 }
 
 export default function AdGate({
@@ -107,6 +108,7 @@ export default function AdGate({
   contentTitle,
   onProceed,
   onCancel,
+  onGoPremium,
 }: AdGateProps) {
   const [loading, setLoading] = useState(true);
   const [showingAd, setShowingAd] = useState(false);
@@ -225,8 +227,12 @@ export default function AdGate({
 
   const handleGoPremium = () => {
     haptic();
-    // This would navigate to paywall
-    if (onCancel) onCancel();
+    // Navigate to paywall for subscription
+    if (onGoPremium) {
+      onGoPremium();
+    } else if (onCancel) {
+      onCancel();
+    }
   };
 
   // ─── Loading State ────────────────────────────────────────────────────────────

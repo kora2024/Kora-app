@@ -151,9 +151,52 @@ KORA est le premier réseau social où l'identité culturelle est l'infrastructu
 - [x] Pas de crash sur navigation rapide
 - [x] Feed scroll snap correct
 
+## Architecture Backend — Cultural Value Engine (CVE)
+
+### Implémenté (v1.0)
+KORA implémente le **Cultural Value Engine (CVE)** selon la spécification mathématique v1.0.
+
+#### Data Models (`/app/backend/models/cve_models.py`)
+- **Work**: Œuvre créative avec FREK-O reference
+- **Asset**: Fichier digital (audio/video) avec qualité (FLAC, Hi-Res, Dolby Atmos)
+- **Release**: Album/EP/Single
+- **RightsHolder**: Détenteur de droits avec JCC Wallet
+- **RoyaltySplit**: Configuration de distribution des royalties
+- **ListeningEvent**: Événement d'écoute avec TrustScore
+- **CulturalValueRecord**: Métriques CVE par cycle
+
+#### CVE Calculation Service (`/app/backend/services/cve_service.py`)
+- **Layer 1 — Measurement**: TrustScore (sig_id, sig_comp, sig_net, sig_hist)
+- **Layer 2 — Comprehension**: CVI via CES aggregation, Nebula Score, CHL
+- **Layer 3 — Forecasting**: Classification culturelle (non utilisé pour allocation)
+- **Layer 4 — Allocation**: UVC = (CVI / Σ CVI) × MD
+
+#### API Endpoints (`/app/backend/routes/cve_routes.py`)
+- `GET /api/cve/work/{id}` — Métriques CVE d'une œuvre
+- `GET /api/cve/leaderboard` — Top œuvres par CVI
+- `GET /api/cve/stats` — Statistiques du cycle
+- `GET /api/cve/config/{cycle}` — Configuration transparente
+- `POST /api/cve/cycle/{id}/process` — [ADMIN] Traitement du cycle
+
+#### Contraintes Fondamentales
+- C1: Budget (Σ UVC = MD)
+- C2: Fraude (TS ≥ τ_fraude)
+- C3: Stabilité (|Δw| ≤ 0.10)
+- C4: Diversité culturelle
+- C5: Neutralité culturelle
+- C6: Auditabilité (H0)
+- C7: Gouvernance
+- C8: Séparation forecast/allocation
+
+### Stripe Monetization
+- **Premium**: 3,98€/mois
+- **Pack Famille**: 7,98€/mois (jusqu'à 6 comptes)
+- Webhook `/api/webhook/stripe` pour activation automatique
+
 ## Prochaines Étapes
-- Backend FastAPI + MongoDB pour persistence
-- Authentification utilisateur
-- Messagerie temps réel (WebSockets)
-- Algorithme de fréquence basé sur les réactions
-- Système CVLN (économie token)
+- [ ] Dashboard Artiste (KORA for Creators - stats, revenus)
+- [ ] Social Logins (Google/Apple via Emergent)
+- [ ] Push Notifications (Emergent-managed)
+- [ ] Mode Offline (téléchargement)
+- [ ] CultureConnect P2P (géolocalisation diaspora)
+- [ ] NFT Sovereign (FrekCore integration)
