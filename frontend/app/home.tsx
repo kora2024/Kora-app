@@ -913,7 +913,7 @@ function Footer({ onNavigate }: { onNavigate: (route: string) => void }) {
           </View>
           <View style={styles.footerLinkColumn}>
             <Text style={styles.footerLinkTitle}>Communautés</Text>
-            <TouchableOpacity onPress={() => onNavigate('/(static)/artists')}><Text style={styles.footerLinkItem}>Artistes</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => onNavigate('/creator-dashboard')}><Text style={styles.footerLinkItem}>KORA for Creators</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigate('/(static)/developers')}><Text style={styles.footerLinkItem}>Développeurs</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => onNavigate('/(static)/advertising')}><Text style={styles.footerLinkItem}>Publicité</Text></TouchableOpacity>
           </View>

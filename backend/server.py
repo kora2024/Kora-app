@@ -762,6 +762,11 @@ from routes.api_v1_routes import router as api_v1_router, init_routes as init_v1
 init_v1_routes(db)
 api_router.include_router(api_v1_router)
 
+# Include KORA for Creators routes (Master Prompt Section 20)
+from routes.creators_routes import router as creators_router, init_routes as init_creators_routes
+init_creators_routes(db, get_current_user)
+api_router.include_router(creators_router)
+
 # Include api router in app
 app.include_router(api_router)
 
