@@ -757,6 +757,11 @@ from routes.cve_routes import router as cve_router, init_routes as init_cve_rout
 init_cve_routes(db, get_current_user, get_admin_user)
 api_router.include_router(cve_router)
 
+# Include API v1 routes (Master Prompt Section 26)
+from routes.api_v1_routes import router as api_v1_router, init_routes as init_v1_routes
+init_v1_routes(db)
+api_router.include_router(api_v1_router)
+
 # Include api router in app
 app.include_router(api_router)
 
