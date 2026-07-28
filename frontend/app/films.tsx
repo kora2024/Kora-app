@@ -9,6 +9,8 @@
  * - Category rows (Continue Watching, Trending, New Releases)
  * - Genre filtering
  * - Series vs Films distinction
+ * 
+ * UPDATED: Fetches content from FrekCore API (Living Catalog)
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -41,6 +43,9 @@ import Animated, {
 
 const { width: SW, height: SH } = Dimensions.get('window');
 
+// API Base URL
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || '';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // DESIGN TOKENS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -65,7 +70,7 @@ const FONTS = {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TYPES & DEMO DATA
+// TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface VideoItem {
@@ -80,6 +85,9 @@ interface VideoItem {
   genres: string[];
   description?: string;
   progress?: number; // 0-100 for continue watching
+  artist?: string;
+  stream_url?: string;
+  frekcore_ref?: string;
 }
 
 const CATEGORIES = [
@@ -89,89 +97,6 @@ const CATEGORIES = [
   { id: 'docs', title: 'Documentaires', icon: 'film' },
   { id: 'series', title: 'Séries', icon: 'tv' },
   { id: 'concerts', title: 'Concerts & Lives', icon: 'musical-notes' },
-];
-
-const DEMO_CONTENT: VideoItem[] = [
-  {
-    id: 'v1',
-    title: "SAYD — C'est Nous L'Avenir",
-    type: 'documentary',
-    poster: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400',
-    backdrop: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=1280',
-    year: 2024,
-    duration: '1h 30min',
-    rating: '16+',
-    genres: ['Documentaire', 'Culture', 'Diaspora'],
-    description: "Un documentaire puissant sur la diaspora africaine et son impact culturel mondial.",
-    progress: 35,
-  },
-  {
-    id: 'v2',
-    title: 'Diaspora Rising',
-    type: 'series',
-    poster: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400',
-    year: 2024,
-    duration: '8 épisodes',
-    rating: '12+',
-    genres: ['Drame', 'Histoire'],
-  },
-  {
-    id: 'v3',
-    title: 'Afrobeat Origins',
-    type: 'documentary',
-    poster: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
-    year: 2023,
-    duration: '2h 15min',
-    rating: 'Tous publics',
-    genres: ['Musique', 'Histoire'],
-  },
-  {
-    id: 'v4',
-    title: 'Lagos to Paris',
-    type: 'film',
-    poster: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-    year: 2024,
-    duration: '1h 45min',
-    rating: '12+',
-    genres: ['Drame', 'Romance'],
-  },
-  {
-    id: 'v5',
-    title: 'Youssou N\'Dour Live',
-    type: 'concert',
-    poster: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=400',
-    year: 2024,
-    duration: '2h',
-    rating: 'Tous publics',
-    genres: ['Concert', 'Mbalax'],
-  },
-  {
-    id: 'v6',
-    title: 'Roots of Zouk',
-    type: 'documentary',
-    poster: 'https://images.unsplash.com/photo-1518834107812-67b0b7c58434?w=400',
-    year: 2023,
-    duration: '1h 20min',
-    genres: ['Musique', 'Antilles'],
-  },
-  {
-    id: 'v7',
-    title: 'Kinshasa Symphony',
-    type: 'documentary',
-    poster: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400',
-    year: 2024,
-    duration: '1h 35min',
-    genres: ['Musique', 'Classique'],
-  },
-  {
-    id: 'v8',
-    title: 'Caribbean Dreams',
-    type: 'series',
-    poster: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-    year: 2024,
-    duration: '6 épisodes',
-    genres: ['Drame', 'Caraïbes'],
-  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -196,7 +121,16 @@ const ContentCard = ({
     <Animated.View entering={FadeInRight.delay(index * 100).duration(400)}>
       <TouchableOpacity 
         style={[styles.card, { width: cardWidth }]}
-        onPress={() => router.push('/video-player')}
+        onPress={() => router.push({
+          pathname: '/video-player',
+          params: {
+            id: item.id,
+            title: item.title,
+            artist: item.artist || 'KORA Originals',
+            poster: item.poster,
+            stream_url: item.stream_url || '',
+          }
+        })}
         activeOpacity={0.8}
       >
         <Image
@@ -299,25 +233,105 @@ export default function AudiovisualCatalog() {
   const [activeGenre, setActiveGenre] = useState<string | null>(null);
   const scrollY = useSharedValue(0);
   
-  const featuredContent = DEMO_CONTENT[0];
+  // Dynamic content from API
+  const [allContent, setAllContent] = useState<VideoItem[]>([]);
+  const [featuredContent, setFeaturedContent] = useState<VideoItem | null>(null);
   
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => setLoading(false), 500);
+  // Load audiovisual content from FrekCore API
+  const loadAudiovisualContent = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/frekcore/feed/audiovisual?limit=30`);
+      if (res.ok) {
+        const data = await res.json();
+        const transformed = (data.works || []).map((w: any) => ({
+          id: w.id,
+          title: w.title,
+          type: w.type || 'documentary',
+          poster: w.poster || w.artwork || 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400',
+          backdrop: w.backdrop || w.poster,
+          year: w.year || 2024,
+          duration: w.duration || '1h 30min',
+          rating: w.rating || 'Tous publics',
+          genres: w.genres || ['Documentaire'],
+          description: w.description || '',
+          artist: w.artist,
+          stream_url: w.stream_url,
+          frekcore_ref: w.frekcore_ref,
+          progress: Math.random() > 0.7 ? Math.floor(Math.random() * 80) + 10 : undefined,
+        }));
+        
+        setAllContent(transformed);
+        if (transformed.length > 0) {
+          setFeaturedContent(transformed[0]);
+        }
+        console.log(`[KORA Films] Loaded ${transformed.length} audiovisual works`);
+      }
+    } catch (error) {
+      console.error('Error loading audiovisual content:', error);
+    }
   }, []);
   
-  const onRefresh = () => {
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await loadAudiovisualContent();
+      setLoading(false);
+    };
+    init();
+  }, []);
+  
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    await loadAudiovisualContent();
+    setRefreshing(false);
   };
   
   const genres = ['Tout', 'Films', 'Séries', 'Documentaires', 'Concerts', 'Diaspora', 'Afrique'];
+  
+  // Filter content based on active genre
+  const getFilteredContent = useCallback(() => {
+    if (!activeGenre || activeGenre === 'Tout') return allContent;
+    
+    const genreMap: Record<string, string[]> = {
+      'Films': ['film'],
+      'Séries': ['series'],
+      'Documentaires': ['documentary'],
+      'Concerts': ['concert'],
+    };
+    
+    const types = genreMap[activeGenre];
+    if (types) {
+      return allContent.filter(item => types.includes(item.type));
+    }
+    
+    // Search in genres array
+    return allContent.filter(item => 
+      item.genres.some(g => g.toLowerCase().includes(activeGenre.toLowerCase()))
+    );
+  }, [allContent, activeGenre]);
+  
+  const filteredContent = getFilteredContent();
+  
+  // Fallback featured content if API didn't return any
+  const displayFeatured = featuredContent || {
+    id: 'default',
+    title: "SAYD — C'est Nous L'Avenir",
+    type: 'documentary' as const,
+    poster: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=400',
+    backdrop: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb?w=1280',
+    year: 2024,
+    duration: '1h 30min',
+    rating: '16+',
+    genres: ['Documentaire', 'Culture', 'Diaspora'],
+    description: "Un documentaire puissant sur la diaspora africaine et son impact culturel mondial.",
+  };
   
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <LinearGradient colors={[CINEMA.obsidian, CINEMA.void]} style={StyleSheet.absoluteFill} />
         <ActivityIndicator size="large" color={CINEMA.gold} />
+        <Text style={styles.loadingText}>Chargement du catalogue...</Text>
       </View>
     );
   }
@@ -339,7 +353,7 @@ export default function AudiovisualCatalog() {
         {/* Hero Section */}
         <Animated.View entering={FadeIn.duration(800)} style={styles.heroSection}>
           <Image
-            source={{ uri: featuredContent.backdrop || featuredContent.poster }}
+            source={{ uri: displayFeatured.backdrop || displayFeatured.poster }}
             style={styles.heroImage}
           />
           <LinearGradient
@@ -366,24 +380,30 @@ export default function AudiovisualCatalog() {
                 </View>
               </View>
               
-              <Text style={styles.heroTitle}>{featuredContent.title}</Text>
+              <Text style={styles.heroTitle}>{displayFeatured.title}</Text>
               
               <View style={styles.heroMeta}>
-                <Text style={styles.heroYear}>{featuredContent.year}</Text>
+                <Text style={styles.heroYear}>{displayFeatured.year}</Text>
                 <Text style={styles.heroDot}>•</Text>
-                <Text style={styles.heroDuration}>{featuredContent.duration}</Text>
+                <Text style={styles.heroDuration}>{displayFeatured.duration}</Text>
                 <Text style={styles.heroDot}>•</Text>
-                <Text style={styles.heroRating}>{featuredContent.rating}</Text>
+                <Text style={styles.heroRating}>{displayFeatured.rating}</Text>
               </View>
               
               <Text style={styles.heroDescription} numberOfLines={2}>
-                {featuredContent.description}
+                {displayFeatured.description || 'Contenu exclusif KORA.'}
               </Text>
               
               <View style={styles.heroActions}>
                 <TouchableOpacity 
                   style={styles.playNowButton}
-                  onPress={() => router.push('/video-player')}
+                  onPress={() => router.push({
+                    pathname: '/video-player',
+                    params: {
+                      id: displayFeatured.id,
+                      title: displayFeatured.title,
+                    }
+                  })}
                 >
                   <Ionicons name="play" size={24} color={CINEMA.void} />
                   <Text style={styles.playNowText}>Regarder</Text>
@@ -429,40 +449,61 @@ export default function AudiovisualCatalog() {
         </View>
         
         {/* Continue Watching */}
-        <CategoryRow
-          title="Reprendre la lecture"
-          icon="play-circle"
-          items={DEMO_CONTENT.filter(i => i.progress)}
-          showProgress={true}
-        />
+        {filteredContent.filter(i => i.progress).length > 0 && (
+          <CategoryRow
+            title="Reprendre la lecture"
+            icon="play-circle"
+            items={filteredContent.filter(i => i.progress)}
+            showProgress={true}
+          />
+        )}
         
         {/* Trending */}
-        <CategoryRow
-          title="Tendances KORA"
-          icon="trending-up"
-          items={DEMO_CONTENT.slice(0, 4)}
-        />
+        {filteredContent.length > 0 && (
+          <CategoryRow
+            title="Tendances KORA"
+            icon="trending-up"
+            items={filteredContent.slice(0, 6)}
+          />
+        )}
         
         {/* Documentaries */}
-        <CategoryRow
-          title="Documentaires"
-          icon="film"
-          items={DEMO_CONTENT.filter(i => i.type === 'documentary')}
-        />
+        {filteredContent.filter(i => i.type === 'documentary').length > 0 && (
+          <CategoryRow
+            title="Documentaires"
+            icon="film"
+            items={filteredContent.filter(i => i.type === 'documentary')}
+          />
+        )}
         
         {/* Series */}
-        <CategoryRow
-          title="Séries"
-          icon="tv"
-          items={DEMO_CONTENT.filter(i => i.type === 'series')}
-        />
+        {filteredContent.filter(i => i.type === 'series').length > 0 && (
+          <CategoryRow
+            title="Séries"
+            icon="tv"
+            items={filteredContent.filter(i => i.type === 'series')}
+          />
+        )}
         
         {/* Concerts */}
-        <CategoryRow
-          title="Concerts & Lives"
-          icon="musical-notes"
-          items={DEMO_CONTENT.filter(i => i.type === 'concert')}
-        />
+        {filteredContent.filter(i => i.type === 'concert').length > 0 && (
+          <CategoryRow
+            title="Concerts & Lives"
+            icon="musical-notes"
+            items={filteredContent.filter(i => i.type === 'concert')}
+          />
+        )}
+        
+        {/* Empty State */}
+        {filteredContent.length === 0 && (
+          <View style={styles.emptyState}>
+            <Ionicons name="film-outline" size={64} color={CINEMA.mist} />
+            <Text style={styles.emptyStateTitle}>Aucun contenu</Text>
+            <Text style={styles.emptyStateText}>
+              Le catalogue audiovisuel sera bientôt disponible.
+            </Text>
+          </View>
+        )}
         
         {/* Bottom spacing */}
         <View style={{ height: insets.bottom + 100 }} />
@@ -485,8 +526,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: CINEMA.silver,
+    fontFamily: FONTS.jostLight,
+  },
   scrollView: {
     flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 48,
+    marginTop: 40,
+  },
+  emptyStateTitle: {
+    marginTop: 16,
+    fontSize: 20,
+    fontFamily: FONTS.playfairBold,
+    color: CINEMA.ivory,
+  },
+  emptyStateText: {
+    marginTop: 8,
+    fontSize: 14,
+    fontFamily: FONTS.jostLight,
+    color: CINEMA.mist,
+    textAlign: 'center',
   },
   
   // Hero

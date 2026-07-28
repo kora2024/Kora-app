@@ -1094,18 +1094,27 @@ export default function KoraHome() {
     try {
       setIsLoading(true);
       
-      // Load featured tracks
-      const featuredRes = await fetch(`${API_BASE}/api/catalog/featured?limit=12`);
-      if (featuredRes.ok) {
-        const data = await featuredRes.json();
-        setFeaturedTracks(data.tracks || []);
-      }
-
-      // Load trending (can be same endpoint with different params)
-      const trendingRes = await fetch(`${API_BASE}/api/catalog/featured?limit=10&sort=plays`);
-      if (trendingRes.ok) {
-        const data = await trendingRes.json();
-        setTrendingTracks(data.tracks || []);
+      // Load from FrekCore feed (Living Catalog Pipeline)
+      const feedRes = await fetch(`${API_BASE}/api/frekcore/feed?limit=20`);
+      if (feedRes.ok) {
+        const data = await feedRes.json();
+        
+        // Featured = trending content (highest play counts)
+        setFeaturedTracks(data.trending || []);
+        
+        // Trending = new releases mixed with discoveries
+        const trending = [...(data.new_releases || []), ...(data.discoveries || [])];
+        setTrendingTracks(trending.slice(0, 15));
+        
+        console.log(`[KORA] Loaded ${data.total_works} works from catalog`);
+      } else {
+        // Fallback to catalog/featured endpoint
+        const featuredRes = await fetch(`${API_BASE}/api/catalog/featured?limit=12`);
+        if (featuredRes.ok) {
+          const data = await featuredRes.json();
+          setFeaturedTracks(data.tracks || []);
+          setTrendingTracks(data.tracks?.slice(0, 10) || []);
+        }
       }
       
     } catch (error) {

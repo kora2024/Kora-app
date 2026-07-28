@@ -767,6 +767,11 @@ from routes.creators_routes import router as creators_router, init_routes as ini
 init_creators_routes(db, get_current_user)
 api_router.include_router(creators_router)
 
+# Include FrekCore Ingestion routes (Living Catalog Pipeline)
+from routes.frekcore_routes import router as frekcore_router, init_routes as init_frekcore_routes
+init_frekcore_routes(db)
+api_router.include_router(frekcore_router)
+
 # Include api router in app
 app.include_router(api_router)
 

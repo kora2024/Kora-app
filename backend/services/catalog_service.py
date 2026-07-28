@@ -1,9 +1,10 @@
 """KORA Catalog Service — 100% Souverain MongoDB
 
-Catalogue alimenté EXCLUSIVEMENT par les créateurs KORA.
-Jamendo et APIs externes purgés — Souveraineté culturelle absolue.
+Catalogue alimenté par:
+1. Collection "works" — FrekCore Ingestion Pipeline (priorité)
+2. Collection "content" — Créateurs self-serve (fallback)
 
-Le contenu provient uniquement de la collection MongoDB "content".
+Architecture: Source → FrekCore → Works → KORA Catalog → Frontend
 """
 import asyncio
 from typing import List, Optional, Dict, Any
@@ -15,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 class CatalogService:
-    """Service de catalogue souverain — MongoDB only"""
+    """Service de catalogue souverain — MongoDB (works + content)"""
     
     def __init__(self, db=None):
         self.db = db
@@ -26,101 +27,217 @@ class CatalogService:
         self.db = db
     
     async def search_all(self, query: str, limit: int = 20, media_type: str = 'all') -> Dict[str, Any]:
-        """Recherche dans le catalogue souverain KORA"""
+        """Recherche dans le catalogue souverain KORA (works + content)"""
         if self.db is None:
             logger.error("Database non initialisée")
             return {'tracks': [], 'total': 0, 'sources': ['kora_organic']}
         
-        # Construction de la requête MongoDB
-        search_filter = {
-            'status': 'published',
+        results = []
+        
+        # 1. Recherche dans works (FrekCore ingestion)
+        works_filter = {
+            'status': 'validated',
+            'visibility': 'public',
             '$or': [
                 {'title': {'$regex': query, '$options': 'i'}},
                 {'description': {'$regex': query, '$options': 'i'}},
-                {'creator_id': {'$regex': query, '$options': 'i'}},
+                {'display_artist': {'$regex': query, '$options': 'i'}},
                 {'genres': {'$regex': query, '$options': 'i'}},
             ]
         }
         
         if media_type != 'all':
-            search_filter['type'] = media_type
+            if media_type == 'audio':
+                works_filter['type'] = 'music'
+            elif media_type == 'video':
+                works_filter['type'] = {'$in': ['audiovisual_catalog', 'audiovisual_creator']}
         
-        cursor = self.db.content.find(search_filter).sort('created_at', -1).limit(limit)
-        tracks = await cursor.to_list(length=limit)
+        works_cursor = self.db.works.find(works_filter).sort('play_count', -1).limit(limit)
+        works = await works_cursor.to_list(length=limit)
+        results.extend(await self._transform_works_async(works))
+        
+        # 2. Si pas assez de résultats, chercher dans content (legacy)
+        if len(results) < limit:
+            content_filter = {
+                'status': 'published',
+                '$or': [
+                    {'title': {'$regex': query, '$options': 'i'}},
+                    {'description': {'$regex': query, '$options': 'i'}},
+                    {'creator_id': {'$regex': query, '$options': 'i'}},
+                    {'genres': {'$regex': query, '$options': 'i'}},
+                ]
+            }
+            
+            if media_type != 'all':
+                content_filter['type'] = media_type
+            
+            content_cursor = self.db.content.find(content_filter).sort('created_at', -1).limit(limit - len(results))
+            content = await content_cursor.to_list(length=limit - len(results))
+            results.extend(await self._transform_kora_tracks_async(content))
         
         return {
-            'tracks': await self._transform_kora_tracks_async(tracks),
-            'total': len(tracks),
-            'sources': ['kora_organic']
+            'tracks': results[:limit],
+            'total': len(results),
+            'sources': ['kora_works', 'kora_content']
         }
     
     async def get_featured_tracks(self, limit: int = 20) -> List[Dict]:
-        """Récupère les tracks populaires du catalogue souverain"""
+        """Récupère les tracks populaires (works prioritaire, fallback content)"""
         if self.db is None:
             return []
         
-        # Tri par play_count décroissant (popularité)
-        cursor = self.db.content.find(
-            {'status': 'published'}
-        ).sort([
+        results = []
+        
+        # 1. D'abord les works validés (catalogue vivant FrekCore)
+        works_cursor = self.db.works.find({
+            'status': 'validated',
+            'visibility': 'public',
+        }).sort([
             ('play_count', -1),
-            ('created_at', -1)
+            ('published_at', -1)
         ]).limit(limit)
         
-        tracks = await cursor.to_list(length=limit)
-        return await self._transform_kora_tracks_async(tracks)
+        works = await works_cursor.to_list(length=limit)
+        results.extend(await self._transform_works_async(works))
+        
+        # 2. Si pas assez, fallback sur content
+        if len(results) < limit:
+            content_cursor = self.db.content.find(
+                {'status': 'published'}
+            ).sort([
+                ('play_count', -1),
+                ('created_at', -1)
+            ]).limit(limit - len(results))
+            
+            content = await content_cursor.to_list(length=limit - len(results))
+            results.extend(await self._transform_kora_tracks_async(content))
+        
+        return results[:limit]
+    
+    async def _transform_works_async(self, works: List[Dict]) -> List[Dict]:
+        """Transforme les works FrekCore au format API KORA"""
+        result = []
+        for work in works:
+            result.append({
+                'id': work.get('work_id') or str(work.get('_id')),
+                'title': work.get('title', 'Sans titre'),
+                'artist': work.get('display_artist', 'Artiste KORA'),
+                'album': work.get('release_ref', ''),
+                'duration': work.get('duration_seconds', 0),
+                'stream_url': work.get('audio_url', ''),
+                'artwork': work.get('artwork_url', ''),
+                'source': work.get('ingestion_source', 'kora'),
+                'type': 'video' if work.get('type') in ['audiovisual_catalog', 'audiovisual_creator'] else 'audio',
+                'playable': bool(work.get('audio_url') or work.get('video_url')),
+                'territory': work.get('territories_origin', ['world'])[0] if work.get('territories_origin') else 'world',
+                'cultural_signature': work.get('frekcore_ref', ''),
+                'play_count': work.get('play_count', 0),
+                'genres': work.get('genres', []),
+                'frekcore_ref': work.get('frekcore_ref'),
+            })
+        return result
     
     async def get_tracks_by_genre(self, genre: str, limit: int = 20) -> List[Dict]:
-        """Récupère les tracks par genre/tags"""
+        """Récupère les tracks par genre/tags (works + content)"""
         if self.db is None:
             return []
         
-        # Recherche dans les genres (peut être séparé par virgules)
         genre_tags = [g.strip().lower() for g in genre.split(',')]
+        results = []
         
-        cursor = self.db.content.find({
-            'status': 'published',
-            '$or': [
-                {'genres': {'$in': genre_tags}},
-                {'territory': {'$in': genre_tags}},
-                {'category': {'$in': genre_tags}},
-            ]
-        }).sort('created_at', -1).limit(limit)
+        # 1. Works collection (FrekCore)
+        works_cursor = self.db.works.find({
+            'status': 'validated',
+            'visibility': 'public',
+            'genres': {'$regex': '|'.join(genre_tags), '$options': 'i'}
+        }).sort('play_count', -1).limit(limit)
         
-        tracks = await cursor.to_list(length=limit)
-        return await self._transform_kora_tracks_async(tracks)
+        works = await works_cursor.to_list(length=limit)
+        results.extend(await self._transform_works_async(works))
+        
+        # 2. Content collection (legacy)
+        if len(results) < limit:
+            content_cursor = self.db.content.find({
+                'status': 'published',
+                '$or': [
+                    {'genres': {'$in': genre_tags}},
+                    {'territory': {'$in': genre_tags}},
+                    {'category': {'$in': genre_tags}},
+                ]
+            }).sort('created_at', -1).limit(limit - len(results))
+            
+            content = await content_cursor.to_list(length=limit - len(results))
+            results.extend(await self._transform_kora_tracks_async(content))
+        
+        return results[:limit]
     
     async def get_territory_catalog(self, territory: str, limit: int = 20) -> List[Dict]:
-        """Récupère le catalogue par territoire — 100% MongoDB souverain"""
+        """Récupère le catalogue par territoire (works + content)"""
         if self.db is None:
             return []
         
-        cursor = self.db.content.find({
-            'territory': territory.lower(),
-            'status': 'published'
-        }).sort('created_at', -1).limit(limit)
+        results = []
         
-        tracks = await cursor.to_list(length=limit)
-        return await self._transform_kora_tracks_async(tracks)
+        # 1. Works collection (FrekCore)
+        works_cursor = self.db.works.find({
+            'status': 'validated',
+            'visibility': 'public',
+            'territories_origin': territory.upper()
+        }).sort('play_count', -1).limit(limit)
+        
+        works = await works_cursor.to_list(length=limit)
+        results.extend(await self._transform_works_async(works))
+        
+        # 2. Content collection (legacy)
+        if len(results) < limit:
+            content_cursor = self.db.content.find({
+                'territory': territory.lower(),
+                'status': 'published'
+            }).sort('created_at', -1).limit(limit - len(results))
+            
+            content = await content_cursor.to_list(length=limit - len(results))
+            results.extend(await self._transform_kora_tracks_async(content))
+        
+        return results[:limit]
     
     async def get_track_details(self, track_id: str, source: str = 'kora') -> Optional[Dict]:
-        """Obtient les détails d'un track avec URL de streaming"""
+        """Obtient les détails d'un track avec URL de streaming (works + content)"""
         if self.db is None:
             return None
         
         try:
-            # Recherche dans MongoDB
-            track = await self.db.content.find_one({
-                '_id': ObjectId(track_id),
-                'status': 'published'
+            # 1. Chercher dans works (FrekCore)
+            work = await self.db.works.find_one({
+                '$or': [
+                    {'work_id': track_id},
+                    {'id': track_id},
+                ]
             })
             
-            if not track:
-                # Essayer avec l'ID comme string
-                track = await self.db.content.find_one({
-                    '_id': track_id,
-                    'status': 'published'
-                })
+            if work:
+                return {
+                    'id': work.get('work_id') or str(work.get('_id')),
+                    'title': work.get('title', 'Sans titre'),
+                    'artist': work.get('display_artist', 'Artiste KORA'),
+                    'album': work.get('release_ref', ''),
+                    'duration': work.get('duration_seconds', 0),
+                    'stream_url': work.get('audio_url') or work.get('video_url', ''),
+                    'artwork': work.get('artwork_url', ''),
+                    'source': work.get('ingestion_source', 'kora'),
+                    'license': 'KORA Souverain',
+                    'genres': work.get('genres', []),
+                    'territory': work.get('territories_origin', ['world'])[0] if work.get('territories_origin') else 'world',
+                    'cultural_signature': work.get('frekcore_ref', ''),
+                    'play_count': work.get('play_count', 0),
+                    'frekcore_ref': work.get('frekcore_ref'),
+                    'type': work.get('type'),
+                }
+            
+            # 2. Chercher dans content (legacy)
+            track = await self.db.content.find_one({
+                '_id': ObjectId(track_id) if ObjectId.is_valid(track_id) else track_id,
+                'status': 'published'
+            })
             
             if track:
                 return {

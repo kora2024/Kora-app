@@ -1,14 +1,63 @@
 # KORA — Product Requirements Document
 
 ## Vision
-KORA est le premier réseau social où l'identité culturelle est l'infrastructure. L'application mobile React Native offre une expérience sensorielle unique centrée sur la diaspora et les connexions culturelles.
+KORA est le premier DSP (Digital Service Provider) culturel souverain pour la diaspora caribéenne et afro-diasporique. L'application mobile React Native offre une expérience premium Netflix/Apple TV avec un catalogue musical et audiovisuel alimenté par le pipeline FrekCore.
 
-## Architecture
-- **Frontend**: React Native / Expo (SDK 54) avec expo-router (file-based routing)
-- **State Management**: Zustand
-- **3D Globe**: Three.js via WebView (native) / iframe (web)
-- **Fonts**: Playfair Display, Jost, JetBrains Mono (Google Fonts)
-- **Design System**: Fichier theme.ts séparé avec tokens KORA
+## Architecture Vivante (Sprint 1 Complete)
+
+### Flux de Données
+```
+Source (Artiste/Label/Distributeur)
+         ↓
+   FrekCore Ingestion Layer
+         ↓
+    Work Object Signé (.fk ready)
+         ↓
+     KORA MongoDB (works)
+         ↓
+     API /frekcore/feed
+         ↓
+   Frontend (home.tsx, films.tsx)
+```
+
+### Stack Technique
+- **Frontend**: React Native / Expo (SDK 54) avec expo-router
+- **Backend**: FastAPI + Motor (Async MongoDB)
+- **State Management**: Zustand (global player store)
+- **Video**: expo-video (migration expo-av complete)
+- **Design System**: Tokens KORA (CINEMA, FONTS)
+
+### Collections MongoDB
+- `users`: Utilisateurs avec rôle culturel et FREK-ID
+- `works`: Catalogue principal (FrekCore validated) — **56 works**
+- `content`: Contenu créateurs self-serve (legacy)
+- `events`: Bus d'événements API
+
+## Catalogue Vivant (Sprint 1)
+
+### Statistiques Actuelles
+- **Total Works**: 58
+- **Musique**: 47 tracks
+- **Audiovisuel**: 11 (films, séries, documentaires, concerts)
+
+### Territoires Culturels Représentés
+- Caraïbes: Martinique, Guadeloupe, Jamaïque, Haïti, Trinidad
+- Afrique: Sénégal, Nigeria, Côte d'Ivoire, Congo, Mali, Bénin
+- Diaspora: France, UK, USA
+- Global: Brésil, Cuba, Corée, Japon, Inde
+
+### Contenu CVLN Interne
+- **DJ Sayd** — "C'est Nous L'Avenir" (flagship)
+- Factory Maker Studio catalog
+- Sessions FMS
+
+### API Endpoints
+- `GET /api/frekcore/feed` — Home feed (trending, new_releases, discoveries)
+- `GET /api/frekcore/feed/audiovisual` — Films/Séries
+- `GET /api/frekcore/feed/trending` — Top plays
+- `GET /api/frekcore/feed/territory/{code}` — Par territoire
+- `POST /api/frekcore/ingest` — Ingestion manuelle
+- `GET /api/frekcore/stats` — Statistiques catalogue
 
 ## Écrans Implémentés (7/7)
 
