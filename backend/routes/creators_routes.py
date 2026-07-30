@@ -133,6 +133,192 @@ async def get_creator_dashboard(current_user: dict = Depends(get_current_creator
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PUBLIC CREATOR PROFILE (Profil public pour la page artiste)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@router.get("/public/{creator_id}")
+async def get_creator_public_profile(creator_id: str):
+    """
+    Profil public d'un créateur (accessible sans auth).
+    
+    Utilisé par la page /creator/[id].tsx pour afficher les données dynamiques
+    au lieu des données mockées.
+    
+    Args:
+        creator_id: FREK-ID ou user_id du créateur
+    
+    Returns:
+        Profil public avec oeuvres, bio, stats publiques
+    """
+    if _db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    # Find creator in users collection
+    creator = await _db.users.find_one({
+        "$or": [
+            {"frek_id": creator_id},
+            {"_id": creator_id},
+            {"email": creator_id}
+        ],
+        "is_creator": True
+    })
+    
+    if not creator:
+        # Check if it's a work artist name (support both 'artist' and 'display_artist' fields)
+        work_with_artist = await _db.works.find_one({
+            "$or": [
+                {"artist": creator_id},
+                {"display_artist": creator_id},
+                {"primary_artists": creator_id}
+            ]
+        })
+        
+        if work_with_artist:
+            # Create a synthetic profile from works
+            artist_name = work_with_artist.get("display_artist") or work_with_artist.get("artist", creator_id)
+            
+            # Get all works by this artist
+            works = await _db.works.find({
+                "$or": [
+                    {"artist": artist_name},
+                    {"display_artist": artist_name},
+                    {"primary_artists": artist_name}
+                ]
+            }).to_list(100)
+            
+            # Group by type
+            music_works = [w for w in works if w.get("type") == "track"]
+            film_works = [w for w in works if w.get("type") in ["film", "video", "movie"]]
+            
+            # Extract unique genres
+            all_genres = []
+            for w in works:
+                genres = w.get("genres", [])
+                if isinstance(genres, list):
+                    all_genres.extend(genres)
+            unique_genres = list(set(all_genres))[:5]
+            
+            # Calculate stats
+            total_streams = sum(w.get("streams", 0) for w in works)
+            
+            return {
+                "creator_id": creator_id,
+                "display_name": artist_name,
+                "bio": f"Artiste présent sur KORA avec {len(works)} oeuvres.",
+                "profile_image": work_with_artist.get("cover_url", work_with_artist.get("artwork_url")),
+                "cover_image": work_with_artist.get("cover_url"),
+                "verified": True,
+                "territories": list(set([w.get("territory", "INT") for w in works])),
+                "genres": unique_genres,
+                "stats": {
+                    "total_works": len(works),
+                    "total_tracks": len(music_works),
+                    "total_films": len(film_works),
+                    "total_streams": total_streams,
+                    "followers": 0,  # Would come from social features
+                },
+                "featured_works": [
+                    {
+                        "work_id": w.get("work_id") or w.get("id"),
+                        "title": w.get("title"),
+                        "type": w.get("type"),
+                        "cover_url": w.get("cover_url") or w.get("artwork_url"),
+                        "stream_url": w.get("stream_url"),
+                        "genres": w.get("genres", []),
+                        "release_date": w.get("release_date"),
+                    }
+                    for w in works[:10]
+                ],
+                "all_works": [
+                    {
+                        "work_id": w.get("work_id") or w.get("id"),
+                        "title": w.get("title"),
+                        "type": w.get("type"),
+                        "cover_url": w.get("cover_url") or w.get("artwork_url"),
+                    }
+                    for w in works
+                ],
+                "social_links": {},
+            }
+        
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Créateur non trouvé: {creator_id}"
+        )
+    
+    # Creator found in users collection
+    frek_id = creator.get("frek_id") or str(creator.get("_id"))
+    
+    # Get creator's works
+    works = await _db.works.find({
+        "$or": [
+            {"rights_holder_ref": frek_id},
+            {"primary_artists": frek_id},
+            {"creator_frek_id": frek_id},
+            {"artist": creator.get("display_name")}
+        ]
+    }).to_list(100)
+    
+    # Group by type
+    music_works = [w for w in works if w.get("type") == "track"]
+    film_works = [w for w in works if w.get("type") in ["film", "video", "movie"]]
+    
+    # Extract genres
+    all_genres = []
+    for w in works:
+        genres = w.get("genres", [])
+        if isinstance(genres, list):
+            all_genres.extend(genres)
+    unique_genres = list(set(all_genres))[:5]
+    
+    # Stats
+    total_streams = sum(w.get("streams", 0) for w in works)
+    followers_count = await _db.follows.count_documents({"followed_id": frek_id})
+    
+    return {
+        "creator_id": frek_id,
+        "display_name": creator.get("display_name") or creator.get("name"),
+        "bio": creator.get("bio", ""),
+        "profile_image": creator.get("profile_image") or creator.get("avatar_url"),
+        "cover_image": creator.get("cover_image"),
+        "verified": creator.get("verified", True),
+        "territories": creator.get("territories", []),
+        "genres": unique_genres,
+        "stats": {
+            "total_works": len(works),
+            "total_tracks": len(music_works),
+            "total_films": len(film_works),
+            "total_streams": total_streams,
+            "followers": followers_count,
+        },
+        "featured_works": [
+            {
+                "work_id": w.get("work_id") or w.get("id"),
+                "title": w.get("title"),
+                "type": w.get("type"),
+                "cover_url": w.get("cover_url") or w.get("artwork_url"),
+                "stream_url": w.get("stream_url"),
+                "genres": w.get("genres", []),
+                "release_date": w.get("release_date"),
+            }
+            for w in works[:10]
+        ],
+        "all_works": [
+            {
+                "work_id": w.get("work_id") or w.get("id"),
+                "title": w.get("title"),
+                "type": w.get("type"),
+                "cover_url": w.get("cover_url") or w.get("artwork_url"),
+            }
+            for w in works
+        ],
+        "social_links": creator.get("social_links", {}),
+    }
+
+
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # ANALYTICS
 # ══════════════════════════════════════════════════════════════════════════════
 

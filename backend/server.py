@@ -772,6 +772,10 @@ from routes.frekcore_routes import router as frekcore_router, init_routes as ini
 init_frekcore_routes(db)
 api_router.include_router(frekcore_router)
 
+# Include RBAC routes (Role-Based Access Control - Section 3 & 32)
+from routes.rbac_routes import router as rbac_router
+api_router.include_router(rbac_router)
+
 # Include api router in app
 app.include_router(api_router)
 

@@ -295,36 +295,67 @@ function CriteriaSection() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MOCK DATA
+// TYPES
 // ══════════════════════════════════════════════════════════════════════════════
 
-const CREATOR = {
-  id: 'kassav',
-  name: "Kassav'",
-  frekId: 'FRK-KSV9X7M2P4',
-  role: 'Groupe • Zouk',
-  bio: "Kassav' est un groupe de zouk guadeloupéen fondé en 1979. Pionniers du zouk, ils ont révolutionné la musique caribéenne et africaine avec des hits intemporels comme \"Zouk la sé sèl médikaman nou ni\".",
-  image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
-  cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200',
-  followers: '2.1M',
-  monthlyListeners: '1.8M',
-  frekScore: 94,
-  verified: true,
-  territory: 'Guadeloupe',
-  since: 1979,
+interface CreatorData {
+  creator_id: string;
+  display_name: string;
+  bio: string;
+  profile_image: string | null;
+  cover_image: string | null;
+  verified: boolean;
+  territories: string[];
+  genres: string[];
+  stats: {
+    total_works: number;
+    total_tracks: number;
+    total_films: number;
+    total_streams: number;
+    followers: number;
+  };
+  featured_works: Array<{
+    work_id: string;
+    title: string;
+    type: string;
+    cover_url: string | null;
+    stream_url?: string;
+    genres: string[];
+    release_date?: string;
+  }>;
+  all_works: Array<{
+    work_id: string;
+    title: string;
+    type: string;
+    cover_url: string | null;
+  }>;
+  social_links: Record<string, string>;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FALLBACK DATA (utilisé si l'API ne retourne rien)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const FALLBACK_CREATOR: CreatorData = {
+  creator_id: 'unknown',
+  display_name: 'Artiste',
+  bio: 'Artiste présent sur KORA.',
+  profile_image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800',
+  cover_image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200',
+  verified: false,
+  territories: [],
+  genres: [],
+  stats: {
+    total_works: 0,
+    total_tracks: 0,
+    total_films: 0,
+    total_streams: 0,
+    followers: 0,
+  },
+  featured_works: [],
+  all_works: [],
+  social_links: {},
 };
-
-const MUSIC = [
-  { id: 'm1', title: 'Zouk la sé sèl médikaman', type: 'Single', year: 1984, image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' },
-  { id: 'm2', title: 'Syé Bwa', type: 'Album', year: 1987, image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-  { id: 'm3', title: 'Mwen Alé', type: 'Single', year: 1990, image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400' },
-  { id: 'm4', title: 'Majestik Zouk', type: 'Album', year: 1989, image: 'https://images.unsplash.com/photo-1571266028243-d220c6a8b855?w=400' },
-];
-
-const VIDEOS = [
-  { id: 'v1', title: 'Live à Bercy 2019', duration: '1h 45min', image: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' },
-  { id: 'v2', title: 'Documentaire: 40 ans de Zouk', duration: '52 min', image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400' },
-];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MAIN CREATOR SCREEN
@@ -336,6 +367,54 @@ export default function CreatorScreen() {
   const params = useLocalSearchParams();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState('Musique');
+  
+  // Dynamic data state
+  const [creator, setCreator] = useState<CreatorData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get creator ID from URL params
+  const creatorId = params.id as string;
+
+  // Fetch creator data from API
+  useEffect(() => {
+    const fetchCreator = async () => {
+      if (!creatorId) {
+        setError('ID créateur manquant');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        const apiUrl = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+        const response = await fetch(`${apiUrl}/api/creators/public/${encodeURIComponent(creatorId)}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setError(`Créateur "${creatorId}" non trouvé`);
+          } else {
+            setError('Erreur lors du chargement');
+          }
+          setCreator(FALLBACK_CREATOR);
+          return;
+        }
+
+        const data = await response.json();
+        setCreator(data);
+      } catch (err) {
+        console.error('Error fetching creator:', err);
+        setError('Erreur de connexion');
+        setCreator(FALLBACK_CREATOR);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCreator();
+  }, [creatorId]);
 
   // Animations
   const headerOpacity = scrollY.interpolate({
@@ -371,8 +450,38 @@ export default function CreatorScreen() {
 
   const tabs = ['Musique', 'Vidéo', 'À propos', 'Droits'];
 
+  // Helper to format numbers
+  const formatNumber = (num: number): string => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toString();
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <Text style={styles.loadingText}>Chargement...</Text>
+      </View>
+    );
+  }
+
+  // If no creator data, use fallback
+  const displayCreator = creator || FALLBACK_CREATOR;
+  
+  // Separate works by type
+  const musicWorks = displayCreator.featured_works.filter(w => w.type === 'track');
+  const videoWorks = displayCreator.featured_works.filter(w => ['film', 'video', 'movie'].includes(w.type));
+
   return (
     <View style={styles.container}>
+      {/* Error banner if applicable */}
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+      
       {/* Fixed header */}
       <Animated.View style={[styles.fixedHeader, { paddingTop: insets.top, opacity: headerOpacity }]}>
         <LinearGradient colors={[COLORS.dark, 'rgba(13,13,13,0.95)']} style={StyleSheet.absoluteFill} />
@@ -380,7 +489,7 @@ export default function CreatorScreen() {
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
             <BackIcon size={24} color={COLORS.cream} />
           </TouchableOpacity>
-          <Text style={styles.fixedHeaderTitle}>{CREATOR.name}</Text>
+          <Text style={styles.fixedHeaderTitle}>{displayCreator.display_name}</Text>
           <View style={{ width: 44 }} />
         </View>
       </Animated.View>
@@ -414,7 +523,10 @@ export default function CreatorScreen() {
             },
           ]}
         >
-          <Image source={{ uri: CREATOR.cover }} style={styles.coverImage} />
+          <Image 
+            source={{ uri: displayCreator.cover_image || displayCreator.profile_image || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200' }} 
+            style={styles.coverImage} 
+          />
           <LinearGradient
             colors={['transparent', 'rgba(13,13,13,0.5)', COLORS.dark]}
             locations={[0, 0.6, 1]}
@@ -425,36 +537,43 @@ export default function CreatorScreen() {
         {/* Profile section */}
         <View style={styles.profileSection}>
           <View style={styles.profileHeader}>
-            <Image source={{ uri: CREATOR.image }} style={styles.profileImage} />
+            <Image 
+              source={{ uri: displayCreator.profile_image || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800' }} 
+              style={styles.profileImage} 
+            />
             <View style={styles.profileInfo}>
               <View style={styles.nameRow}>
-                <Text style={styles.profileName}>{CREATOR.name}</Text>
-                {CREATOR.verified && <VerifiedBadge size={24} />}
+                <Text style={styles.profileName}>{displayCreator.display_name}</Text>
+                {displayCreator.verified && <VerifiedBadge size={24} />}
               </View>
               <FrekBadge />
-              <Text style={styles.frekIdText}>{CREATOR.frekId}</Text>
-              <Text style={styles.profileRole}>{CREATOR.role}</Text>
+              <Text style={styles.frekIdText}>{displayCreator.creator_id}</Text>
+              <Text style={styles.profileRole}>
+                {displayCreator.genres.length > 0 
+                  ? displayCreator.genres.slice(0, 2).join(' • ')
+                  : 'Artiste'}
+              </Text>
             </View>
           </View>
 
           {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{CREATOR.followers}</Text>
+              <Text style={styles.statValue}>{formatNumber(displayCreator.stats.followers)}</Text>
               <Text style={styles.statLabel}>Abonnés</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{CREATOR.monthlyListeners}</Text>
-              <Text style={styles.statLabel}>Écoutes/mois</Text>
+              <Text style={styles.statValue}>{formatNumber(displayCreator.stats.total_streams)}</Text>
+              <Text style={styles.statLabel}>Écoutes</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{CREATOR.since}</Text>
-              <Text style={styles.statLabel}>Depuis</Text>
+              <Text style={styles.statValue}>{displayCreator.stats.total_works}</Text>
+              <Text style={styles.statLabel}>Œuvres</Text>
             </View>
           </View>
 
-          {/* FREK Score */}
-          <AnimatedFrekScore score={CREATOR.frekScore} />
+          {/* FREK Score (placeholder - would come from CVE) */}
+          <AnimatedFrekScore score={displayCreator.verified ? 85 : 50} />
 
           {/* Actions */}
           <View style={styles.actionsRow}>
@@ -475,30 +594,67 @@ export default function CreatorScreen() {
         <View style={styles.tabContent}>
           {activeTab === 'Musique' && (
             <View>
-              {MUSIC.map((item) => (
-                <MusicCard key={item.id} item={item} onPress={handlePlay} />
-              ))}
+              {musicWorks.length > 0 ? (
+                musicWorks.map((item) => (
+                  <MusicCard 
+                    key={item.work_id} 
+                    item={{
+                      id: item.work_id,
+                      title: item.title,
+                      type: 'Track',
+                      year: item.release_date ? new Date(item.release_date).getFullYear() : 2024,
+                      image: item.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
+                    }} 
+                    onPress={handlePlay} 
+                  />
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Aucune musique disponible</Text>
+              )}
             </View>
           )}
           
           {activeTab === 'Vidéo' && (
             <View style={styles.videoGrid}>
-              {VIDEOS.map((item) => (
-                <VideoCard key={item.id} item={item} onPress={handlePlay} />
-              ))}
+              {videoWorks.length > 0 ? (
+                videoWorks.map((item) => (
+                  <VideoCard 
+                    key={item.work_id} 
+                    item={{
+                      id: item.work_id,
+                      title: item.title,
+                      duration: '',
+                      image: item.cover_url || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400',
+                    }} 
+                    onPress={handlePlay} 
+                  />
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Aucune vidéo disponible</Text>
+              )}
             </View>
           )}
           
           {activeTab === 'À propos' && (
             <View style={styles.aboutSection}>
               <Text style={styles.aboutTitle}>Biographie</Text>
-              <Text style={styles.aboutText}>{CREATOR.bio}</Text>
+              <Text style={styles.aboutText}>{displayCreator.bio || 'Aucune biographie disponible.'}</Text>
               <View style={styles.aboutMeta}>
                 <View style={styles.aboutMetaItem}>
-                  <Text style={styles.aboutMetaLabel}>Territoire</Text>
-                  <Text style={styles.aboutMetaValue}>{CREATOR.territory}</Text>
+                  <Text style={styles.aboutMetaLabel}>Territoires</Text>
+                  <Text style={styles.aboutMetaValue}>
+                    {displayCreator.territories.length > 0 
+                      ? displayCreator.territories.join(', ')
+                      : 'International'}
+                  </Text>
                 </View>
                 <View style={styles.aboutMetaItem}>
+                  <Text style={styles.aboutMetaLabel}>Genres</Text>
+                  <Text style={styles.aboutMetaValue}>
+                    {displayCreator.genres.length > 0 
+                      ? displayCreator.genres.join(', ')
+                      : 'Divers'}
+                  </Text>>
                   <Text style={styles.aboutMetaLabel}>Genre</Text>
                   <Text style={styles.aboutMetaValue}>Zouk, Kompa, Afro-Caribbean</Text>
                 </View>
@@ -988,5 +1144,38 @@ const styles = StyleSheet.create({
   },
   criteriaStatusTextPending: {
     color: '#C9A84C',
+  },
+  // Loading and Error states
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 16,
+    color: COLORS.gray,
+  },
+  errorBanner: {
+    position: 'absolute',
+    top: 100,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(166,93,71,0.9)',
+    padding: 12,
+    borderRadius: 8,
+    zIndex: 100,
+  },
+  errorText: {
+    fontFamily: FONTS.jostRegular,
+    fontSize: 13,
+    color: COLORS.cream,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontFamily: FONTS.jostLight,
+    fontSize: 14,
+    color: COLORS.gray,
+    textAlign: 'center',
+    paddingVertical: 24,
   },
 });

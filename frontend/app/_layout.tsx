@@ -22,6 +22,8 @@ import { COLORS } from '../src/theme';
 import TransitionOverlay from '../src/components/TransitionOverlay';
 import { ToastContainer } from '../src/components/Toast';
 import MiniPlayer from '../src/components/MiniPlayer';
+import { RBACProvider } from '../src/context/RBACContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -94,14 +96,16 @@ export default function RootLayout() {
   }
 
   return (
-    <View style={styles.rootContainer}>
-      <StatusBar style="light" />
-      
-      {/* Overlay de transition (flash subtil) */}
-      <TransitionOverlay />
-      
-      {/* Toast notifications — UPGRADE 19 */}
-      <ToastContainer />
+    <SafeAreaProvider>
+      <RBACProvider>
+        <View style={styles.rootContainer}>
+          <StatusBar style="light" />
+          
+          {/* Overlay de transition (flash subtil) */}
+          <TransitionOverlay />
+          
+          {/* Toast notifications — UPGRADE 19 */}
+          <ToastContainer />
       
       <Stack
         screenOptions={{
@@ -269,7 +273,9 @@ export default function RootLayout() {
       
       {/* Global DSP Mini-Player — persists across all screens */}
       <MiniPlayer />
-    </View>
+        </View>
+      </RBACProvider>
+    </SafeAreaProvider>
   );
 }
 
