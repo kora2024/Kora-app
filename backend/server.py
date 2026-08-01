@@ -776,6 +776,10 @@ api_router.include_router(frekcore_router)
 from routes.rbac_routes import router as rbac_router
 api_router.include_router(rbac_router)
 
+# Include CVE routes (Cultural Value Engine - Section 8)
+from routes.cve_routes import router as cve_router
+api_router.include_router(cve_router)
+
 # Include api router in app
 app.include_router(api_router)
 

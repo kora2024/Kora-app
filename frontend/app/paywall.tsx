@@ -1,480 +1,198 @@
 /**
- * KORA Paywall — Premium 3,98€/mois
+ * KORA Paywall — Module 7 Monétisation
+ * ═══════════════════════════════════════════════════════════════════════════════
  * 
- * Expérience premium Apple-style
- * Stripe integration ready
+ * Section 10: "Auditeur : la couche Wallet reste entièrement invisible"
+ * 
+ * Offres: FREE (0€ + pub) | PREMIUM (3,98€/mois, sans pub, HQ, 2x royalties)
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
-  Animated,
   ScrollView,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import Svg, { Path, Circle } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
-import * as WebBrowser from 'expo-web-browser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Svg, { Path, Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { COLORS, FONTS } from '../src/theme';
-import { BackIcon } from '../src/components/icons/KoraIcons';
 
-const { width: SW, height: SH } = Dimensions.get('window');
-const API_URL = process.env.EXPO_PUBLIC_API_URL || '';
+const CheckIcon = ({ size = 20, color = '#C9A84C' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5">
+    <Path d="M20 6L9 17l-5-5" />
+  </Svg>
+);
 
-// Price formatted
-const PRICE = 3.98;
-const PRICE_LABEL = new Intl.NumberFormat('fr-FR', {
-  style: 'currency',
-  currency: 'EUR',
-}).format(PRICE);
+const CloseIcon = ({ size = 12, color = 'rgba(255,255,255,0.3)' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2">
+    <Path d="M18 6L6 18M6 6l12 12" />
+  </Svg>
+);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ICONS
-// ══════════════════════════════════════════════════════════════════════════════
+const CrownIcon = ({ size = 48, color = '#C9A84C' }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
+    <Path d="M12 1L9 9l-7-4 3 12h14l3-12-7 4-3-8z" />
+  </Svg>
+);
 
-function CheckIcon({ size = 20 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 20 20">
-      <Circle cx="10" cy="10" r="10" fill={COLORS.terra} />
-      <Path d="M6 10L9 13L14 7" stroke={COLORS.cream} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </Svg>
-  );
-}
+const PLANS = {
+  premium: {
+    id: 'premium',
+    name: 'PREMIUM',
+    price: '3,98€',
+    period: '/mois',
+    description: 'L\'expérience KORA complète',
+    badge: 'RECOMMANDÉ',
+    features: [
+      { text: 'Catalogue complet', included: true },
+      { text: 'Qualité HQ / Lossless', included: true },
+      { text: 'Sans publicité', included: true },
+      { text: 'Mode hors-ligne', included: true },
+      { text: '2x royalties aux créateurs', included: true, highlight: true },
+    ],
+  },
+  free: {
+    id: 'free',
+    name: 'FREE',
+    price: '0€',
+    period: '',
+    description: 'Avec publicités',
+    features: [
+      { text: 'Catalogue complet', included: true },
+      { text: 'Qualité standard', included: true },
+      { text: 'Publicités', included: true, isNegative: true },
+      { text: 'Mode hors-ligne', included: false },
+      { text: 'Priorité créateurs', included: false },
+    ],
+  },
+};
 
-function CrownIcon({ size = 48 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 48 48">
-      <Path
-        d="M8 36H40V40H8V36ZM8 16L16 24L24 12L32 24L40 16V36H8V16Z"
-        fill={COLORS.terra}
-      />
-    </Svg>
-  );
-}
+const FeatureRow = ({ text, included, isNegative, highlight }: any) => (
+  <View style={styles.featureRow}>
+    <View style={[styles.featureIcon, included ? styles.featureIconOk : styles.featureIconNo, highlight && styles.featureIconGold]}>
+      {included ? <CheckIcon size={12} color={highlight ? '#0A0A0F' : '#C9A84C'} /> : <CloseIcon />}
+    </View>
+    <Text style={[styles.featureText, !included && styles.featureTextNo, isNegative && styles.featureTextNeg, highlight && styles.featureTextGold]}>
+      {text}
+    </Text>
+  </View>
+);
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FEATURES LIST
-// ══════════════════════════════════════════════════════════════════════════════
-
-const FEATURES = [
-  'Streaming illimité audio & vidéo',
-  'Qualité audio FLAC / Hi-Res',
-  'Téléchargement hors-ligne',
-  'Contenu exclusif créateurs',
-  'Lives et avant-premières',
-  'Zéro publicité',
-  'Support prioritaire',
-  'Certification FREK-ID',
-];
-
-function FeatureItem({ text, delay }: { text: string; delay: number }) {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 80,
-        friction: 12,
-        delay,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [delay]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.featureItem,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateX: slideAnim }],
-        },
-      ]}
-    >
-      <CheckIcon size={18} />
-      <Text style={styles.featureText}>{text}</Text>
-    </Animated.View>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MAIN PAYWALL SCREEN
-// ══════════════════════════════════════════════════════════════════════════════
+const PlanCard = ({ plan, selected, onPress }: any) => (
+  <TouchableOpacity style={[styles.card, selected && styles.cardSelected]} onPress={onPress} activeOpacity={0.8}>
+    {plan.badge && <View style={styles.badge}><Text style={styles.badgeText}>{plan.badge}</Text></View>}
+    <Text style={styles.planName}>{plan.name}</Text>
+    <View style={styles.priceRow}>
+      <Text style={styles.price}>{plan.price}</Text>
+      <Text style={styles.period}>{plan.period}</Text>
+    </View>
+    <Text style={styles.desc}>{plan.description}</Text>
+    <View style={styles.features}>
+      {plan.features.map((f: any, i: number) => <FeatureRow key={i} {...f} />)}
+    </View>
+    {selected && <View style={styles.check}><CheckIcon size={14} color="#0A0A0F" /></View>}
+  </TouchableOpacity>
+);
 
 export default function PaywallScreen() {
-  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const [plan, setPlan] = useState<'free' | 'premium'>('premium');
+  const [loading, setLoading] = useState(false);
 
-  // Animations
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+  const handleContinue = useCallback(async () => {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch {}
+    setLoading(true);
+    await AsyncStorage.setItem('kora_subscription_plan', plan);
+    await AsyncStorage.setItem('kora_is_premium', plan === 'premium' ? 'true' : 'false');
+    if (plan === 'premium') await new Promise(r => setTimeout(r, 1000));
+    setLoading(false);
+    router.replace('/home');
+  }, [plan, router]);
 
-  useEffect(() => {
-    // Entrance animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Glow animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
-  const handleSubscribe = useCallback(async (planType: 'premium' | 'family' = 'premium') => {
-    try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    } catch {}
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // Get token from storage
-      const token = await AsyncStorage.getItem('kora_token');
-      if (!token) {
-        setError('Veuillez vous connecter');
-        router.push('/auth/login');
-        setIsLoading(false);
-        return;
-      }
-
-      // Create checkout session with auth token and plan type
-      const response = await fetch(`${API_URL}/api/subscriptions/checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ plan_type: planType }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Erreur lors de la création de la session');
-      }
-
-      const { checkoutUrl } = await response.json();
-
-      // Open Stripe Checkout
-      if (Platform.OS === 'web') {
-        (window as any).location.href = checkoutUrl;
-      } else {
-        await WebBrowser.openBrowserAsync(checkoutUrl);
-        // Check subscription status after returning
-        const statusResponse = await fetch(`${API_URL}/api/subscriptions/status`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        const status = await statusResponse.json();
-        if (status.active) {
-          try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          } catch {}
-          router.replace('/home');
-        }
-      }
-    } catch (err: any) {
-      console.error('Subscription error:', err);
-      setError(err.message || 'Une erreur est survenue');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSkip = useCallback(() => {
+    AsyncStorage.setItem('kora_subscription_plan', 'free');
+    router.replace('/home');
   }, [router]);
-
-  const handleClose = useCallback(() => {
-    router.back();
-  }, [router]);
-
-  const handleRestore = useCallback(async () => {
-    try {
-      Haptics.selectionAsync();
-    } catch {}
-    // TODO: Implement restore purchases
-  }, []);
-
-  const glowOpacity = glowAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.6],
-  });
 
   return (
-    <View style={styles.container}>
-      {/* Background gradient */}
-      <LinearGradient
-        colors={[COLORS.dark, '#0a0a12', '#0d0d0d']}
-        style={StyleSheet.absoluteFill}
-      />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <LinearGradient colors={['#0A0A0F', '#1A1A24', '#0A0A0F']} style={StyleSheet.absoluteFill} />
       
-      {/* Glow effect */}
-      <Animated.View style={[styles.glow, { opacity: glowOpacity }]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(166,93,71,0.15)', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </Animated.View>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleSkip}><Text style={styles.skip}>Plus tard</Text></TouchableOpacity>
+      </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
-            <BackIcon size={24} color={COLORS.cream} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleRestore}>
-            <Text style={styles.restoreText}>Restaurer</Text>
-          </TouchableOpacity>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.hero}>
+          <View style={styles.crown}><CrownIcon /></View>
+          <Text style={styles.title}>Choisis ton expérience</Text>
+          <Text style={styles.subtitle}>Premium redistribue 2x plus aux créateurs</Text>
         </View>
 
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          {/* Crown icon */}
-          <View style={styles.iconContainer}>
-            <CrownIcon size={64} />
-          </View>
-
-          {/* Title */}
-          <Text style={styles.title}>KORA Premium</Text>
-          <Text style={styles.subtitle}>L'expérience culturelle ultime</Text>
-
-          {/* Price */}
-          <View style={styles.priceContainer}>
-            <Text style={styles.price}>{PRICE_LABEL}</Text>
-            <Text style={styles.priceFrequency}>/mois</Text>
-          </View>
-
-          {/* Features */}
-          <View style={styles.featuresContainer}>
-            {FEATURES.map((feature, i) => (
-              <FeatureItem key={i} text={feature} delay={300 + i * 80} />
-            ))}
-          </View>
-
-          {/* Error */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* Subscribe button */}
-          <TouchableOpacity
-            style={styles.subscribeBtn}
-            onPress={handleSubscribe}
-            disabled={isLoading}
-            activeOpacity={0.9}
-          >
-            <LinearGradient
-              colors={[COLORS.terra, '#8B4D3B']}
-              style={styles.subscribeBtnGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.cream} />
-              ) : (
-                <Text style={styles.subscribeBtnText}>S'abonner maintenant</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Terms */}
-          <Text style={styles.terms}>
-            Renouvellement automatique. Annulation possible à tout moment.
-            En continuant, vous acceptez nos{' '}
-            <Text style={styles.termsLink}>Conditions d'utilisation</Text>
-            {' '}et notre{' '}
-            <Text style={styles.termsLink}>Politique de confidentialité</Text>.
-          </Text>
-        </Animated.View>
+        <View style={styles.plans}>
+          <PlanCard plan={PLANS.premium} selected={plan === 'premium'} onPress={() => setPlan('premium')} />
+          <PlanCard plan={PLANS.free} selected={plan === 'free'} onPress={() => setPlan('free')} />
+        </View>
       </ScrollView>
+
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity style={styles.btn} onPress={handleContinue} disabled={loading}>
+          <LinearGradient colors={plan === 'premium' ? ['#C9A84C', '#D4B55A'] : ['#333', '#444']} style={styles.btnGrad}>
+            {loading ? <ActivityIndicator color={plan === 'premium' ? '#0A0A0F' : '#FFF'} /> :
+              <Text style={[styles.btnText, plan !== 'premium' && styles.btnTextFree]}>
+                {plan === 'premium' ? 'ESSAI GRATUIT 7 JOURS' : 'CONTINUER AVEC FREE'}
+              </Text>}
+          </LinearGradient>
+        </TouchableOpacity>
+        {plan === 'premium' && <Text style={styles.trial}>Puis 3,98€/mois. Annulable à tout moment.</Text>}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.dark,
-  },
-  glow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: SH * 0.5,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: -12,
-  },
-  restoreText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 14,
-    color: COLORS.gray,
-  },
-  content: {
-    alignItems: 'center',
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: 'rgba(166,93,71,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  title: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 36,
-    color: COLORS.cream,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 16,
-    color: COLORS.gray,
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginTop: 24,
-    marginBottom: 32,
-  },
-  price: {
-    fontFamily: FONTS.playfairBold,
-    fontSize: 48,
-    color: COLORS.terra,
-  },
-  priceFrequency: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 18,
-    color: COLORS.gray,
-    marginLeft: 4,
-  },
-  featuresContainer: {
-    alignSelf: 'stretch',
-    marginBottom: 32,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    gap: 14,
-  },
-  featureText: {
-    fontFamily: FONTS.jostRegular,
-    fontSize: 15,
-    color: COLORS.cream,
-  },
-  errorContainer: {
-    backgroundColor: 'rgba(220, 53, 69, 0.15)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-    alignSelf: 'stretch',
-  },
-  errorText: {
-    fontFamily: FONTS.jostRegular,
-    fontSize: 14,
-    color: '#dc3545',
-    textAlign: 'center',
-  },
-  subscribeBtn: {
-    alignSelf: 'stretch',
-    borderRadius: 30,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
-  subscribeBtnGradient: {
-    paddingVertical: 18,
-    alignItems: 'center',
-  },
-  subscribeBtnText: {
-    fontFamily: FONTS.jostMedium,
-    fontSize: 17,
-    color: COLORS.cream,
-    letterSpacing: 0.5,
-  },
-  terms: {
-    fontFamily: FONTS.jostLight,
-    fontSize: 11,
-    color: COLORS.gray,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  termsLink: {
-    color: COLORS.terra,
-    textDecorationLine: 'underline',
-  },
+  container: { flex: 1, backgroundColor: '#0A0A0F' },
+  header: { flexDirection: 'row', justifyContent: 'flex-end', padding: 16 },
+  skip: { fontFamily: FONTS.jostRegular, fontSize: 14, color: 'rgba(255,255,255,0.5)' },
+  scroll: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 140 },
+  hero: { alignItems: 'center', marginBottom: 32 },
+  crown: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(201,168,76,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  title: { fontFamily: FONTS.playfairBold, fontSize: 28, color: '#FAF9F6', marginBottom: 8 },
+  subtitle: { fontFamily: FONTS.jostLight, fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
+  plans: { gap: 16 },
+  card: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
+  cardSelected: { borderColor: '#C9A84C', backgroundColor: 'rgba(201,168,76,0.05)' },
+  badge: { position: 'absolute', top: -10, left: 20, backgroundColor: '#C9A84C', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
+  badgeText: { fontFamily: FONTS.jostMedium, fontSize: 10, color: '#0A0A0F', letterSpacing: 1 },
+  planName: { fontFamily: FONTS.jostMedium, fontSize: 12, color: '#C9A84C', letterSpacing: 2, marginTop: 8, marginBottom: 8 },
+  priceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 },
+  price: { fontFamily: FONTS.playfairBold, fontSize: 32, color: '#FAF9F6' },
+  period: { fontFamily: FONTS.jostLight, fontSize: 14, color: 'rgba(255,255,255,0.5)', marginLeft: 4 },
+  desc: { fontFamily: FONTS.jostLight, fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16 },
+  features: { gap: 10 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  featureIcon: { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  featureIconOk: { backgroundColor: 'rgba(201,168,76,0.15)' },
+  featureIconNo: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  featureIconGold: { backgroundColor: '#C9A84C' },
+  featureText: { fontFamily: FONTS.jostRegular, fontSize: 13, color: 'rgba(255,255,255,0.8)', flex: 1 },
+  featureTextNo: { color: 'rgba(255,255,255,0.3)', textDecorationLine: 'line-through' },
+  featureTextNeg: { color: 'rgba(166,93,71,0.8)' },
+  featureTextGold: { color: '#C9A84C', fontFamily: FONTS.jostMedium },
+  check: { position: 'absolute', top: 16, right: 16, width: 26, height: 26, borderRadius: 13, backgroundColor: '#C9A84C', alignItems: 'center', justifyContent: 'center' },
+  bottom: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 20, backgroundColor: '#0A0A0F', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  btn: { borderRadius: 8, overflow: 'hidden' },
+  btnGrad: { paddingVertical: 16, alignItems: 'center' },
+  btnText: { fontFamily: FONTS.jostMedium, fontSize: 14, color: '#0A0A0F', letterSpacing: 1 },
+  btnTextFree: { color: '#FAF9F6' },
+  trial: { fontFamily: FONTS.jostLight, fontSize: 11, color: 'rgba(255,255,255,0.4)', textAlign: 'center', marginTop: 12 },
 });

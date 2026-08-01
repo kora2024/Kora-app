@@ -33,11 +33,13 @@ import { COLORS } from '../src/theme';
 
 const AUTH_TOKEN_KEY = 'kora_auth_token';
 const ONBOARDING_COMPLETED_KEY = 'kora_onboarding_completed';
+const SUBSCRIPTION_PLAN_KEY = 'kora_subscription_plan';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [hasChosenPlan, setHasChosenPlan] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -47,13 +49,16 @@ export default function Index() {
     try {
       const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
       const onboardingCompleted = await AsyncStorage.getItem(ONBOARDING_COMPLETED_KEY);
+      const subscriptionPlan = await AsyncStorage.getItem(SUBSCRIPTION_PLAN_KEY);
       
       setIsAuthenticated(!!token);
       setHasCompletedOnboarding(onboardingCompleted === 'true');
+      setHasChosenPlan(!!subscriptionPlan);
     } catch (error) {
       console.log('Error checking auth status:', error);
       setIsAuthenticated(false);
       setHasCompletedOnboarding(false);
+      setHasChosenPlan(false);
     } finally {
       setIsLoading(false);
     }
@@ -71,19 +76,21 @@ export default function Index() {
   // 
   // 1. Non authentifié → Landing Page CVLN Motion
   // 2. Authentifié + pas onboardé → Onboarding 60s
-  // 3. Authentifié + onboardé → Home (feed personnalisé)
+  // 3. Authentifié + onboardé + pas de plan → Paywall
+  // 4. Authentifié + onboardé + plan choisi → Home
   
   if (!isAuthenticated) {
-    // ÉTAPE 1: Landing Page CVLN Motion
     return <Redirect href="/landing" />;
   }
   
   if (!hasCompletedOnboarding) {
-    // ÉTAPE 3: Onboarding 60s (territoires, langues, genres, créateurs, FREK-ID)
     return <Redirect href="/onboarding" />;
   }
   
-  // ÉTAPE 5: Home avec feed personnalisé
+  if (!hasChosenPlan) {
+    return <Redirect href="/paywall" />;
+  }
+  
   return <Redirect href="/home" />;
 }
 
