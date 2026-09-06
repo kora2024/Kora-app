@@ -16,11 +16,15 @@ import string
 import bcrypt
 import jwt
 from contextlib import asynccontextmanager
+import hmac
 import stripe
+
+from config import load_settings
 
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
+settings = load_settings()
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -28,7 +32,7 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'kora_db')]
 
 # JWT Configuration
-JWT_SECRET = os.environ.get('JWT_SECRET', 'kora_secret_key_change_in_production_2024')
+JWT_SECRET = settings.jwt_secret
 JWT_ALGORITHM = 'HS256'
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
@@ -376,9 +380,9 @@ async def get_profile(current_user: dict = Depends(get_current_user)):
 
 # Admin seed endpoint (one-time use, should be secured in production)
 @auth_router.post("/admin/seed")
-async def seed_admin(email: str, admin_secret: str = "kora_admin_secret_2024"):
+async def seed_admin(email: str, admin_secret: str):
     """Promouvoir un utilisateur en admin (dev only)"""
-    if admin_secret != os.environ.get('ADMIN_SECRET', 'kora_admin_secret_2024'):
+    if not hmac.compare_digest(admin_secret, settings.admin_secret):
         raise HTTPException(status_code=403, detail="Secret invalide")
     
     result = await db.users.update_one(
@@ -786,7 +790,7 @@ app.include_router(api_router)
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=list(settings.cors_origins),
     allow_methods=["*"],
     allow_headers=["*"],
 )
