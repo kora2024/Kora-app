@@ -1,0 +1,7 @@
+[mcp_servers.perplexity]
+command = "npx"
+args = ["-yq", "@perplexity-ai/mcp-server"]
+env_vars = ["PERPLEXITY_API_KEY"]
+enabled = true
+startup_timeout_sec = 30
+tool_timeout_sec = 600
