@@ -19,3 +19,11 @@ env_vars = ["CONTEXT7_API_KEY"]
 enabled = true
 startup_timeout_sec = 40
 tool_timeout_sec = 600
+
+[mcp_servers.cvln_agent_factory]
+command = "python3"
+args = [".codex/cvln_agent_factory_bridge.py"]
+env_vars = ["CVLN_AGENT_FACTORY_URL", "CVLN_AGENT_FACTORY_TOKEN"]
+enabled = true
+startup_timeout_sec = 60
+tool_timeout_sec = 600
