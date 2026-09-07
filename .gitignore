@@ -58,6 +58,9 @@ chainlit.md
 .ipynb_checkpoints/
 .ac
 
+# Codex local tool caches
+.codex/cache/
+
 # Deployment
 .vercel
 
