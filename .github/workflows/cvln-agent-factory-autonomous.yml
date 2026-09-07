@@ -1,0 +1,114 @@
+name: CVLN Agent Factory — KORA Autonomous Cycle
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 2 hours. The Agent Factory runtime itself decides dry_run vs live.
+    - cron: "17 */2 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cvln-agent-factory-kora-autonomous
+  cancel-in-progress: false
+
+jobs:
+  autonomous-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CVLN_AGENT_FACTORY_URL: ${{ secrets.CVLN_AGENT_FACTORY_URL }}
+      CVLN_AGENT_FACTORY_TOKEN: ${{ secrets.CVLN_AGENT_FACTORY_TOKEN }}
+
+    steps:
+      - name: Validate runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${CVLN_AGENT_FACTORY_URL:-}" ]; then
+            echo "CVLN_AGENT_FACTORY_URL secret is not configured." >&2
+            exit 1
+          fi
+
+      - name: Read Agent Factory autonomous mode
+        id: mode
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${CVLN_AGENT_FACTORY_URL%/}"
+          auth=()
+          if [ -n "${CVLN_AGENT_FACTORY_TOKEN:-}" ]; then
+            auth=(-H "Authorization: Bearer ${CVLN_AGENT_FACTORY_TOKEN}")
+          fi
+
+          response="$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 15 --max-time 60 \
+            "${auth[@]}" \
+            -H "Accept: application/json" \
+            "${base}/api/autonomous/mode")"
+
+          echo "Agent Factory mode response: ${response}"
+          python3 - <<'PY' "$response" >> "$GITHUB_OUTPUT"
+import json, sys
+payload = json.loads(sys.argv[1])
+mode = payload.get("mode")
+if mode not in {"dry_run", "live"}:
+    raise SystemExit(f"Unexpected autonomous mode: {mode!r}")
+print(f"runtime_mode={mode}")
+print(f"completed_dry_runs={payload.get('completed_dry_runs', 0)}")
+PY
+
+      - name: Run governed autonomous cycle
+        id: cycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${CVLN_AGENT_FACTORY_URL%/}"
+          auth=()
+          if [ -n "${CVLN_AGENT_FACTORY_TOKEN:-}" ]; then
+            auth=(-H "Authorization: Bearer ${CVLN_AGENT_FACTORY_TOKEN}")
+          fi
+
+          response="$(curl --fail-with-body --silent --show-error \
+            --connect-timeout 15 --max-time 300 \
+            -X POST \
+            "${auth[@]}" \
+            -H "Accept: application/json" \
+            -H "Content-Type: application/json" \
+            "${base}/api/autonomous/cycle")"
+
+          printf '%s\n' "$response" > cycle-result.json
+          echo "Autonomous cycle completed in Agent Factory mode: ${{ steps.mode.outputs.runtime_mode }}"
+
+          python3 - <<'PY' "$response" >> "$GITHUB_OUTPUT"
+import json, sys
+payload = json.loads(sys.argv[1])
+print(f"cycle_id={payload.get('id', '')}")
+print(f"cycle_number={payload.get('number', '')}")
+print(f"cycle_status={payload.get('status', '')}")
+PY
+
+      - name: Publish evidence summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## CVLN Agent Factory — KORA autonomous cycle"
+            echo
+            echo "- Runtime mode: \`${{ steps.mode.outputs.runtime_mode || 'unknown' }}\`"
+            echo "- Completed dry-runs before cycle: \`${{ steps.mode.outputs.completed_dry_runs || 'unknown' }}\`"
+            echo "- Cycle ID: \`${{ steps.cycle.outputs.cycle_id || 'unavailable' }}\`"
+            echo "- Cycle number: \`${{ steps.cycle.outputs.cycle_number || 'unavailable' }}\`"
+            echo "- Cycle status: \`${{ steps.cycle.outputs.cycle_status || 'unavailable' }}\`"
+            echo
+            echo "KORA does not force LIVE mode. Critical actions remain governed by CVLN Agent Factory validation gates."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload cycle evidence
+        if: always() && hashFiles('cycle-result.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: cvln-agent-factory-cycle-${{ github.run_id }}
+          path: cycle-result.json
+          retention-days: 30
